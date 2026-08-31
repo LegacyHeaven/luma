@@ -123,14 +123,17 @@ pub fn save(app: &AppHandle, cfg: &LumaConfig) -> Result<(), String> {
 const DEFAULT_THEME_CSS: &str = include_str!("../resources/themes/luma-default/theme.css");
 const DEFAULT_THEME_JSON: &str = include_str!("../resources/themes/luma-default/theme.json");
 
-/// Makes sure `<config dir>/themes/luma-default` exists, seeding it on
-/// first run so there's always at least one usable theme, and so users
-/// have a folder to drop their own themes next to.
+/// Makes sure `<config dir>/themes/luma-default` exists and matches the
+/// copy of the theme compiled into this binary.
+///
+/// This always overwrites `luma-default`'s files (not just on first run) -
+/// it's the built-in theme, not a place users are meant to edit in place
+/// (the Theming docs tell people to copy the folder first), so re-seeding
+/// it on every launch is what makes a Luma update actually change how the
+/// app looks instead of a user's on-disk copy silently going stale. Anyone
+/// customizing keeps their own theme folder, which this never touches.
 pub fn ensure_themes_dir(app: &AppHandle) {
     let dest = themes_dir(app).join("luma-default");
-    if dest.exists() {
-        return;
-    }
 
     if let Err(err) = fs::create_dir_all(&dest) {
         eprintln!("luma: failed to seed default theme: {err}");
