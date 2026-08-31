@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-uninstall-theme"
+description = "Enables the uninstall_theme command without any pre-configured scope."
+commands.allow = ["uninstall_theme"]
+
+[[permission]]
+identifier = "deny-uninstall-theme"
+description = "Denies the uninstall_theme command without any pre-configured scope."
+commands.deny = ["uninstall_theme"]

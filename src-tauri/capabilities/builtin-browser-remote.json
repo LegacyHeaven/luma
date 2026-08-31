@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "builtin-browser-remote",
+  "description": "Lets the built-in browser window's injected toolbar (see resources/builtin-browser-toolbar.js, which runs inside whatever external site the user searched to) close that window or hand the page off to the system browser. Tauri always enforces ACL for commands called from remote/external content, unlike local Luma content which these same commands are already free to call - this is what actually grants it, scoped to nothing but these two commands, and only for the 'browser' window. `local: false` because this capability exists only to cover remote content; the default capability already covers this window's own local-content needs.",
+  "windows": ["browser"],
+  "local": false,
+  "remote": {
+    "urls": ["http://*", "https://*"]
+  },
+  "permissions": ["allow-close-builtin-browser", "allow-open-in-system-browser"]
+}

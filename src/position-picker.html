@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUMA - pick spotlight position</title>
+  <style>
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      cursor: crosshair;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      user-select: none;
+    }
+
+    .hint {
+      position: fixed;
+      top: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(18, 10, 28, .92);
+      color: #fff;
+      border: 1px solid rgba(207, 89, 230, .5);
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      letter-spacing: .3px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+      white-space: nowrap;
+    }
+
+    .hint code {
+      background: rgba(255, 255, 255, .08);
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+
+    .crosshair {
+      position: fixed;
+      width: 1px;
+      height: 100%;
+      top: 0;
+      background: rgba(207, 89, 230, .35);
+      pointer-events: none;
+    }
+
+    .crosshair.h {
+      width: 100%;
+      height: 1px;
+      left: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="hint">Click anywhere to place the spotlight there &mdash; or it cancels itself in <code id="countdown">10</code>s</div>
+  <div class="crosshair" id="crosshair-v"></div>
+  <div class="crosshair h" id="crosshair-h"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      function getTauriBridge() {
+        return window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__ : null;
+      }
+
+      var crosshairV = document.getElementById("crosshair-v");
+      var crosshairH = document.getElementById("crosshair-h");
+      var countdownEl = document.getElementById("countdown");
+
+      document.addEventListener("mousemove", function (e) {
+        crosshairV.style.left = e.clientX + "px";
+        crosshairH.style.top = e.clientY + "px";
+      });
+
+      var settled = false;
+      var secondsLeft = 10;
+      var countdownTimer = setInterval(function () {
+        if (settled) {
+          clearInterval(countdownTimer);
+          return;
+        }
+        secondsLeft -= 1;
+        if (secondsLeft <= 0) {
+          settled = true;
+          clearInterval(countdownTimer);
+          var tauri = getTauriBridge();
+          if (tauri) tauri.core.invoke("cancel_position_pick").catch(function () {});
+          return;
+        }
+        if (countdownEl) countdownEl.textContent = String(secondsLeft);
+      }, 1000);
+
+      document.addEventListener("click", function (e) {
+        var tauri = getTauriBridge();
+        if (!tauri) return;
+        settled = true;
+        var xFrac = e.clientX / window.innerWidth;
+        var yFrac = e.clientY / window.innerHeight;
+        tauri.core
+          .invoke("report_spotlight_position", { xFrac: xFrac, yFrac: yFrac })
+          .catch(function () {});
+      });
+
+      function registerFocusCancel(attempt) {
+        attempt = attempt || 1;
+        var tauri = getTauriBridge();
+        if (!tauri) {
+          if (attempt < 1200) {
+            setTimeout(function () { registerFocusCancel(attempt + 1); }, 100);
+          }
+          return;
+        }
+        tauri.window.getCurrentWindow().onFocusChanged(function (event) {
+          if (!event.payload) {
+            settled = true;
+            tauri.core.invoke("cancel_position_pick").catch(function () {});
+          }
+        });
+      }
+
+      registerFocusCancel();
+    })();
+  </script>
+</body>
+</html>

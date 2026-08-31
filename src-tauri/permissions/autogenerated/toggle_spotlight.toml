@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-toggle-spotlight"
+description = "Enables the toggle_spotlight command without any pre-configured scope."
+commands.allow = ["toggle_spotlight"]
+
+[[permission]]
+identifier = "deny-toggle-spotlight"
+description = "Denies the toggle_spotlight command without any pre-configured scope."
+commands.deny = ["toggle_spotlight"]

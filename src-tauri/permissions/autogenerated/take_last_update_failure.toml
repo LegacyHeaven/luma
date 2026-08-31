@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-take-last-update-failure"
+description = "Enables the take_last_update_failure command without any pre-configured scope."
+commands.allow = ["take_last_update_failure"]
+
+[[permission]]
+identifier = "deny-take-last-update-failure"
+description = "Denies the take_last_update_failure command without any pre-configured scope."
+commands.deny = ["take_last_update_failure"]

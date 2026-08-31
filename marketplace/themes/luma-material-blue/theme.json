@@ -1,0 +1,9 @@
+{
+  "id": "luma-material-blue",
+  "name": "Material Blue",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "A cool Material-Design-inspired blue, for a calmer, more corporate feel.",
+  "type": "dark",
+  "css": "theme.css"
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "luma-material-blue",
+    "name": "Material Blue",
+    "author": "Luma",
+    "description": "A cool Material-Design-inspired blue, for a calmer, more corporate feel.",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-material-blue/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-material-blue/theme.json",
+    "colors": ["#131418", "#1e2126", "#8ab4f8", "#aecbfa", "#e8eaed"]
+  },
+  {
+    "id": "luma-pink",
+    "name": "Neon Pink",
+    "author": "Luma",
+    "description": "A vibrant hot-pink/magenta theme with a synthwave edge.",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-pink/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-pink/theme.json",
+    "colors": ["#150816", "#240f22", "#ff2e88", "#ff8fc7", "#fff"]
+  },
+  {
+    "id": "luma-emerald",
+    "name": "Emerald",
+    "author": "Luma",
+    "description": "A calm nature-inspired emerald green theme.",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-emerald/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-emerald/theme.json",
+    "colors": ["#04120c", "#0b2018", "#10b981", "#6ee7b7", "#eafff4"]
+  },
+  {
+    "id": "luma-amber",
+    "name": "Amber Sunset",
+    "author": "Luma",
+    "description": "A warm amber/orange sunset theme.",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-amber/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-amber/theme.json",
+    "colors": ["#120b02", "#1c1305", "#f59e0b", "#ffcf6b", "#ffe9b3"]
+  },
+  {
+    "id": "nord",
+    "name": "Nord",
+    "author": "Luma community",
+    "description": "Cool arctic blues and grays, snowy and calm.",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/nord/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/nord/theme.json",
+    "colors": ["#2e3440", "#3b4252", "#88c0d0", "#81a1c1", "#eceff4"]
+  },
+  {
+    "id": "solarized-dark",
+    "name": "Solarized Dark",
+    "author": "Luma community",
+    "description": "The classic low-contrast editor palette, plain and easy on the eyes.",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/solarized-dark/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/solarized-dark/theme.json",
+    "colors": ["#002b36", "#073642", "#b58900", "#cb4b16", "#2aa198"]
+  }
+]

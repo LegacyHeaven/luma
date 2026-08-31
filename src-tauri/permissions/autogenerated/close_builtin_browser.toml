@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-close-builtin-browser"
+description = "Enables the close_builtin_browser command without any pre-configured scope."
+commands.allow = ["close_builtin_browser"]
+
+[[permission]]
+identifier = "deny-close-builtin-browser"
+description = "Denies the close_builtin_browser command without any pre-configured scope."
+commands.deny = ["close_builtin_browser"]

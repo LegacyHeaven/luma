@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-locales"
+description = "Enables the list_locales command without any pre-configured scope."
+commands.allow = ["list_locales"]
+
+[[permission]]
+identifier = "deny-list-locales"
+description = "Denies the list_locales command without any pre-configured scope."
+commands.deny = ["list_locales"]

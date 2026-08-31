@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reset-spotlight-position"
+description = "Enables the reset_spotlight_position command without any pre-configured scope."
+commands.allow = ["reset_spotlight_position"]
+
+[[permission]]
+identifier = "deny-reset-spotlight-position"
+description = "Denies the reset_spotlight_position command without any pre-configured scope."
+commands.deny = ["reset_spotlight_position"]

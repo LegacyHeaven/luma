@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUMA Settings</title>
+  <style>
+    html, body { background: #0a0510; margin: 0; }
+    body { visibility: hidden; }
+    body.luma-ready { visibility: visible; }
+    a { color: inherit; text-decoration: none; }
+    svg { display: block; }
+  </style>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body class="settings-page">
+  <a href="#" class="settings-btn" id="back-to-search" title="Back to search" aria-label="Back to search" data-i18n-title="settings.back_to_search" data-i18n-aria-label="settings.back_to_search"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></a>
+  <div class="particles" id="particles"></div>
+
+  <div class="wrapper settings-wrapper">
+    <p class="brand"><span data-i18n="settings.brand">Settings</span><span class="brand-dot">.</span></p>
+    <p class="motto"><span class="status-dot"></span><span data-i18n="settings.motto">Configure LUMA.</span></p>
+
+    <form id="settings-form">
+      <div class="settings-layout">
+        <nav class="settings-nav" id="settings-nav" aria-label="Settings categories">
+          <button type="button" class="settings-nav-btn" data-category="general" data-i18n="settings.nav.general">General</button>
+          <button type="button" class="settings-nav-btn" data-category="search" data-i18n="settings.nav.search">Search &amp; apps</button>
+          <button type="button" class="settings-nav-btn" data-category="appearance" data-i18n="settings.nav.appearance">Appearance</button>
+          <button type="button" class="settings-nav-btn" data-category="spotlight" data-i18n="settings.nav.spotlight">Spotlight window</button>
+          <button type="button" class="settings-nav-btn" data-category="updates" data-i18n="settings.nav.updates">Updates</button>
+          <button type="button" class="settings-nav-btn" data-category="advanced" id="advanced-nav-btn" hidden data-i18n="settings.nav.advanced">Advanced</button>
+        </nav>
+
+        <div class="settings-content">
+          <section class="settings-section" data-category="general">
+            <h2 data-i18n="settings.general.shortcut.title">Spotlight shortcut</h2>
+            <p class="help" data-i18n="settings.general.shortcut.help">Click the box, then press your desired key combination.</p>
+            <input type="text" id="shortcut-input" class="settings-input" readonly placeholder="Click and press keys…" data-i18n-placeholder="settings.general.shortcut.placeholder">
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2 data-i18n="settings.general.browser_mode.title">Search results open in</h2>
+            <div class="settings-row">
+              <label class="radio-option"><input type="radio" name="browser_mode" value="system"> <span data-i18n="settings.general.browser_mode.system">Your default browser</span></label>
+              <label class="radio-option"><input type="radio" name="browser_mode" value="builtin"> <span data-i18n="settings.general.browser_mode.builtin">LUMA's built-in browser window</span></label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2 data-i18n="settings.general.default_engine.title">Default search engine</h2>
+            <select id="default-engine" class="settings-input"></select>
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2 data-i18n="settings.general.language.title">Language</h2>
+            <p class="help" data-i18n="settings.general.language.help">The language LUMA's interface is shown in. Missing a language? See the wiki's "Community translations" page - it only takes one file.</p>
+            <select id="language-select" class="settings-input"></select>
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2 data-i18n="settings.general.window_size.title">Main window size</h2>
+            <p class="help" data-i18n="settings.general.window_size.help">How big the main LUMA window opens. Takes effect the next time it opens.</p>
+            <div class="settings-row">
+              <label class="radio-option"><input type="radio" name="main_window_size" value="compact"> <span data-i18n="settings.general.window_size.compact">Compact</span></label>
+              <label class="radio-option"><input type="radio" name="main_window_size" value="default"> <span data-i18n="settings.general.window_size.default">Default</span></label>
+              <label class="radio-option"><input type="radio" name="main_window_size" value="roomy"> <span data-i18n="settings.general.window_size.roomy">Roomy</span></label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2 data-i18n="settings.general.start_at_login.title">Start LUMA at login</h2>
+            <label class="checkbox-option"><input type="checkbox" id="start-at-login"> <span data-i18n="settings.general.start_at_login.label">Launch automatically when I sign in</span></label>
+          </section>
+
+          <section class="settings-section" data-category="search">
+            <h2 data-i18n="settings.search.engines.title">Search engines</h2>
+            <p class="help" data-i18n-rich="settings.search.engines.help">Add your own - any site with a search URL works. Use <code>%s</code> in the URL for where your search text should go, e.g. <code>https://example.com/search?q=%s</code>.</p>
+            <div class="settings-row" id="custom-engines-list"></div>
+            <div class="settings-row">
+              <input type="text" id="new-engine-name" class="settings-input" placeholder="Name" style="max-width:160px;" data-i18n-placeholder="settings.search.engines.new_name_placeholder">
+              <input type="text" id="new-engine-url" class="settings-input" placeholder="https://example.com/search?q=%s" style="flex:2;min-width:220px;" data-i18n-placeholder="settings.search.engines.new_url_placeholder">
+              <input type="text" id="new-engine-bang" class="settings-input settings-input-sm" placeholder="bang" style="max-width:90px;" data-i18n-placeholder="settings.search.engines.new_bang_placeholder">
+              <button type="button" class="btn" id="add-engine-btn" data-i18n="settings.search.engines.add_button">Add engine</button>
+            </div>
+            <span id="engine-form-status" class="update-status"></span>
+          </section>
+
+          <section class="settings-section" data-category="search">
+            <h2 data-i18n="settings.search.more_engines.title">More search engines</h2>
+            <p class="help" data-i18n="settings.search.more_engines.help">Google, MyPC and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its &#10005;.</p>
+            <div class="settings-row" id="builtin-engines-list"></div>
+            <div class="settings-row">
+              <select id="add-builtin-engine" class="settings-input">
+                <option value="" data-i18n="settings.search.more_engines.add_option">+ Add a search engine…</option>
+              </select>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="search">
+            <h2 data-i18n="settings.search.custom_apps.title">Custom selected apps</h2>
+            <p class="help" data-i18n-rich="settings.search.custom_apps.help">Apps you've pointed <code>!open</code> at by hand after it couldn't find them on its own - it'll launch straight from here next time.</p>
+            <div class="settings-row" id="custom-apps-list"></div>
+          </section>
+
+          <section class="settings-section" data-category="spotlight">
+            <h2 data-i18n="settings.spotlight.window.title">Spotlight window</h2>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="close-on-blur"> <span data-i18n="settings.spotlight.window.close_on_blur">Hide when it loses focus</span></label>
+            </div>
+            <div class="settings-row">
+              <label><span data-i18n="settings.spotlight.window.width_label">Width</span>
+                <input type="number" id="spotlight-width" class="settings-input settings-input-sm" min="360" max="1200" step="10">
+              </label>
+            </div>
+            <p class="help" data-i18n="settings.spotlight.window.position_help">Where the spotlight appears - screen center by default, or click anywhere to pick a spot.</p>
+            <div class="settings-row">
+              <span id="spotlight-position-status" class="update-status"></span>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn" id="pick-position-btn" data-i18n="settings.spotlight.window.pick_position">Pick position&hellip;</button>
+              <button type="button" class="btn" id="reset-position-btn" data-i18n="settings.spotlight.window.reset_position">Reset to default (center)</button>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="spotlight">
+            <h2 data-i18n="settings.spotlight.animations.title">Animations</h2>
+            <p class="help" data-i18n="settings.spotlight.animations.help">The spotlight's fade in/out and the main window's entrance motion. Turn this off for a snappier, fully static feel.</p>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="disable-animations"> <span data-i18n="settings.spotlight.animations.disable">Disable animations</span></label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="spotlight">
+            <h2 data-i18n="settings.spotlight.branding.title">Spotlight branding</h2>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="show-spotlight-branding"> <span data-i18n="settings.spotlight.branding.show">Show "LUMA." above the spotlight bar</span></label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="updates">
+            <h2 data-i18n="settings.updates.title">Updates</h2>
+            <p class="help" data-i18n="settings.updates.help">LUMA can check GitHub for a newer build and install it itself - no separate download needed.</p>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="check-updates-enabled"> <span data-i18n="settings.updates.auto_check">Automatically check for updates on launch</span></label>
+            </div>
+            <div class="settings-row update-row">
+              <button type="button" class="btn" id="check-updates-btn" data-i18n="settings.updates.check_button">Check for updates</button>
+              <span id="update-status" class="update-status"></span>
+            </div>
+            <button type="button" class="btn primary" id="install-update-btn" hidden data-i18n="settings.updates.install_button">Download &amp; install update</button>
+          </section>
+
+          <section class="settings-section" data-category="appearance">
+            <h2 data-i18n="settings.appearance.theme.title">Theme</h2>
+            <p class="help" data-i18n-rich="settings.appearance.theme.help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see the wiki's Theming page.</p>
+            <div class="settings-row" id="theme-options"></div>
+            <button type="button" class="btn" id="open-themes-folder" data-i18n="settings.appearance.theme.open_folder_button">Open themes folder</button>
+          </section>
+
+          <section class="settings-section" data-category="appearance">
+            <h2 data-i18n="settings.appearance.marketplace.title">Marketplace</h2>
+            <p class="help" data-i18n="settings.appearance.marketplace.help">Community themes, installed with one click - no restart needed.</p>
+            <div class="marketplace-status" id="marketplace-status" data-i18n="settings.appearance.marketplace.loading">Loading the marketplace…</div>
+            <div class="marketplace-grid" id="marketplace-grid"></div>
+            <p class="help" style="margin-top:16px;" data-i18n-rich="settings.appearance.marketplace.url_help">Or add one by its raw <code>theme.css</code> URL:</p>
+            <div class="settings-row">
+              <input type="text" id="marketplace-url-input" class="settings-input" placeholder="https://.../theme.css" style="flex:2;min-width:220px;" data-i18n-placeholder="settings.appearance.marketplace.url_placeholder">
+              <button type="button" class="btn" id="marketplace-url-install-btn" data-i18n="settings.appearance.marketplace.install_button">Install</button>
+            </div>
+            <span id="marketplace-url-status" class="update-status"></span>
+          </section>
+
+          <section class="settings-section" data-category="appearance">
+            <h2 data-i18n="settings.appearance.custom_css.title">Custom CSS</h2>
+            <p class="help" data-i18n="settings.appearance.custom_css.help">Injected after the theme's stylesheet, so it can override anything.</p>
+            <textarea id="custom-css" class="settings-input" placeholder="/* e.g. :root { --color-purple: #00e0a8; } */"></textarea>
+          </section>
+
+          <section class="settings-section" data-category="advanced" id="debug-section" hidden>
+            <h2 data-i18n="settings.advanced.logging.title">Advanced logging</h2>
+            <p class="help" data-i18n-rich="settings.advanced.logging.help">
+              Off by default, and fully inert while off - nothing is recorded
+              or written to disk. Turn it on and LUMA records every notable
+              thing it does (every command it runs, search submitted, results
+              opened, config saved, errors) at a much higher level of detail,
+              both in the console below and in a rotating log file on disk -
+              plus live RAM/process info, so a bug can be diagnosed without a
+              terminal. See the wiki's "Logging &amp; diagnostics" page for the
+              exact format, useful for anyone building their own version of
+              LUMA. You found this section by holding <code>Shift+L</code> on
+              this page - it'll stay revealed once enabled below.
+            </p>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="debug-logging-enabled"> <span data-i18n="settings.advanced.logging.enable">Enable advanced logging &amp; keep this section visible</span></label>
+            </div>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="show-debug-tier" checked> <span data-i18n="settings.advanced.logging.show_debug_tier">Show high-volume debug-level entries in the console below</span></label>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn" id="open-debug-console" data-i18n="settings.advanced.logging.open_console">Open debug console</button>
+              <button type="button" class="btn" id="reveal-log-file" data-i18n="settings.advanced.logging.reveal_file">Reveal log file</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <span class="settings-actions-help" data-i18n="settings.saves_automatically">Everything here saves automatically.</span>
+        <span id="save-status" class="save-status"></span>
+      </div>
+    </form>
+
+    <p class="build-stamp" id="build-stamp">LUMA - loading…</p>
+  </div>
+
+  <div id="debug-console" class="debug-console" hidden>
+    <div class="debug-console-header">
+      <strong data-i18n="debug_console.title">LUMA debug console</strong>
+      <span id="debug-console-meta" class="debug-console-meta"></span>
+      <span class="debug-console-actions">
+        <button type="button" class="btn" id="debug-copy" data-i18n="debug_console.copy">Copy</button>
+        <button type="button" class="btn" id="debug-clear" data-i18n="debug_console.clear">Clear</button>
+        <button type="button" class="btn" id="debug-close" data-i18n="debug_console.close">Close</button>
+      </span>
+    </div>
+    <div id="debug-console-sysinfo" class="debug-console-sysinfo"></div>
+    <pre id="debug-console-log" class="debug-console-log"></pre>
+  </div>
+
+  <script src="vendor/titlebar.js"></script>
+  <script src="debug-log.js"></script>
+  <script src="i18n.js"></script>
+  <script src="vendor/engine/bangdeck.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

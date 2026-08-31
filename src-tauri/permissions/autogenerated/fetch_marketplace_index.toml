@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fetch-marketplace-index"
+description = "Enables the fetch_marketplace_index command without any pre-configured scope."
+commands.allow = ["fetch_marketplace_index"]
+
+[[permission]]
+identifier = "deny-fetch-marketplace-index"
+description = "Denies the fetch_marketplace_index command without any pre-configured scope."
+commands.deny = ["fetch_marketplace_index"]

@@ -1,0 +1,9 @@
+{
+  "id": "luma-default",
+  "name": "Luma Default",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "The default terminal-purple Luma theme.",
+  "type": "dark",
+  "css": "theme.css"
+}

@@ -1,0 +1,154 @@
+name: Release
+
+# Builds a standalone Luma executable for Linux, macOS (Intel + Apple
+# Silicon) and Windows, and attaches them to a GitHub Release. No
+# installer, just one file per platform - download it, run it.
+#
+# Triggers on a `v*` tag push, or manually from the Actions tab.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release as - use 'Release' for the normal rolling release the in-app updater watches (see src-tauri/src/updater.rs's RELEASE_BASE_URL); a different tag makes a one-off release the updater ignores"
+        required: true
+        default: "Release"
+      release_title:
+        description: "Human-readable release title (e.g. 'Luma Version 2') - shown on the GitHub release page. Leave blank to just use the tag."
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            asset_name: luma-linux-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_name: luma-macos-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            asset_name: luma-macos-x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset_name: luma-windows-x64.exe
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            build-essential
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+
+      - name: Build
+        working-directory: src-tauri
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: cp src-tauri/target/${{ matrix.target }}/release/luma ${{ matrix.asset_name }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        run: cp src-tauri/target/${{ matrix.target }}/release/luma.exe ${{ matrix.asset_name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      # The in-app updater (src-tauri/src/updater.rs) has no version tag to
+      # compare against - this workflow re-uses the same `Release` release
+      # tag forever instead of cutting a new one per build - so it compares
+      # this file's `commit` field against the running build's own
+      # embedded commit (build.rs) instead. Must stay in the platform-key
+      # <-> asset_name shape updater.rs's platform_key() expects.
+      - name: Build update manifest.json
+        run: |
+          python3 - "$GITHUB_SHA" <<'PY'
+          import hashlib, json, sys, datetime, pathlib
+
+          commit = sys.argv[1][:12]
+          asset_names = {
+              "linux-x64": "luma-linux-x64",
+              "macos-arm64": "luma-macos-arm64",
+              "macos-x64": "luma-macos-x64",
+              "windows-x64": "luma-windows-x64.exe",
+          }
+
+          assets = {}
+          for key, filename in asset_names.items():
+              path = pathlib.Path("dist") / filename
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              assets[key] = {"file": filename, "sha256": digest}
+
+          manifest = {
+              "commit": commit,
+              "built_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "assets": assets,
+          }
+
+          pathlib.Path("dist/manifest.json").write_text(json.dumps(manifest, indent=2))
+          print(json.dumps(manifest, indent=2))
+          PY
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: "${{ github.event.inputs.release_title || format('Luma {0}', github.event.inputs.tag || github.ref_name) }}"
+          draft: true
+          files: dist/*
+          body: |
+            Standalone Luma executables. No installer - download the file
+            for your platform and run it directly.
+
+            - **Linux**: `luma-linux-x64`
+            - **macOS (Apple Silicon)**: `luma-macos-arm64`
+            - **macOS (Intel)**: `luma-macos-x64`
+            - **Windows**: `luma-windows-x64.exe`
+
+            On Linux and macOS you'll need to mark the file executable first:
+            `chmod +x luma-linux-x64`. On macOS, since the binary isn't
+            notarized, right-click it and choose Open the first time to get
+            past Gatekeeper.
+
+            Luma checks this release for updates on launch and can install
+            them itself (Settings → Updates) - `manifest.json` here is what
+            it reads to do that, not something you need to touch.

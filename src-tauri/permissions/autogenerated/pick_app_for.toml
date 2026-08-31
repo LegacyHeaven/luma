@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pick-app-for"
+description = "Enables the pick_app_for command without any pre-configured scope."
+commands.allow = ["pick_app_for"]
+
+[[permission]]
+identifier = "deny-pick-app-for"
+description = "Denies the pick_app_for command without any pre-configured scope."
+commands.deny = ["pick_app_for"]

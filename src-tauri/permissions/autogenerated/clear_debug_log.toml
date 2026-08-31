@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-clear-debug-log"
+description = "Enables the clear_debug_log command without any pre-configured scope."
+commands.allow = ["clear_debug_log"]
+
+[[permission]]
+identifier = "deny-clear-debug-log"
+description = "Denies the clear_debug_log command without any pre-configured scope."
+commands.deny = ["clear_debug_log"]

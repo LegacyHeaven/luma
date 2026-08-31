@@ -1,0 +1,9 @@
+{
+  "id": "luma-emerald",
+  "name": "Emerald",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "A calm nature-inspired emerald green theme.",
+  "type": "dark",
+  "css": "theme.css"
+}
