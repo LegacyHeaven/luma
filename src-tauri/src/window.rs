@@ -49,7 +49,7 @@ pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<Web
         WebviewUrl::App("index.html?mode=spotlight".into()),
     )
     .title("Luma")
-    .inner_size(width, 96.0)
+    .inner_size(width, 128.0)
     .resizable(false)
     .decorations(false)
     .transparent(true)
@@ -118,8 +118,8 @@ pub fn hide_spotlight(app: &AppHandle) {
 /// "Built-in browser" mode: a single reusable Luma-branded webview window
 /// that navigates to whatever URL you search for, instead of handing off
 /// to your system browser. Uses the OS's native webview engine (Chromium
-/// via WebView2 on Windows; WebKit on macOS/Linux) - see docs/CONFIGURATION.md
-/// for why that's not literally bundled Chromium everywhere.
+/// via WebView2 on Windows; WebKit on macOS/Linux) - see the wiki's
+/// Configuration page for why that's not literally bundled Chromium everywhere.
 pub fn open_in_builtin_browser(app: &AppHandle, url_str: &str) -> Result<(), String> {
     let parsed = url::Url::parse(url_str).map_err(|e| e.to_string())?;
 

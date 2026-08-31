@@ -3,7 +3,7 @@
  *
  * To make your own theme: copy this folder, edit the variables in
  * :root, restyle whatever else you like, and update theme.json's
- * "id"/"name"/"author". See docs/THEMING.md.
+ * "id"/"name"/"author". See the wiki's Theming page.
  */
 
 :root {
@@ -440,11 +440,14 @@ body {
   opacity: 1;
 }
 
-/* ===== Spotlight-mode specific (desktop floating window) ===== */
+/* ===== Spotlight-mode specific (desktop floating window) =====
+ * Just the search bar - no brand/motto, no engine selector, no hint
+ * text, nothing else. A single frosted "pill" with a soft purple glow
+ * behind it, centered in the (transparent) spotlight window. */
 body.spotlight-mode {
   padding: 0;
   background: transparent;
-  align-items: flex-start;
+  align-items: center;
 }
 
 body.spotlight-mode .viewport-frame,
@@ -452,13 +455,15 @@ body.spotlight-mode .home-link,
 body.spotlight-mode .settings-link,
 body.spotlight-mode .particles,
 body.spotlight-mode .motto,
-body.spotlight-mode .hint {
+body.spotlight-mode .hint,
+body.spotlight-mode .searchbar-tag,
+body.spotlight-mode .engine-selector {
   display: none;
 }
 
 body.spotlight-mode .wrapper {
   max-width: 100%;
-  padding: 18px;
+  padding: 22px 18px;
   animation: none;
 }
 
@@ -466,22 +471,9 @@ body.spotlight-mode .search-shell {
   background: rgba(10, 5, 16, .92);
   border: 1px solid var(--box-border-color);
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .5), 0 0 0 1px rgba(128, 0, 255, .15);
+  box-shadow: 0 10px 40px rgba(128, 0, 255, .25), 0 0 0 1px rgba(128, 0, 255, .18);
   backdrop-filter: blur(18px);
-  padding: 18px 22px 12px;
-}
-
-body.spotlight-mode .engine-selector {
-  display: block;
-  margin-bottom: 10px;
-}
-
-body.spotlight-mode .engine-current {
-  min-width: 0;
-  width: 100%;
-  font-size: 1.3rem;
-  text-align: left;
-  padding: 6px 10px;
+  padding: 4px;
 }
 
 body.spotlight-mode .search-box {
