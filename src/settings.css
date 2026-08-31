@@ -1,0 +1,124 @@
+/* Chrome for the Settings page - layered on top of whichever theme.css
+   the main search page is using, so it inherits the same color variables. */
+
+.settings-wrapper {
+  max-width: 640px;
+  width: 100%;
+  text-align: left;
+  z-index: 1;
+  position: relative;
+  padding-bottom: 60px;
+}
+
+.settings-wrapper .brand,
+.settings-wrapper .motto {
+  text-align: left;
+}
+
+.settings-section {
+  border: 1px solid var(--box-border-color, #3a1f5c);
+  border-radius: 6px;
+  padding: 18px 22px;
+  margin-bottom: 18px;
+  background: rgba(255, 255, 255, .02);
+}
+
+.settings-section h2 {
+  font-size: 1.4rem;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  color: var(--color-light-purple, #cf59e6);
+  font-family: var(--font-family, monospace);
+}
+
+.settings-section p.help {
+  font-size: 1.1rem;
+  color: var(--color-gray, #c4c4c4);
+  opacity: .6;
+  margin-bottom: 12px;
+  font-family: var(--font-family, monospace);
+}
+
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.radio-option, .checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-family, monospace);
+  font-size: 1.3rem;
+  color: var(--color-white, #fff);
+  cursor: pointer;
+}
+
+.settings-input {
+  font-family: var(--font-family, monospace);
+  font-size: 1.3rem;
+  background: var(--box-first-color, #180d29);
+  color: var(--color-white, #fff);
+  border: 1px solid var(--box-border-color, #3a1f5c);
+  border-radius: 4px;
+  padding: 8px 12px;
+  width: 100%;
+}
+
+.settings-input-sm { width: auto; }
+
+textarea.settings-input {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--box-border-color, #3a1f5c);
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 1.3rem;
+  font-family: var(--font-family, monospace);
+  color: var(--color-white, #fff);
+}
+
+.theme-option.selected {
+  border-color: var(--color-purple, #8000ff);
+  box-shadow: 0 0 10px rgba(128, 0, 255, .25);
+}
+
+.btn {
+  font-family: var(--font-family, monospace);
+  font-size: 1.3rem;
+  padding: 8px 18px;
+  border-radius: 4px;
+  border: 1px solid var(--box-border-color, #3a1f5c);
+  background: rgba(255, 255, 255, .02);
+  color: var(--color-white, #fff);
+  cursor: pointer;
+}
+
+.btn:hover { border-color: var(--color-purple, #8000ff); }
+.btn.primary { border-color: var(--color-light-purple, #cf59e6); }
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.save-status {
+  font-family: var(--font-family, monospace);
+  font-size: 1.2rem;
+  color: var(--color-light-purple, #cf59e6);
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+
+.save-status.visible { opacity: .85; }

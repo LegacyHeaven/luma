@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luma</title>
+  <style>
+    /* Critical CSS so the window isn't white for a frame before the theme loads. */
+    html, body { background: #0a0510; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="viewport-frame" aria-hidden="true">
+    <span class="vf-corner vf-tl"></span>
+    <span class="vf-corner vf-tr"></span>
+    <span class="vf-corner vf-bl"></span>
+    <span class="vf-corner vf-br"></span>
+  </div>
+
+  <a href="#" class="home-link" id="open-settings" title="Settings">&#60;/Luma&#62;</a>
+
+  <div class="particles" id="particles"></div>
+
+  <div class="wrapper">
+    <p class="brand">Luma<span class="brand-dot">.</span></p>
+    <p class="motto"><span class="status-dot"></span>One search. Every direction.</p>
+
+    <div class="search-shell">
+      <div class="engine-selector" id="engine-selector">
+        <button type="button" class="engine-current" id="current-engine" aria-haspopup="listbox" aria-expanded="false">Google</button>
+        <div class="engine-list" id="engine-list" role="listbox"></div>
+      </div>
+
+      <p class="searchbar-tag">BangDeck</p>
+      <div class="search-box">
+        <span class="terminal-prompt">&gt;</span>
+        <form id="search-form" autocomplete="off">
+          <input type="text" id="search-input" placeholder="search" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="BangDeck search input">
+        </form>
+        <span class="terminal-cursor">_</span>
+      </div>
+    </div>
+
+    <p class="hint">type <code>!bang</code> before your search to jump straight to that engine &dash; press <code>Esc</code> to clear, or your shortcut again to hide.</p>
+  </div>
+
+  <script src="vendor/engine/bangdeck.js"></script>
+  <script src="vendor/engine/ui.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "luma",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Luma - a spotlight-style search launcher for the desktop, with !bang commands.",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icons": "tauri icon assets/app-icon-source.png -o src-tauri/icons"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.0"
+  }
+}

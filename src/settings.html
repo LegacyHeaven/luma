@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luma Settings</title>
+  <style>
+    html, body { background: #0a0510; margin: 0; }
+  </style>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <a href="#" class="home-link" id="back-to-search">&#60;/Luma&#62;</a>
+  <div class="particles" id="particles"></div>
+
+  <div class="wrapper settings-wrapper">
+    <p class="brand">Settings<span class="brand-dot">.</span></p>
+    <p class="motto"><span class="status-dot"></span>Configure Luma &amp; BangDeck</p>
+
+    <form id="settings-form">
+      <section class="settings-section">
+        <h2>Spotlight shortcut</h2>
+        <p class="help">Click the box, then press your desired key combination.</p>
+        <input type="text" id="shortcut-input" class="settings-input" readonly placeholder="Click and press keys…">
+      </section>
+
+      <section class="settings-section">
+        <h2>Search results open in</h2>
+        <div class="settings-row">
+          <label class="radio-option"><input type="radio" name="browser_mode" value="system"> Your default browser</label>
+          <label class="radio-option"><input type="radio" name="browser_mode" value="builtin"> Luma's built-in browser window</label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Default search engine</h2>
+        <select id="default-engine" class="settings-input"></select>
+      </section>
+
+      <section class="settings-section">
+        <h2>Spotlight window</h2>
+        <div class="settings-row">
+          <label class="checkbox-option"><input type="checkbox" id="close-on-blur"> Hide when it loses focus</label>
+        </div>
+        <div class="settings-row">
+          <label>Width
+            <input type="number" id="spotlight-width" class="settings-input settings-input-sm" min="360" max="1200" step="10">
+          </label>
+          <label>Position
+            <select id="spotlight-position" class="settings-input settings-input-sm">
+              <option value="top-center">Top-center</option>
+              <option value="center">Screen center</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Start Luma at login</h2>
+        <label class="checkbox-option"><input type="checkbox" id="start-at-login"> Launch automatically when I sign in</label>
+      </section>
+
+      <section class="settings-section">
+        <h2>Theme</h2>
+        <p class="help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see docs/THEMING.md.</p>
+        <div class="settings-row" id="theme-options"></div>
+        <button type="button" class="btn" id="open-themes-folder">Open themes folder</button>
+      </section>
+
+      <section class="settings-section">
+        <h2>Custom CSS</h2>
+        <p class="help">Injected after the theme's stylesheet, so it can override anything.</p>
+        <textarea id="custom-css" class="settings-input" placeholder="/* e.g. :root { --color-purple: #00e0a8; } */"></textarea>
+      </section>
+
+      <div class="settings-actions">
+        <button type="submit" class="btn primary">Save</button>
+        <span id="save-status" class="save-status"></span>
+      </div>
+    </form>
+  </div>
+
+  <script src="vendor/engine/bangdeck.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

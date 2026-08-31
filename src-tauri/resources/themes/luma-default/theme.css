@@ -1,0 +1,511 @@
+/*
+ * Luma Default theme.
+ *
+ * To make your own theme: copy this folder, edit the variables in
+ * :root, restyle whatever else you like, and update theme.json's
+ * "id"/"name"/"author". See docs/THEMING.md.
+ */
+
+:root {
+  --color-white: #fff;
+  --color-dark-mode: #0a0510;
+  --color-purple: #8000ff;
+  --color-light-purple: #cf59e6;
+  --color-light-blue: #f5f2ff;
+  --color-gray: #c4c4c4;
+  --box-first-color: #180d29;
+  --box-border-color: #3a1f5c;
+  --font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  font-size: 62.5%;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-family);
+  background-color: var(--color-dark-mode);
+  background-image:
+    linear-gradient(rgba(128, 0, 255, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128, 0, 255, .05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 40px 20px;
+  overflow: hidden;
+}
+
+/* viewport corner frame */
+.viewport-frame {
+  position: fixed;
+  inset: 14px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.vf-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-color: var(--color-light-purple);
+  opacity: .45;
+}
+
+.vf-tl { top: 0; left: 0; border-top: 2px solid; border-left: 2px solid; }
+.vf-tr { top: 0; right: 0; border-top: 2px solid; border-right: 2px solid; }
+.vf-bl { bottom: 0; left: 0; border-bottom: 2px solid; border-left: 2px solid; }
+.vf-br { bottom: 0; right: 0; border-bottom: 2px solid; border-right: 2px solid; }
+
+@media screen and (max-width: 700px) {
+  .viewport-frame { display: none; }
+}
+
+/* top-left link that opens the settings window */
+.home-link {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 6;
+  font-family: var(--font-family);
+  font-size: 1.4rem;
+  letter-spacing: 1px;
+  color: var(--color-gray);
+  text-decoration: none;
+  border: 1px solid var(--box-border-color);
+  padding: 8px 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .02);
+  transition: border-color .3s, color .3s;
+}
+
+.home-link:hover {
+  border-color: var(--color-purple);
+  color: var(--color-white);
+  transform: translateY(-2px);
+}
+
+.home-link:active {
+  transform: translateY(0) scale(.96);
+}
+
+.settings-link {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 6;
+  font-family: var(--font-family);
+  font-size: 1.4rem;
+  letter-spacing: 1px;
+  color: var(--color-gray);
+  text-decoration: none;
+  border: 1px solid var(--box-border-color);
+  padding: 8px 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .02);
+  transition: border-color .3s, color .3s;
+}
+
+.settings-link:hover {
+  border-color: var(--color-purple);
+  color: var(--color-white);
+  transform: translateY(-2px);
+}
+
+/* Animated background particles */
+.particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: var(--color-light-purple);
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: float 20s infinite linear;
+}
+
+@keyframes float {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.3; }
+  90% { opacity: 0.3; }
+  100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+}
+
+.wrapper {
+  text-align: center;
+  z-index: 1;
+  position: relative;
+  animation: fadeInUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  width: 100%;
+  max-width: 640px;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.brand {
+  font-family: var(--font-family);
+  font-size: 3.2rem;
+  letter-spacing: 4px;
+  font-weight: 700;
+  color: var(--color-white);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.brand .brand-dot {
+  color: var(--color-light-purple);
+}
+
+.motto {
+  font-family: var(--font-family);
+  font-size: 1.3rem;
+  color: var(--color-gray);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: .55;
+  margin-bottom: 30px;
+}
+
+.motto .status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-light-blue);
+  margin-right: 8px;
+  box-shadow: 0 0 6px var(--color-light-blue);
+  animation: status-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
+}
+
+.searchbar-tag {
+  font-family: var(--font-family);
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-light-purple);
+  opacity: .55;
+  margin-bottom: 8px;
+}
+
+/* Engine selector */
+.engine-selector {
+  display: inline-block;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.engine-current {
+  font-family: var(--font-family);
+  font-size: 1.8rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--color-light-purple);
+  cursor: pointer;
+  padding: 8px 18px;
+  min-width: 260px;
+  max-width: 90vw;
+  text-align: center;
+  border: 1px solid var(--box-border-color);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .02);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  user-select: none;
+}
+
+.engine-current::after {
+  content: ' \25be';
+  opacity: .6;
+  display: inline-block;
+  transition: transform .3s ease;
+}
+
+.engine-selector.active .engine-current::after {
+  transform: rotate(180deg);
+}
+
+.engine-current:hover,
+.engine-selector.active .engine-current {
+  color: var(--color-white);
+  border-color: var(--color-purple);
+  box-shadow: 0 0 20px rgba(128, 0, 255, .25);
+  transform: translateY(-2px);
+}
+
+.engine-current:active {
+  transform: translateY(0) scale(.97);
+}
+
+.engine-current.bang-override {
+  color: var(--color-white);
+  border-color: var(--color-light-purple);
+  box-shadow: 0 0 16px rgba(207, 89, 230, .35);
+}
+
+.engine-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 10px;
+  opacity: 0;
+  max-height: 0;
+  overflow-y: auto;
+  pointer-events: none;
+  transition: opacity .3s ease, max-height .3s ease, transform .3s ease;
+  transform: translateY(-8px);
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background: var(--color-dark-mode);
+  border-radius: 6px;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-purple) var(--box-first-color);
+}
+
+.engine-list::-webkit-scrollbar { width: 7px; }
+.engine-list::-webkit-scrollbar-track { background: var(--box-first-color); border-radius: 6px; }
+.engine-list::-webkit-scrollbar-thumb { background-color: var(--color-purple); border-radius: 6px; }
+.engine-list::-webkit-scrollbar-thumb:hover { background-color: var(--color-light-purple); }
+
+.engine-selector.active .engine-list {
+  opacity: 1;
+  max-height: 300px;
+  pointer-events: auto;
+  transform: translateY(0);
+  padding: 4px;
+  border: 1px solid var(--box-border-color);
+}
+
+.engine-list button {
+  font-family: var(--font-family);
+  font-size: 1.8rem;
+  letter-spacing: .5px;
+  cursor: pointer;
+  opacity: 0;
+  transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+  padding: 12px 16px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: var(--box-first-color);
+  color: var(--color-white);
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.engine-selector.active .engine-list button {
+  animation: engineItemIn .3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes engineItemIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: .8; transform: translateY(0); }
+}
+
+.engine-list button .bang {
+  color: var(--color-gray);
+  opacity: .7;
+  font-size: 1.5rem;
+}
+
+.engine-list button:hover,
+.engine-list button:focus-visible {
+  opacity: 1;
+  border-color: var(--color-purple);
+  background: rgba(128, 0, 255, .15);
+  transform: translateX(4px);
+}
+
+.engine-list button:active {
+  transform: translateX(4px) scale(.98);
+}
+
+.engine-list button.selected {
+  opacity: 1;
+  border-color: var(--color-light-purple);
+}
+
+.engine-list button.selected::before {
+  content: '\2022 ';
+  color: var(--color-light-purple);
+}
+
+/* Search box */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--box-border-color);
+  background: rgba(255, 255, 255, .02);
+  border-radius: 6px;
+  padding: 14px 26px;
+  width: 560px;
+  max-width: 88vw;
+  margin: 0 auto;
+  transition: border-color .4s ease, box-shadow .4s ease;
+  animation: searchboxPulse 4.5s ease-in-out infinite;
+}
+
+@keyframes searchboxPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(128, 0, 255, 0); }
+  50% { box-shadow: 0 0 18px rgba(128, 0, 255, .15); }
+}
+
+.search-box:focus-within {
+  border-color: var(--color-purple);
+  box-shadow: 0 0 30px rgba(128, 0, 255, .25);
+  animation: none;
+}
+
+.search-box .terminal-prompt {
+  font-size: 2.4rem;
+  color: var(--color-light-purple);
+  font-weight: 700;
+}
+
+.search-box form {
+  flex: 1;
+  display: flex;
+}
+
+.search-box input {
+  width: 100%;
+  font-family: var(--font-family);
+  font-size: 2.4rem;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--color-white);
+  outline: none;
+}
+
+.search-box input::placeholder {
+  color: var(--color-gray);
+  opacity: .45;
+}
+
+.search-box .terminal-cursor {
+  display: inline-block;
+  color: var(--color-light-purple);
+  font-size: 2.4rem;
+  animation: terminal-blink 1.3s step-start infinite;
+}
+
+@keyframes terminal-blink {
+  50% { opacity: 0; }
+}
+
+.hint {
+  margin-top: 18px;
+  font-size: 1.2rem;
+  color: var(--color-gray);
+  opacity: .45;
+  letter-spacing: .5px;
+}
+
+.hint code {
+  color: var(--color-light-purple);
+  opacity: 1;
+}
+
+/* ===== Spotlight-mode specific (desktop floating window) ===== */
+body.spotlight-mode {
+  padding: 0;
+  background: transparent;
+  align-items: flex-start;
+}
+
+body.spotlight-mode .viewport-frame,
+body.spotlight-mode .home-link,
+body.spotlight-mode .settings-link,
+body.spotlight-mode .particles,
+body.spotlight-mode .motto,
+body.spotlight-mode .hint {
+  display: none;
+}
+
+body.spotlight-mode .wrapper {
+  max-width: 100%;
+  padding: 18px;
+  animation: none;
+}
+
+body.spotlight-mode .search-shell {
+  background: rgba(10, 5, 16, .92);
+  border: 1px solid var(--box-border-color);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .5), 0 0 0 1px rgba(128, 0, 255, .15);
+  backdrop-filter: blur(18px);
+  padding: 18px 22px 12px;
+}
+
+body.spotlight-mode .engine-selector {
+  display: block;
+  margin-bottom: 10px;
+}
+
+body.spotlight-mode .engine-current {
+  min-width: 0;
+  width: 100%;
+  font-size: 1.3rem;
+  text-align: left;
+  padding: 6px 10px;
+}
+
+body.spotlight-mode .search-box {
+  width: 100%;
+  max-width: 100%;
+  animation: none;
+}
+
+/* Narrow-window styles (the main window can be resized down quite small) */
+@media (max-width: 768px) {
+  .search-box { width: 85vw; padding: 12px 18px; }
+  .search-box input, .search-box .terminal-prompt, .search-box .terminal-cursor { font-size: 1.9rem; }
+  .engine-current { font-size: 1.5rem; padding: 10px 15px; min-width: 240px; }
+  .engine-list button { font-size: 1.6rem; padding: 12px 14px; }
+  .engine-list button .bang { font-size: 1.3rem; }
+  .engine-current, .engine-list button { touch-action: manipulation; }
+  .home-link, .settings-link { top: 16px; font-size: 1.2rem; padding: 6px 10px; }
+  .home-link { left: 16px; }
+  .settings-link { right: 16px; }
+}
+
+@media (max-width: 480px) {
+  .search-box input, .search-box .terminal-prompt, .search-box .terminal-cursor { font-size: 1.6rem; }
+  .engine-current { font-size: 1.3rem; min-width: 200px; }
+  .engine-list button { font-size: 1.5rem; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .engine-list button .bang { font-size: 1.2rem; }
+}

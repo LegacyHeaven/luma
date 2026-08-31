@@ -1,0 +1,109 @@
+name: Release
+
+# Builds a standalone Luma executable for Linux, macOS (Intel + Apple
+# Silicon) and Windows, and attaches them to a GitHub Release. No
+# installer, just one file per platform - download it, run it.
+#
+# Triggers on a `v*` tag push, or manually from the Actions tab.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release as (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            asset_name: luma-linux-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_name: luma-macos-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            asset_name: luma-macos-x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset_name: luma-windows-x64.exe
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            build-essential
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+
+      - name: Build
+        working-directory: src-tauri
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: cp src-tauri/target/${{ matrix.target }}/release/luma ${{ matrix.asset_name }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        run: cp src-tauri/target/${{ matrix.target }}/release/luma.exe ${{ matrix.asset_name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: "Luma ${{ github.event.inputs.tag || github.ref_name }}"
+          draft: true
+          files: dist/*
+          body: |
+            Standalone Luma executables. No installer - download the file
+            for your platform and run it directly.
+
+            - **Linux**: `luma-linux-x64`
+            - **macOS (Apple Silicon)**: `luma-macos-arm64`
+            - **macOS (Intel)**: `luma-macos-x64`
+            - **Windows**: `luma-windows-x64.exe`
+
+            On Linux and macOS you'll need to mark the file executable first:
+            `chmod +x luma-linux-x64`. On macOS, since the binary isn't
+            notarized, right-click it and choose Open the first time to get
+            past Gatekeeper.

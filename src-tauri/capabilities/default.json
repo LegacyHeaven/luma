@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default permissions granted to all of Luma's windows (main browser-style window, the floating spotlight, and the built-in browser window).",
+  "windows": ["main", "spotlight", "browser"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "global-shortcut:default",
+    "autostart:default"
+  ]
+}
