@@ -1,4 +1,12 @@
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{
+    window::Color, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+};
+
+/// The theme's `--color-dark-mode`. Set as the window's actual background
+/// (not just the page's CSS background) so navigating from the main window
+/// to settings.html - a full page load - shows this instead of a white
+/// flash while the new document is loading.
+const APP_BACKGROUND: Color = Color(10, 5, 16, 255);
 
 pub const MAIN_LABEL: &str = "main";
 pub const SPOTLIGHT_LABEL: &str = "spotlight";
@@ -22,6 +30,7 @@ pub fn show_main_window(app: &AppHandle) {
                     .inner_size(900.0, 640.0)
                     .min_inner_size(480.0, 360.0)
                     .center()
+                    .background_color(APP_BACKGROUND)
                     .build()
             {
                 eprintln!("luma: failed to recreate main window: {err}");

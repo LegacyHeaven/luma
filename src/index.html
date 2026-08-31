@@ -7,6 +7,10 @@
   <style>
     /* Critical CSS so the window isn't white for a frame before the theme loads. */
     html, body { background: #0a0510; margin: 0; }
+    /* Cross-fades into/out of settings.html instead of a hard cut - opt-in
+       only, so it's a no-op (plain instant navigation) on a webview engine
+       that doesn't support cross-document view transitions yet. */
+    @view-transition { navigation: auto; }
   </style>
 </head>
 <body>

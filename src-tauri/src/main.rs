@@ -15,6 +15,14 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, ShortcutS
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // A second launch (double-clicking the binary again, or the OS
+            // relaunching it) shouldn't spawn a second Luma - focus the
+            // window from the instance that's already running instead.
+            // Without this, two processes end up racing for the same
+            // global shortcut and the loser's Alt+Space silently no-ops.
+            window::show_main_window(app);
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
