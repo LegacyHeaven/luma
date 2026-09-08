@@ -3,6 +3,7 @@
 
 mod commands;
 mod config;
+mod logging;
 mod shortcuts;
 mod themes;
 mod tray;
@@ -15,12 +16,21 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, ShortcutS
 
 fn main() {
     tauri::Builder::default()
+        .manage(logging::AppLog::new())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // A second launch (double-clicking the binary again, or the OS
             // relaunching it) shouldn't spawn a second Luma - focus the
             // window from the instance that's already running instead.
             // Without this, two processes end up racing for the same
             // global shortcut and the loser's Alt+Space silently no-ops.
+            //
+            // If you're staring at the debug console wondering why a fix
+            // "isn't taking effect": this line firing means you're looking
+            // at an OLD process that never fully quit - check the build
+            // sha in the system-info panel against what you just
+            // downloaded. Quit Luma from the tray icon (not just closing
+            // the window) and relaunch to be sure you're on the new build.
+            logging::info(app, "second instance launch detected - focusing existing window instead of starting a new one");
             window::show_main_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
@@ -59,9 +69,23 @@ fn main() {
             commands::toggle_spotlight,
             commands::hide_spotlight,
             commands::show_main_window,
+            logging::get_system_info,
+            logging::get_debug_log,
+            logging::clear_debug_log,
+            logging::log_client_event,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
+
+            logging::info(
+                &handle,
+                format!(
+                    "Luma {} (build {}) starting up, pid {}",
+                    env!("CARGO_PKG_VERSION"),
+                    logging::BUILD_SHA,
+                    std::process::id()
+                ),
+            );
 
             let cfg = config::load(&handle);
             config::ensure_themes_dir(&handle);
@@ -71,13 +95,20 @@ fn main() {
             });
 
             if let Err(err) = shortcuts::register(&handle, &cfg.general.shortcut) {
-                eprintln!(
-                    "luma: could not register shortcut '{}': {err} - falling back to Alt+Space",
-                    cfg.general.shortcut
+                logging::error(
+                    &handle,
+                    format!(
+                        "could not register shortcut '{}': {err} - falling back to Alt+Space",
+                        cfg.general.shortcut
+                    ),
                 );
                 let fallback =
                     tauri_plugin_global_shortcut::Shortcut::new(Some(Modifiers::ALT), Code::Space);
-                let _ = handle.global_shortcut().register(fallback);
+                if let Err(err) = handle.global_shortcut().register(fallback) {
+                    logging::error(&handle, format!("fallback Alt+Space registration also failed: {err}"));
+                }
+            } else {
+                logging::info(&handle, format!("registered global shortcut '{}'", cfg.general.shortcut));
             }
 
             if cfg.general.start_at_login {
@@ -89,6 +120,7 @@ fn main() {
             }
 
             tray::build(&handle)?;
+            logging::info(&handle, "tray icon ready, setup complete");
 
             Ok(())
         })

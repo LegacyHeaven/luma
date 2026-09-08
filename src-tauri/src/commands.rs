@@ -17,10 +17,15 @@ pub fn save_config(
     state: State<AppState>,
     new_config: LumaConfig,
 ) -> Result<(), String> {
-    crate::config::save(&app, &new_config)?;
+    crate::logging::info(&app, format!("save_config called: {new_config:?}"));
+
+    if let Err(err) = crate::config::save(&app, &new_config) {
+        crate::logging::error(&app, format!("save_config: writing config.toml failed: {err}"));
+        return Err(err);
+    }
 
     if let Err(err) = shortcuts::reregister(&app, &new_config.general.shortcut) {
-        eprintln!("luma: could not apply new shortcut: {err}");
+        crate::logging::error(&app, format!("save_config: could not apply new shortcut: {err}"));
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -33,11 +38,12 @@ pub fn save_config(
             autostart.disable()
         };
         if let Err(err) = result {
-            eprintln!("luma: could not update start-at-login: {err}");
+            crate::logging::warn(&app, format!("could not update start-at-login: {err}"));
         }
     }
 
     *state.config.lock().unwrap() = new_config;
+    crate::logging::info(&app, "save_config: saved successfully");
     Ok(())
 }
 
@@ -83,25 +89,43 @@ pub fn open_result(
     from_spotlight: bool,
 ) -> Result<(), String> {
     let mode = state.config.lock().unwrap().general.browser_mode.clone();
+    crate::logging::info(
+        &app,
+        format!("open_result: url={url:?} mode={mode:?} from_spotlight={from_spotlight}"),
+    );
 
-    match mode.as_str() {
-        "builtin" => window::open_in_builtin_browser(&app, &url)?,
-        _ => open_in_system_browser(app.clone(), url)?,
+    let result = match mode.as_str() {
+        "builtin" => window::open_in_builtin_browser(&app, &url),
+        _ => open_in_system_browser(app.clone(), url),
+    };
+
+    if let Err(err) = &result {
+        crate::logging::error(&app, format!("open_result: failed to open: {err}"));
+    } else {
+        crate::logging::info(&app, "open_result: opened successfully");
     }
 
     if from_spotlight {
         window::hide_spotlight(&app);
     }
 
-    Ok(())
+    result
 }
 
 #[tauri::command]
 pub fn open_in_system_browser(app: AppHandle, url: String) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    app.opener()
-        .open_url(url, None::<&str>)
-        .map_err(|e| e.to_string())
+    crate::logging::info(&app, format!("open_in_system_browser: calling opener.open_url({url:?})"));
+    match app.opener().open_url(url, None::<&str>) {
+        Ok(()) => {
+            crate::logging::info(&app, "open_in_system_browser: opener.open_url returned Ok");
+            Ok(())
+        }
+        Err(err) => {
+            crate::logging::error(&app, format!("open_in_system_browser: opener.open_url returned Err: {err}"));
+            Err(err.to_string())
+        }
+    }
 }
 
 #[tauri::command]

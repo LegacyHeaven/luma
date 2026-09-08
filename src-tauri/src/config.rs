@@ -15,6 +15,11 @@ pub struct GeneralConfig {
     pub start_at_login: bool,
     /// Hide the spotlight window automatically when it loses focus.
     pub close_spotlight_on_blur: bool,
+    /// Persists whether the Settings page's debug console section (Shift+L
+    /// to reveal it) should stay open on future launches. The debug log
+    /// itself is always collected regardless of this flag - it only
+    /// controls whether the section/console auto-shows.
+    pub debug_logging: bool,
 }
 
 impl Default for GeneralConfig {
@@ -25,6 +30,7 @@ impl Default for GeneralConfig {
             default_engine: "Google".into(),
             start_at_login: false,
             close_spotlight_on_blur: true,
+            debug_logging: false,
         }
     }
 }
@@ -93,14 +99,21 @@ pub fn load(app: &AppHandle) -> LumaConfig {
     let path = config_path(app);
 
     match fs::read_to_string(&path) {
-        Ok(text) => toml::from_str(&text).unwrap_or_else(|err| {
-            eprintln!("luma: failed to parse {path:?} ({err}) - using defaults");
-            LumaConfig::default()
-        }),
+        Ok(text) => match toml::from_str(&text) {
+            Ok(cfg) => {
+                crate::logging::info(app, format!("config loaded from {path:?}"));
+                cfg
+            }
+            Err(err) => {
+                crate::logging::error(app, format!("failed to parse {path:?} ({err}) - using defaults"));
+                LumaConfig::default()
+            }
+        },
         Err(_) => {
+            crate::logging::info(app, format!("no config at {path:?} yet - writing defaults"));
             let cfg = LumaConfig::default();
             if let Err(err) = save(app, &cfg) {
-                eprintln!("luma: failed to write default config: {err}");
+                crate::logging::error(app, format!("failed to write default config: {err}"));
             }
             cfg
         }
@@ -136,13 +149,13 @@ pub fn ensure_themes_dir(app: &AppHandle) {
     let dest = themes_dir(app).join("luma-default");
 
     if let Err(err) = fs::create_dir_all(&dest) {
-        eprintln!("luma: failed to seed default theme: {err}");
+        crate::logging::error(app, format!("failed to seed default theme: {err}"));
         return;
     }
     if let Err(err) = fs::write(dest.join("theme.css"), DEFAULT_THEME_CSS) {
-        eprintln!("luma: failed to seed default theme: {err}");
+        crate::logging::error(app, format!("failed to seed default theme.css: {err}"));
     }
     if let Err(err) = fs::write(dest.join("theme.json"), DEFAULT_THEME_JSON) {
-        eprintln!("luma: failed to seed default theme: {err}");
+        crate::logging::error(app, format!("failed to seed default theme.json: {err}"));
     }
 }

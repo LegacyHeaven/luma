@@ -1,12 +1,37 @@
 /**
  * Luma desktop app - Settings page. Loads the current config.toml (via
  * get_config), lets you edit it, and writes it back with save_config.
+ *
+ * Also owns the debug console: hold Shift+L on this page to reveal a
+ * "Debug log" section; turning it on opens a live console showing every
+ * notable thing Luma does plus RAM/process info. See debug-log.js for the
+ * client-side half of this and src-tauri/src/logging.rs for the backend
+ * half.
  */
 (function () {
   "use strict";
 
-  var tauri = window.__TAURI__;
-  var invoke = tauri.core.invoke;
+  function dlog(level, message) {
+    if (window.LumaDebugLog) window.LumaDebugLog.record(level, message);
+  }
+
+  function getTauriBridge() {
+    return window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__ : null;
+  }
+
+  function showFatalBanner(message) {
+    try {
+      if (document.getElementById("luma-fatal-banner")) return;
+      var el = document.createElement("div");
+      el.id = "luma-fatal-banner";
+      el.style.cssText =
+        "position:fixed;top:0;left:0;right:0;z-index:99999;background:#4a0d0d;" +
+        "color:#fff;font-family:monospace;font-size:12px;line-height:1.4;" +
+        "padding:10px 16px;border-bottom:2px solid #ff4d4d;white-space:pre-wrap;";
+      el.textContent = "Luma: " + message;
+      document.body.appendChild(el);
+    } catch (e) {}
+  }
 
   var backLink = document.getElementById("back-to-search");
   if (backLink) {
@@ -27,9 +52,22 @@
   var openThemesFolderBtn = document.getElementById("open-themes-folder");
   var form = document.getElementById("settings-form");
   var saveStatus = document.getElementById("save-status");
+  var buildStamp = document.getElementById("build-stamp");
+
+  var debugSection = document.getElementById("debug-section");
+  var debugLoggingEnabled = document.getElementById("debug-logging-enabled");
+  var openDebugConsoleBtn = document.getElementById("open-debug-console");
+  var debugConsole = document.getElementById("debug-console");
+  var debugConsoleMeta = document.getElementById("debug-console-meta");
+  var debugConsoleSysinfo = document.getElementById("debug-console-sysinfo");
+  var debugConsoleLog = document.getElementById("debug-console-log");
+  var debugCopyBtn = document.getElementById("debug-copy");
+  var debugClearBtn = document.getElementById("debug-clear");
+  var debugCloseBtn = document.getElementById("debug-close");
 
   var currentConfig = null;
   var selectedThemeId = null;
+  var invoke = null; // set once the Tauri bridge is confirmed ready
 
   // ----- shortcut recorder -----
   var KEY_CODE_MAP = {
@@ -65,13 +103,195 @@
     shortcutInput.blur();
   });
 
+  // ----- debug console -----
+
+  // Shift+L reveals the (otherwise hidden) debug section. Doesn't fire
+  // while the shortcut recorder or another text field has focus, so it
+  // can't clash with actually typing "L".
+  document.addEventListener("keydown", function (e) {
+    var tag = document.activeElement && document.activeElement.tagName;
+    var typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    if (!typing && e.shiftKey && (e.key === "L" || e.key === "l" || e.code === "KeyL")) {
+      if (debugSection.hidden) {
+        debugSection.hidden = false;
+        debugSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        dlog("info", "debug section revealed via Shift+L");
+      }
+    }
+  });
+
+  function formatEntry(entry) {
+    var d = new Date(entry.ts_ms);
+    var time = d.toLocaleTimeString(undefined, { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0");
+    return { time: time, level: entry.level, source: entry.source, message: entry.message };
+  }
+
+  function renderLog(entries) {
+    var atBottom = debugConsoleLog.scrollTop + debugConsoleLog.clientHeight >= debugConsoleLog.scrollHeight - 20;
+
+    var sorted = entries.slice().sort(function (a, b) { return a.ts_ms - b.ts_ms; });
+    debugConsoleLog.innerHTML = sorted.map(function (raw) {
+      var e = formatEntry(raw);
+      var esc = function (s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); };
+      return '<div class="debug-log-line level-' + esc(e.level) + '">' +
+        e.time + ' <span class="debug-log-source">[' + esc(e.source) + ']</span> ' + esc(e.message) +
+        '</div>';
+    }).join("");
+
+    if (atBottom) debugConsoleLog.scrollTop = debugConsoleLog.scrollHeight;
+  }
+
+  // Every JS-side dlog() call writes to localStorage immediately *and*
+  // separately asks the Rust side to log the same message (so it shows up
+  // even from a different window, and to prove the IPC bridge is actually
+  // alive) - so the same message legitimately shows up in both
+  // `serverEntries` and the client's own localStorage copy, a few ms
+  // apart. Dedupe by source+message within a loose time window rather
+  // than requiring an exact ts_ms match, so that pair collapses to one
+  // line instead of showing every event twice.
+  function mergedLogEntries(serverEntries) {
+    var clientEntries = window.LumaDebugLog ? window.LumaDebugLog.all() : [];
+    var all = (serverEntries || []).concat(clientEntries).sort(function (a, b) { return a.ts_ms - b.ts_ms; });
+
+    var lastSeenAt = {}; // "source|message" -> ts_ms of the last kept copy
+    var out = [];
+    all.forEach(function (e) {
+      var key = e.source + "|" + e.message;
+      var last = lastSeenAt[key];
+      if (last !== undefined && e.ts_ms - last < 3000) return; // same event, other pipe
+      lastSeenAt[key] = e.ts_ms;
+      out.push(e);
+    });
+    return out;
+  }
+
+  function formatBytes(n) {
+    if (!n && n !== 0) return "?";
+    var units = ["B", "KB", "MB", "GB"];
+    var i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return n.toFixed(i === 0 ? 0 : 1) + " " + units[i];
+  }
+
+  function formatUptime(secs) {
+    if (!secs && secs !== 0) return "?";
+    var h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = Math.floor(secs % 60);
+    return (h ? h + "h " : "") + (m ? m + "m " : "") + s + "s";
+  }
+
+  var sysinfoTimer = null;
+
+  function refreshSysinfo() {
+    if (!invoke) return;
+    invoke("get_system_info")
+      .then(function (info) {
+        debugConsoleMeta.textContent = "Luma " + info.app_version + " · build " + info.build_sha + " · pid " + info.pid;
+        var windowsList = (info.windows || []).map(function (w) {
+          return w.label + (w.visible ? " (visible)" : " (hidden)");
+        }).join(", ") || "none";
+        debugConsoleSysinfo.innerHTML =
+          "<div><b>Memory:</b> " + formatBytes(info.process_rss_bytes) + " used by Luma / " +
+            formatBytes(info.system_used_mem_bytes) + " of " + formatBytes(info.system_total_mem_bytes) + " system</div>" +
+          "<div><b>Uptime:</b> " + formatUptime(info.process_uptime_secs) + "</div>" +
+          "<div><b>OS:</b> " + info.os + " " + info.os_version + "</div>" +
+          "<div><b>Config dir:</b> " + info.config_dir + "</div>" +
+          "<div><b>Shortcut:</b> " + info.shortcut + " &nbsp; <b>Browser mode:</b> " + info.browser_mode + " &nbsp; <b>Theme:</b> " + info.theme + "</div>" +
+          "<div><b>Windows open:</b> " + windowsList + "</div>";
+      })
+      .catch(function (err) {
+        debugConsoleSysinfo.textContent = "get_system_info failed: " + err;
+      });
+  }
+
+  function refreshLog() {
+    if (invoke) {
+      invoke("get_debug_log")
+        .then(function (serverEntries) { renderLog(mergedLogEntries(serverEntries)); })
+        .catch(function () { renderLog(mergedLogEntries([])); });
+    } else {
+      renderLog(mergedLogEntries([]));
+    }
+  }
+
+  function openDebugConsole() {
+    debugConsole.hidden = false;
+    refreshSysinfo();
+    refreshLog();
+    if (sysinfoTimer) clearInterval(sysinfoTimer);
+    sysinfoTimer = setInterval(function () { refreshSysinfo(); refreshLog(); }, 1000);
+    dlog("info", "debug console opened");
+  }
+
+  function closeDebugConsole() {
+    debugConsole.hidden = true;
+    if (sysinfoTimer) { clearInterval(sysinfoTimer); sysinfoTimer = null; }
+  }
+
+  openDebugConsoleBtn.addEventListener("click", openDebugConsole);
+  debugCloseBtn.addEventListener("click", closeDebugConsole);
+
+  debugClearBtn.addEventListener("click", function () {
+    if (window.LumaDebugLog) window.LumaDebugLog.clear();
+    if (invoke) invoke("clear_debug_log").catch(function () {});
+    renderLog([]);
+  });
+
+  debugCopyBtn.addEventListener("click", function () {
+    var text = debugConsoleLog.innerText;
+    var done = function () {
+      var original = debugCopyBtn.textContent;
+      debugCopyBtn.textContent = "Copied!";
+      setTimeout(function () { debugCopyBtn.textContent = original; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  });
+
+  function fallbackCopy(text, done) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      done();
+    } catch (e) {
+      dlog("warn", "copy-to-clipboard fallback failed: " + e);
+    }
+  }
+
+  debugLoggingEnabled.addEventListener("change", function () {
+    if (currentConfig) {
+      currentConfig.general.debug_logging = debugLoggingEnabled.checked;
+      if (invoke) {
+        invoke("save_config", { newConfig: currentConfig }).catch(function (err) {
+          dlog("error", "failed to persist debug_logging toggle: " + err);
+        });
+      }
+    }
+    if (debugLoggingEnabled.checked) {
+      openDebugConsole();
+    }
+  });
+
   // ----- load current config + supporting data -----
-  async function boot() {
+  async function boot(tauri) {
+    invoke = tauri.core.invoke;
+    dlog("info", "settings window: boot() starting");
+
     var themeCss;
     try {
       currentConfig = await invoke("get_config");
+      dlog("info", "settings: config loaded");
     } catch (err) {
-      console.error("luma: failed to load config", err);
+      dlog("error", "settings: get_config invoke failed: " + err);
+      showFatalBanner("couldn't load your settings (" + err + ") - nothing below will be accurate. Hold Shift+L for the debug log.");
       return;
     }
 
@@ -81,7 +301,7 @@
       style.textContent = themeCss;
       document.head.appendChild(style);
     } catch (err) {
-      console.error("luma: failed to load theme", err);
+      dlog("error", "settings: get_theme_css invoke failed: " + err);
     }
 
     shortcutInput.value = currentConfig.general.shortcut;
@@ -93,6 +313,11 @@
     customCssTextarea.value = currentConfig.appearance.custom_css || "";
     selectedThemeId = currentConfig.appearance.theme;
 
+    if (currentConfig.general.debug_logging) {
+      debugSection.hidden = false;
+      debugLoggingEnabled.checked = true;
+    }
+
     try {
       var engineConfig = await invoke("get_engines");
       (engineConfig.engines || []).forEach(function (engine) {
@@ -103,15 +328,24 @@
       });
       defaultEngineSelect.value = currentConfig.general.default_engine;
     } catch (err) {
-      console.error("luma: failed to load engines", err);
+      dlog("error", "settings: get_engines invoke failed: " + err);
     }
 
     try {
       var themeList = await invoke("list_themes");
       renderThemeOptions(themeList);
     } catch (err) {
-      console.error("luma: failed to list themes", err);
+      dlog("error", "settings: list_themes invoke failed: " + err);
     }
+
+    try {
+      var info = await invoke("get_system_info");
+      buildStamp.textContent = "Luma " + info.app_version + " · build " + info.build_sha + " · pid " + info.pid;
+    } catch (err) {
+      buildStamp.textContent = "Luma - build info unavailable (" + err + ")";
+    }
+
+    dlog("info", "settings: boot() complete");
   }
 
   function renderThemeOptions(themes) {
@@ -130,13 +364,21 @@
   }
 
   openThemesFolderBtn.addEventListener("click", function () {
+    if (!invoke) return;
     invoke("reveal_themes_folder").catch(function (err) {
-      console.error("luma: could not open themes folder", err);
+      dlog("error", "reveal_themes_folder invoke failed: " + err);
     });
   });
 
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
+
+    if (!invoke) {
+      dlog("error", "Save clicked but the Tauri bridge never initialized - nothing to send this to.");
+      saveStatus.textContent = "Failed to save - internal bridge not ready. See debug log (Shift+L).";
+      saveStatus.classList.add("visible");
+      return;
+    }
 
     var browserModeInput = document.querySelector('input[name="browser_mode"]:checked');
 
@@ -146,23 +388,55 @@
     updated.general.default_engine = defaultEngineSelect.value || updated.general.default_engine;
     updated.general.close_spotlight_on_blur = closeOnBlurCheckbox.checked;
     updated.general.start_at_login = startAtLoginCheckbox.checked;
+    updated.general.debug_logging = debugLoggingEnabled.checked;
     updated.window.spotlight_width = parseInt(spotlightWidthInput.value, 10) || 640;
     updated.window.spotlight_position = spotlightPositionSelect.value;
     updated.appearance.theme = selectedThemeId || updated.appearance.theme;
     updated.appearance.custom_css = customCssTextarea.value || "";
 
+    dlog("info", "settings: submitting save with browser_mode=" + updated.general.browser_mode);
+
     try {
       await invoke("save_config", { newConfig: updated });
       currentConfig = updated;
+      dlog("info", "settings: save_config resolved OK");
       saveStatus.textContent = "Saved.";
       saveStatus.classList.add("visible");
       setTimeout(function () { saveStatus.classList.remove("visible"); }, 2000);
     } catch (err) {
-      console.error("luma: failed to save config", err);
-      saveStatus.textContent = "Failed to save - see console.";
+      dlog("error", "settings: save_config invoke failed: " + err);
+      saveStatus.textContent = "Failed to save: " + err;
       saveStatus.classList.add("visible");
     }
   });
 
-  boot();
+  function init(attempt) {
+    attempt = attempt || 1;
+    var tauri = getTauriBridge();
+
+    if (!tauri) {
+      dlog("warn", "settings: window.__TAURI__ not ready yet (attempt " + attempt + "/20)");
+      if (attempt < 20) {
+        setTimeout(function () { init(attempt + 1); }, 100);
+        return;
+      }
+      dlog("error", "settings: window.__TAURI__ never became available after 20 attempts (2s)");
+      buildStamp.textContent = "Luma - internal bridge did not start";
+      showFatalBanner(
+        "internal bridge didn't start in this window - nothing here will load or save. " +
+          "Try restarting Luma. The client-side log above still recorded this, even " +
+          "though it couldn't reach the backend log."
+      );
+      return;
+    }
+
+    if (attempt > 1) dlog("info", "settings: window.__TAURI__ became available on attempt " + attempt);
+
+    boot(tauri).catch(function (err) {
+      dlog("error", "settings: boot() threw: " + (err && err.message ? err.message : err));
+      showFatalBanner("failed to start up (" + (err && err.message ? err.message : err) + ")");
+    });
+  }
+
+  init();
 })();

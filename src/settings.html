@@ -74,13 +74,45 @@
         <textarea id="custom-css" class="settings-input" placeholder="/* e.g. :root { --color-purple: #00e0a8; } */"></textarea>
       </section>
 
+      <section class="settings-section" id="debug-section" hidden>
+        <h2>Debug log</h2>
+        <p class="help">
+          Records every notable thing Luma does (search submitted, results
+          opened, config saved, errors) plus live RAM/process info, so a bug
+          can be diagnosed without a terminal. You found this by holding
+          <code>Shift+L</code> on this page - it'll stay revealed once
+          enabled below.
+        </p>
+        <div class="settings-row">
+          <label class="checkbox-option"><input type="checkbox" id="debug-logging-enabled"> Enable debug logging &amp; keep this section visible</label>
+        </div>
+        <button type="button" class="btn" id="open-debug-console">Open debug console</button>
+      </section>
+
       <div class="settings-actions">
         <button type="submit" class="btn primary">Save</button>
         <span id="save-status" class="save-status"></span>
       </div>
     </form>
+
+    <p class="build-stamp" id="build-stamp">Luma - loading…</p>
   </div>
 
+  <div id="debug-console" class="debug-console" hidden>
+    <div class="debug-console-header">
+      <strong>Luma debug console</strong>
+      <span id="debug-console-meta" class="debug-console-meta"></span>
+      <span class="debug-console-actions">
+        <button type="button" class="btn" id="debug-copy">Copy</button>
+        <button type="button" class="btn" id="debug-clear">Clear</button>
+        <button type="button" class="btn" id="debug-close">Close</button>
+      </span>
+    </div>
+    <div id="debug-console-sysinfo" class="debug-console-sysinfo"></div>
+    <pre id="debug-console-log" class="debug-console-log"></pre>
+  </div>
+
+  <script src="debug-log.js"></script>
   <script src="vendor/engine/bangdeck.js"></script>
   <script src="settings.js"></script>
 </body>

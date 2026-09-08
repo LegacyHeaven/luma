@@ -122,3 +122,95 @@ textarea.settings-input {
 }
 
 .save-status.visible { opacity: .85; }
+
+.build-stamp {
+  margin-top: 18px;
+  font-family: var(--font-family, monospace);
+  font-size: 1rem;
+  color: var(--color-gray, #c4c4c4);
+  opacity: .4;
+  letter-spacing: .5px;
+  user-select: text;
+}
+
+/* ----- Debug console (Settings, hold Shift+L) ----- */
+
+/* `display: flex` here would otherwise beat the browser's default
+   `[hidden] { display: none }` rule - equal specificity, but an author
+   stylesheet always wins over the user-agent one regardless of order -
+   so the console would stay visible even with the `hidden` attribute set.
+   Scoping the flex rule to :not([hidden]) keeps the attribute in charge. */
+.debug-console:not([hidden]) {
+  position: fixed;
+  inset: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 4, 14, .97);
+  border: 1px solid var(--box-border-color, #3a1f5c);
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .6), 0 0 0 1px rgba(128, 0, 255, .2);
+  font-family: var(--font-family, monospace);
+  color: var(--color-white, #fff);
+  overflow: hidden;
+}
+
+.debug-console-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--box-border-color, #3a1f5c);
+  background: rgba(255, 255, 255, .02);
+  flex-wrap: wrap;
+}
+
+.debug-console-meta {
+  font-size: 1.1rem;
+  color: var(--color-light-purple, #cf59e6);
+  opacity: .8;
+}
+
+.debug-console-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.debug-console-actions .btn {
+  font-size: 1.1rem;
+  padding: 4px 12px;
+}
+
+.debug-console-sysinfo {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--box-border-color, #3a1f5c);
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--color-gray, #c4c4c4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 20px;
+}
+
+.debug-console-sysinfo b { color: var(--color-white, #fff); font-weight: 600; }
+
+.debug-console-log {
+  flex: 1;
+  margin: 0;
+  padding: 12px 16px;
+  overflow-y: auto;
+  font-size: 1.15rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.debug-log-line { padding: 1px 0; }
+.debug-log-line.level-error { color: #ff6b6b; }
+.debug-log-line.level-warn { color: #ffcf6b; }
+.debug-log-line.level-info { color: var(--color-gray, #c4c4c4); }
+.debug-log-line .debug-log-source {
+  color: var(--color-light-purple, #cf59e6);
+  opacity: .7;
+}
