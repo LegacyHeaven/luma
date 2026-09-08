@@ -1,0 +1,9 @@
+{
+  "id": "luma-amber",
+  "name": "Amber Sunset",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "A warm amber/orange sunset theme.",
+  "type": "dark",
+  "css": "theme.css"
+}

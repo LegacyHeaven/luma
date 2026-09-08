@@ -1,6 +1,6 @@
 use crate::{config::LumaConfig, shortcuts, themes, window};
 use std::sync::Mutex;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, State};
 
 pub struct AppState {
     pub config: Mutex<LumaConfig>,
@@ -48,7 +48,18 @@ pub fn save_config(
         }
     }
 
+    let old_main_window_size = state.config.lock().unwrap().window.main_window_size.clone();
+    if new_config.window.main_window_size != old_main_window_size {
+        window::apply_main_window_size(&app, &new_config.window.main_window_size);
+    }
+
     *state.config.lock().unwrap() = new_config;
+
+    // Lets any open window (chiefly the spotlight, which is created once
+    // and never reloads) know it should re-fetch config/theme CSS and
+    // re-apply it live - see main.js's "luma://config-changed" listener.
+    let _ = app.emit("luma://config-changed", ());
+
     crate::logging::info(&app, "save_config: saved successfully");
     Ok(())
 }

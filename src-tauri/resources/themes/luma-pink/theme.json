@@ -1,0 +1,9 @@
+{
+  "id": "luma-pink",
+  "name": "Neon Pink",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "A vibrant hot-pink/magenta theme with a synthwave edge.",
+  "type": "dark",
+  "css": "theme.css"
+}

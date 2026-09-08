@@ -12,6 +12,18 @@ pub const MAIN_LABEL: &str = "main";
 pub const SPOTLIGHT_LABEL: &str = "spotlight";
 pub const BROWSER_LABEL: &str = "browser";
 
+/// Main window size presets (width, height) - see `WindowConfig::main_window_size`.
+/// "default" here is already smaller than Luma's original 900x640, which
+/// Julian felt was too big/overwhelming; "compact" is a further step down
+/// for anyone who wants the window to feel closer to the spotlight itself.
+pub fn main_window_dimensions(size: &str) -> (f64, f64) {
+    match size {
+        "compact" => (620.0, 460.0),
+        "roomy" => (900.0, 640.0),
+        _ => (760.0, 560.0),
+    }
+}
+
 pub fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(MAIN_LABEL)
 }
@@ -24,10 +36,16 @@ pub fn show_main_window(app: &AppHandle) {
             let _ = w.set_focus();
         }
         None => {
+            let size = app
+                .try_state::<crate::commands::AppState>()
+                .map(|s| s.config.lock().unwrap().window.main_window_size.clone())
+                .unwrap_or_else(|| "default".into());
+            let (width, height) = main_window_dimensions(&size);
+
             if let Err(err) =
                 WebviewWindowBuilder::new(app, MAIN_LABEL, WebviewUrl::App("index.html".into()))
                     .title("Luma")
-                    .inner_size(900.0, 640.0)
+                    .inner_size(width, height)
                     .min_inner_size(480.0, 360.0)
                     .center()
                     .background_color(APP_BACKGROUND)
@@ -37,6 +55,24 @@ pub fn show_main_window(app: &AppHandle) {
             }
         }
     }
+}
+
+/// Resizes the main window (if it's currently open) to match a
+/// `WindowConfig::main_window_size` preset, and re-centers it - called on
+/// startup and whenever Settings saves a changed size.
+pub fn apply_main_window_size(app: &AppHandle, size: &str) {
+    let Some(w) = main_window(app) else {
+        return;
+    };
+    let (width, height) = main_window_dimensions(size);
+    if let Err(err) = w.set_size(tauri::Size::Logical(tauri::LogicalSize { width, height })) {
+        crate::logging::error(
+            app,
+            format!("apply_main_window_size: set_size failed: {err}"),
+        );
+        return;
+    }
+    let _ = w.center();
 }
 
 pub fn spotlight_window(app: &AppHandle) -> Option<WebviewWindow> {

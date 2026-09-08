@@ -90,6 +90,12 @@ fn main() {
             let cfg = config::load(&handle);
             config::ensure_themes_dir(&handle);
 
+            // The window array in tauri.conf.json creates the main window
+            // at its default size before this closure ever runs, so a
+            // saved "compact"/"roomy" preference needs to be applied here -
+            // a no-op resize when it's already "default".
+            window::apply_main_window_size(&handle, &cfg.window.main_window_size);
+
             app.manage(AppState {
                 config: Mutex::new(cfg.clone()),
             });

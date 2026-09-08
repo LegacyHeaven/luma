@@ -309,6 +309,10 @@
     closeOnBlurCheckbox.checked = !!currentConfig.general.close_spotlight_on_blur;
     spotlightWidthInput.value = currentConfig.window.spotlight_width;
     spotlightPositionSelect.value = currentConfig.window.spotlight_position;
+    var mainSizeInput = document.querySelector(
+      'input[name="main_window_size"][value="' + (currentConfig.window.main_window_size || "default") + '"]'
+    );
+    if (mainSizeInput) mainSizeInput.checked = true;
     startAtLoginCheckbox.checked = !!currentConfig.general.start_at_login;
     customCssTextarea.value = currentConfig.appearance.custom_css || "";
     selectedThemeId = currentConfig.appearance.theme;
@@ -391,6 +395,8 @@
     updated.general.debug_logging = debugLoggingEnabled.checked;
     updated.window.spotlight_width = parseInt(spotlightWidthInput.value, 10) || 640;
     updated.window.spotlight_position = spotlightPositionSelect.value;
+    var mainSizeChecked = document.querySelector('input[name="main_window_size"]:checked');
+    updated.window.main_window_size = mainSizeChecked ? mainSizeChecked.value : "default";
     updated.appearance.theme = selectedThemeId || updated.appearance.theme;
     updated.appearance.custom_css = customCssTextarea.value || "";
 

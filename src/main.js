@@ -126,6 +126,24 @@
 
     dlog("info", "UI mounted, ready for input");
 
+    // The spotlight window is created once and then just shown/hidden by
+    // toggle_spotlight - it never reloads index.html - so without this,
+    // changing the theme in Settings would only be visible in the spotlight
+    // after quitting and relaunching Luma. save_config emits this once the
+    // new config is written; re-fetching and re-applying the theme/custom
+    // CSS here is what makes the spotlight pill re-color live instead.
+    tauri.event.listen("luma://config-changed", async function () {
+      try {
+        var freshConfig = await invoke("get_config");
+        var freshThemeCss = await invoke("get_theme_css", { themeId: freshConfig.appearance.theme });
+        applyThemeCss(freshThemeCss);
+        applyCustomCss(freshConfig.appearance.custom_css);
+        dlog("info", (isSpotlight ? "spotlight" : "main") + ": re-applied theme '" + freshConfig.appearance.theme + "' after config change");
+      } catch (err) {
+        dlog("error", "config-changed handler failed: " + err);
+      }
+    });
+
     if (isSpotlight) {
       var closeOnBlur = !config.general || config.general.close_spotlight_on_blur !== false;
 

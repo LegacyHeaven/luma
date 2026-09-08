@@ -59,6 +59,11 @@ pub struct WindowConfig {
     pub spotlight_width: u32,
     /// "top-center" or "center"
     pub spotlight_position: String,
+    /// "compact" | "default" | "roomy" - see window::main_window_dimensions().
+    /// Julian's feedback was that the main window felt too big by default,
+    /// so "default" here is deliberately smaller than the original 900x640,
+    /// and "compact" gives an even smaller option.
+    pub main_window_size: String,
 }
 
 impl Default for WindowConfig {
@@ -66,6 +71,7 @@ impl Default for WindowConfig {
         Self {
             spotlight_width: 640,
             spotlight_position: "top-center".into(),
+            main_window_size: "default".into(),
         }
     }
 }
@@ -132,33 +138,60 @@ pub fn save(app: &AppHandle, cfg: &LumaConfig) -> Result<(), String> {
     fs::write(&path, text).map_err(|e| e.to_string())
 }
 
-/// The default theme's files, compiled straight into the binary. Seeding
-/// `<config dir>/themes/luma-default` from these (rather than from a
-/// resource file next to the executable) is what lets a bare downloaded
-/// `luma` binary work with zero other files alongside it.
-const DEFAULT_THEME_CSS: &str = include_str!("../resources/themes/luma-default/theme.css");
-const DEFAULT_THEME_JSON: &str = include_str!("../resources/themes/luma-default/theme.json");
+/// The built-in themes' files, compiled straight into the binary. Seeding
+/// `<config dir>/themes/<id>` from these (rather than from resource files
+/// next to the executable) is what lets a bare downloaded `luma` binary
+/// work with zero other files alongside it.
+const BUILTIN_THEMES: &[(&str, &str, &str)] = &[
+    (
+        "luma-default",
+        include_str!("../resources/themes/luma-default/theme.css"),
+        include_str!("../resources/themes/luma-default/theme.json"),
+    ),
+    (
+        "luma-material-blue",
+        include_str!("../resources/themes/luma-material-blue/theme.css"),
+        include_str!("../resources/themes/luma-material-blue/theme.json"),
+    ),
+    (
+        "luma-pink",
+        include_str!("../resources/themes/luma-pink/theme.css"),
+        include_str!("../resources/themes/luma-pink/theme.json"),
+    ),
+    (
+        "luma-emerald",
+        include_str!("../resources/themes/luma-emerald/theme.css"),
+        include_str!("../resources/themes/luma-emerald/theme.json"),
+    ),
+    (
+        "luma-amber",
+        include_str!("../resources/themes/luma-amber/theme.css"),
+        include_str!("../resources/themes/luma-amber/theme.json"),
+    ),
+];
 
-/// Makes sure `<config dir>/themes/luma-default` exists and matches the
-/// copy of the theme compiled into this binary.
+/// Makes sure every built-in theme folder under `<config dir>/themes/`
+/// exists and matches the copy compiled into this binary.
 ///
-/// This always overwrites `luma-default`'s files (not just on first run) -
-/// it's the built-in theme, not a place users are meant to edit in place
-/// (the Theming docs tell people to copy the folder first), so re-seeding
-/// it on every launch is what makes a Luma update actually change how the
+/// This always overwrites the built-in themes' files (not just on first
+/// run) - they're not a place users are meant to edit in place (the
+/// Theming docs tell people to copy the folder first), so re-seeding them
+/// on every launch is what makes a Luma update actually change how the
 /// app looks instead of a user's on-disk copy silently going stale. Anyone
 /// customizing keeps their own theme folder, which this never touches.
 pub fn ensure_themes_dir(app: &AppHandle) {
-    let dest = themes_dir(app).join("luma-default");
+    for (id, css, json) in BUILTIN_THEMES {
+        let dest = themes_dir(app).join(id);
 
-    if let Err(err) = fs::create_dir_all(&dest) {
-        crate::logging::error(app, format!("failed to seed default theme: {err}"));
-        return;
-    }
-    if let Err(err) = fs::write(dest.join("theme.css"), DEFAULT_THEME_CSS) {
-        crate::logging::error(app, format!("failed to seed default theme.css: {err}"));
-    }
-    if let Err(err) = fs::write(dest.join("theme.json"), DEFAULT_THEME_JSON) {
-        crate::logging::error(app, format!("failed to seed default theme.json: {err}"));
+        if let Err(err) = fs::create_dir_all(&dest) {
+            crate::logging::error(app, format!("failed to seed built-in theme {id}: {err}"));
+            continue;
+        }
+        if let Err(err) = fs::write(dest.join("theme.css"), css) {
+            crate::logging::error(app, format!("failed to seed {id} theme.css: {err}"));
+        }
+        if let Err(err) = fs::write(dest.join("theme.json"), json) {
+            crate::logging::error(app, format!("failed to seed {id} theme.json: {err}"));
+        }
     }
 }
