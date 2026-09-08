@@ -20,12 +20,18 @@ pub fn save_config(
     crate::logging::info(&app, format!("save_config called: {new_config:?}"));
 
     if let Err(err) = crate::config::save(&app, &new_config) {
-        crate::logging::error(&app, format!("save_config: writing config.toml failed: {err}"));
+        crate::logging::error(
+            &app,
+            format!("save_config: writing config.toml failed: {err}"),
+        );
         return Err(err);
     }
 
     if let Err(err) = shortcuts::reregister(&app, &new_config.general.shortcut) {
-        crate::logging::error(&app, format!("save_config: could not apply new shortcut: {err}"));
+        crate::logging::error(
+            &app,
+            format!("save_config: could not apply new shortcut: {err}"),
+        );
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -115,14 +121,20 @@ pub fn open_result(
 #[tauri::command]
 pub fn open_in_system_browser(app: AppHandle, url: String) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    crate::logging::info(&app, format!("open_in_system_browser: calling opener.open_url({url:?})"));
+    crate::logging::info(
+        &app,
+        format!("open_in_system_browser: calling opener.open_url({url:?})"),
+    );
     match app.opener().open_url(url, None::<&str>) {
         Ok(()) => {
             crate::logging::info(&app, "open_in_system_browser: opener.open_url returned Ok");
             Ok(())
         }
         Err(err) => {
-            crate::logging::error(&app, format!("open_in_system_browser: opener.open_url returned Err: {err}"));
+            crate::logging::error(
+                &app,
+                format!("open_in_system_browser: opener.open_url returned Err: {err}"),
+            );
             Err(err.to_string())
         }
     }

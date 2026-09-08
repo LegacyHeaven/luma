@@ -105,7 +105,10 @@ pub fn load(app: &AppHandle) -> LumaConfig {
                 cfg
             }
             Err(err) => {
-                crate::logging::error(app, format!("failed to parse {path:?} ({err}) - using defaults"));
+                crate::logging::error(
+                    app,
+                    format!("failed to parse {path:?} ({err}) - using defaults"),
+                );
                 LumaConfig::default()
             }
         },

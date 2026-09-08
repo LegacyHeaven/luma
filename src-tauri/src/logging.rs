@@ -132,14 +132,20 @@ pub struct WindowInfo {
 /// memory, uptime, the live config, and which windows exist - for the
 /// debug console's system-info panel.
 #[tauri::command]
-pub fn get_system_info(app: AppHandle, state: tauri::State<crate::commands::AppState>) -> SystemInfo {
+pub fn get_system_info(
+    app: AppHandle,
+    state: tauri::State<crate::commands::AppState>,
+) -> SystemInfo {
     let pid = std::process::id();
 
     let mut sys = System::new_with_specifics(
         RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
     );
     sys.refresh_memory();
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]), true);
+    sys.refresh_processes(
+        sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]),
+        true,
+    );
 
     let (rss, uptime) = sys
         .process(Pid::from_u32(pid))
@@ -167,7 +173,9 @@ pub fn get_system_info(app: AppHandle, state: tauri::State<crate::commands::AppS
         system_used_mem_bytes: sys.used_memory(),
         os: System::name().unwrap_or_else(|| "unknown".into()),
         os_version: System::os_version().unwrap_or_else(|| "unknown".into()),
-        config_dir: crate::config::config_dir(&app).to_string_lossy().to_string(),
+        config_dir: crate::config::config_dir(&app)
+            .to_string_lossy()
+            .to_string(),
         shortcut: cfg.general.shortcut,
         browser_mode: cfg.general.browser_mode,
         theme: cfg.appearance.theme,

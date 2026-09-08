@@ -105,7 +105,10 @@ pub fn toggle_spotlight(app: &AppHandle, width: f64, placement: &str) {
     match ensure_spotlight_window(app, width) {
         Ok(window) => {
             let visible = window.is_visible().unwrap_or(false);
-            crate::logging::info(app, format!("toggle_spotlight: currently visible={visible}, toggling"));
+            crate::logging::info(
+                app,
+                format!("toggle_spotlight: currently visible={visible}, toggling"),
+            );
             if visible {
                 let _ = window.hide();
             } else {
@@ -115,7 +118,10 @@ pub fn toggle_spotlight(app: &AppHandle, width: f64, placement: &str) {
                 let _ = window.emit("luma://spotlight-shown", ());
             }
         }
-        Err(err) => crate::logging::error(app, format!("toggle_spotlight: failed to create spotlight window: {err}")),
+        Err(err) => crate::logging::error(
+            app,
+            format!("toggle_spotlight: failed to create spotlight window: {err}"),
+        ),
     }
 }
 
@@ -138,14 +144,20 @@ pub fn open_in_builtin_browser(app: &AppHandle, url_str: &str) -> Result<(), Str
     })?;
 
     if let Some(existing) = app.get_webview_window(BROWSER_LABEL) {
-        crate::logging::info(app, format!("open_in_builtin_browser: reusing existing window, navigating to {parsed}"));
+        crate::logging::info(
+            app,
+            format!("open_in_builtin_browser: reusing existing window, navigating to {parsed}"),
+        );
         existing.navigate(parsed).map_err(|e| e.to_string())?;
         let _ = existing.show();
         let _ = existing.set_focus();
         return Ok(());
     }
 
-    crate::logging::info(app, format!("open_in_builtin_browser: creating new window for {parsed}"));
+    crate::logging::info(
+        app,
+        format!("open_in_builtin_browser: creating new window for {parsed}"),
+    );
     let toolbar_js = include_str!("../resources/builtin-browser-toolbar.js");
 
     WebviewWindowBuilder::new(app, BROWSER_LABEL, WebviewUrl::External(parsed))
