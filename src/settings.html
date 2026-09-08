@@ -72,6 +72,19 @@
       </section>
 
       <section class="settings-section">
+        <h2>Updates</h2>
+        <p class="help">Luma can check GitHub for a newer build and install it itself - no separate download needed.</p>
+        <div class="settings-row">
+          <label class="checkbox-option"><input type="checkbox" id="check-updates-enabled"> Automatically check for updates on launch</label>
+        </div>
+        <div class="settings-row update-row">
+          <button type="button" class="btn" id="check-updates-btn">Check for updates</button>
+          <span id="update-status" class="update-status"></span>
+        </div>
+        <button type="button" class="btn primary" id="install-update-btn" hidden>Download &amp; install update</button>
+      </section>
+
+      <section class="settings-section">
         <h2>Theme</h2>
         <p class="help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see the wiki's Theming page.</p>
         <div class="settings-row" id="theme-options"></div>

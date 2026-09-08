@@ -82,10 +82,47 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+
+      # The in-app updater (src-tauri/src/updater.rs) has no version tag to
+      # compare against - this workflow re-uses the same `1R` release tag
+      # forever instead of cutting a new one per build - so it compares
+      # this file's `commit` field against the running build's own
+      # embedded commit (build.rs) instead. Must stay in the platform-key
+      # <-> asset_name shape updater.rs's platform_key() expects.
+      - name: Build update manifest.json
+        run: |
+          python3 - "$GITHUB_SHA" <<'PY'
+          import hashlib, json, sys, datetime, pathlib
+
+          commit = sys.argv[1][:12]
+          asset_names = {
+              "linux-x64": "luma-linux-x64",
+              "macos-arm64": "luma-macos-arm64",
+              "macos-x64": "luma-macos-x64",
+              "windows-x64": "luma-windows-x64.exe",
+          }
+
+          assets = {}
+          for key, filename in asset_names.items():
+              path = pathlib.Path("dist") / filename
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              assets[key] = {"file": filename, "sha256": digest}
+
+          manifest = {
+              "commit": commit,
+              "built_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "assets": assets,
+          }
+
+          pathlib.Path("dist/manifest.json").write_text(json.dumps(manifest, indent=2))
+          print(json.dumps(manifest, indent=2))
+          PY
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -107,3 +144,7 @@ jobs:
             `chmod +x luma-linux-x64`. On macOS, since the binary isn't
             notarized, right-click it and choose Open the first time to get
             past Gatekeeper.
+
+            Luma checks this release for updates on launch and can install
+            them itself (Settings → Updates) - `manifest.json` here is what
+            it reads to do that, not something you need to touch.

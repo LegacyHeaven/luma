@@ -38,6 +38,80 @@
     }
   }
 
+  // A small "Update available" toast for the main window - see
+  // check_for_update/apply_update in src-tauri/src/updater.rs. Styled
+  // inline rather than through theme.css since this is chrome, not
+  // themable page content (same reasoning as showFatalBanner above).
+  function showUpdateBanner(invoke) {
+    try {
+      if (document.getElementById("luma-update-banner")) return;
+
+      var el = document.createElement("div");
+      el.id = "luma-update-banner";
+      el.style.cssText =
+        "position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:9998;" +
+        "display:flex;align-items:center;gap:12px;max-width:calc(100% - 40px);" +
+        "background:rgba(18,10,28,.96);color:#fff;font-family:monospace;font-size:13px;" +
+        "padding:10px 14px;border-radius:8px;border:1px solid rgba(207,89,230,.4);" +
+        "box-shadow:0 10px 30px rgba(0,0,0,.5);";
+
+      var text = document.createElement("span");
+      text.textContent = "A new version of Luma is available.";
+
+      var updateBtn = document.createElement("button");
+      updateBtn.type = "button";
+      updateBtn.textContent = "Update now";
+      updateBtn.style.cssText =
+        "font-family:monospace;font-size:13px;padding:5px 12px;border-radius:5px;" +
+        "border:1px solid rgba(207,89,230,.6);background:rgba(255,255,255,.06);" +
+        "color:#fff;cursor:pointer;flex-shrink:0;";
+
+      var laterBtn = document.createElement("button");
+      laterBtn.type = "button";
+      laterBtn.textContent = "Later";
+      laterBtn.style.cssText =
+        "font-family:monospace;font-size:12px;padding:5px 10px;border-radius:5px;" +
+        "border:1px solid transparent;background:transparent;color:#c4c4c4;" +
+        "cursor:pointer;opacity:.75;flex-shrink:0;";
+
+      var bridge = getTauriBridge();
+      if (bridge && bridge.event) {
+        bridge.event.listen("luma://update-progress", function (event) {
+          var stage = event.payload && event.payload.stage;
+          if (stage === "downloading") text.textContent = "Downloading the update…";
+          else if (stage === "installing") text.textContent = "Installing - Luma will restart itself…";
+          else if (stage === "checking") text.textContent = "Checking the release…";
+        });
+      }
+
+      updateBtn.addEventListener("click", function () {
+        dlog("info", "update banner: user clicked Update now");
+        text.textContent = "Starting the update…";
+        updateBtn.disabled = true;
+        laterBtn.remove();
+        invoke("apply_update").catch(function (err) {
+          // A genuine failure resolves here; success instead just ends
+          // with this whole window going away as the app restarts, so
+          // there's no matching "it worked" branch to handle.
+          dlog("error", "apply_update invoke failed: " + err);
+          text.textContent = "Update failed: " + err;
+          updateBtn.disabled = false;
+        });
+      });
+
+      laterBtn.addEventListener("click", function () {
+        el.remove();
+      });
+
+      el.appendChild(text);
+      el.appendChild(updateBtn);
+      el.appendChild(laterBtn);
+      document.body.appendChild(el);
+    } catch (e) {
+      dlog("warn", "showUpdateBanner failed: " + e);
+    }
+  }
+
   var params = new URLSearchParams(window.location.search);
   var isSpotlight = params.get("mode") === "spotlight";
 
@@ -143,6 +217,29 @@
         dlog("error", "config-changed handler failed: " + err);
       }
     });
+
+    // Only the main window checks for updates on launch - the spotlight is
+    // a small floating search bar, and it's the one window guaranteed to
+    // exist right after startup (the spotlight/browser windows are created
+    // lazily). See src-tauri/src/updater.rs for why this isn't Tauri's
+    // official updater plugin, and settings.js for the manual "Check for
+    // updates" button that calls the same commands.
+    if (!isSpotlight && (!config.general || config.general.check_for_updates !== false)) {
+      invoke("check_for_update")
+        .then(function (status) {
+          if (status.checked_ok && status.available) {
+            dlog("info", "update available: " + status.current_commit + " -> " + status.latest_commit);
+            showUpdateBanner(invoke);
+          } else if (!status.checked_ok) {
+            dlog("warn", "update check failed: " + status.error);
+          } else {
+            dlog("info", "no update available (running " + status.current_commit + ")");
+          }
+        })
+        .catch(function (err) {
+          dlog("warn", "check_for_update invoke failed: " + err);
+        });
+    }
 
     if (isSpotlight) {
       var closeOnBlur = !config.general || config.general.close_spotlight_on_blur !== false;

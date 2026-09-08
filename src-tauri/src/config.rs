@@ -20,6 +20,10 @@ pub struct GeneralConfig {
     /// itself is always collected regardless of this flag - it only
     /// controls whether the section/console auto-shows.
     pub debug_logging: bool,
+    /// Whether the main window silently checks for a new build on launch
+    /// and shows the "Update available" banner - see src/updater.rs. The
+    /// Settings page's "Check for updates" button works either way.
+    pub check_for_updates: bool,
 }
 
 impl Default for GeneralConfig {
@@ -31,6 +35,7 @@ impl Default for GeneralConfig {
             start_at_login: false,
             close_spotlight_on_blur: true,
             debug_logging: false,
+            check_for_updates: true,
         }
     }
 }

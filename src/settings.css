@@ -153,6 +153,17 @@ textarea.settings-input {
   user-select: text;
 }
 
+.update-row { margin-top: 4px; }
+
+.update-status {
+  font-family: var(--font-family, monospace);
+  font-size: 1.1rem;
+  color: var(--color-gray, #c4c4c4);
+  opacity: .75;
+}
+
+#install-update-btn { margin-top: 12px; }
+
 /* ----- Debug console (Settings, hold Shift+L) ----- */
 
 /* `display: flex` here would otherwise beat the browser's default

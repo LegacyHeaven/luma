@@ -54,6 +54,11 @@
   var saveStatus = document.getElementById("save-status");
   var buildStamp = document.getElementById("build-stamp");
 
+  var checkUpdatesEnabled = document.getElementById("check-updates-enabled");
+  var checkUpdatesBtn = document.getElementById("check-updates-btn");
+  var updateStatus = document.getElementById("update-status");
+  var installUpdateBtn = document.getElementById("install-update-btn");
+
   var debugSection = document.getElementById("debug-section");
   var debugLoggingEnabled = document.getElementById("debug-logging-enabled");
   var openDebugConsoleBtn = document.getElementById("open-debug-console");
@@ -280,6 +285,74 @@
     }
   });
 
+  // ----- updates -----
+  // See check_for_update/apply_update in src-tauri/src/updater.rs - same
+  // commands the main window's "Update available" banner uses on launch,
+  // this is just the manual/visible half of it.
+  var pendingUpdate = null;
+
+  function checkForUpdates() {
+    if (!invoke) return;
+    checkUpdatesBtn.disabled = true;
+    updateStatus.textContent = "Checking…";
+    installUpdateBtn.hidden = true;
+    pendingUpdate = null;
+
+    invoke("check_for_update")
+      .then(function (status) {
+        checkUpdatesBtn.disabled = false;
+        if (!status.checked_ok) {
+          updateStatus.textContent = "Couldn't check for updates: " + status.error;
+          dlog("warn", "check_for_update failed: " + status.error);
+          return;
+        }
+        if (status.available) {
+          pendingUpdate = status;
+          updateStatus.textContent = "Update available (build " + status.latest_commit + ").";
+          installUpdateBtn.hidden = false;
+          dlog("info", "settings: update available " + status.current_commit + " -> " + status.latest_commit);
+        } else {
+          updateStatus.textContent = "You're up to date (build " + status.current_commit + ").";
+        }
+      })
+      .catch(function (err) {
+        checkUpdatesBtn.disabled = false;
+        updateStatus.textContent = "Couldn't check for updates: " + err;
+        dlog("error", "check_for_update invoke failed: " + err);
+      });
+  }
+
+  function installUpdate() {
+    if (!invoke || !pendingUpdate) return;
+    installUpdateBtn.disabled = true;
+    checkUpdatesBtn.disabled = true;
+    updateStatus.textContent = "Starting the update…";
+
+    invoke("apply_update").catch(function (err) {
+      // A real failure resolves here; success instead ends with this
+      // window going away as the app restarts, so there's no "it worked"
+      // branch to handle on this side.
+      dlog("error", "apply_update invoke failed: " + err);
+      updateStatus.textContent = "Update failed: " + err;
+      installUpdateBtn.disabled = false;
+      checkUpdatesBtn.disabled = false;
+    });
+  }
+
+  checkUpdatesBtn.addEventListener("click", checkForUpdates);
+  installUpdateBtn.addEventListener("click", installUpdate);
+
+  checkUpdatesEnabled.addEventListener("change", function () {
+    if (currentConfig) {
+      currentConfig.general.check_for_updates = checkUpdatesEnabled.checked;
+      if (invoke) {
+        invoke("save_config", { newConfig: currentConfig }).catch(function (err) {
+          dlog("error", "failed to persist check_for_updates toggle: " + err);
+        });
+      }
+    }
+  });
+
   // ----- load current config + supporting data -----
   async function boot(tauri) {
     invoke = tauri.core.invoke;
@@ -314,8 +387,16 @@
     );
     if (mainSizeInput) mainSizeInput.checked = true;
     startAtLoginCheckbox.checked = !!currentConfig.general.start_at_login;
+    checkUpdatesEnabled.checked = currentConfig.general.check_for_updates !== false;
     customCssTextarea.value = currentConfig.appearance.custom_css || "";
     selectedThemeId = currentConfig.appearance.theme;
+
+    tauri.event.listen("luma://update-progress", function (event) {
+      var stage = event.payload && event.payload.stage;
+      if (stage === "checking") updateStatus.textContent = "Checking the release…";
+      else if (stage === "downloading") updateStatus.textContent = "Downloading the update…";
+      else if (stage === "installing") updateStatus.textContent = "Installing - Luma will restart itself…";
+    });
 
     if (currentConfig.general.debug_logging) {
       debugSection.hidden = false;
@@ -393,6 +474,7 @@
     updated.general.close_spotlight_on_blur = closeOnBlurCheckbox.checked;
     updated.general.start_at_login = startAtLoginCheckbox.checked;
     updated.general.debug_logging = debugLoggingEnabled.checked;
+    updated.general.check_for_updates = checkUpdatesEnabled.checked;
     updated.window.spotlight_width = parseInt(spotlightWidthInput.value, 10) || 640;
     updated.window.spotlight_position = spotlightPositionSelect.value;
     var mainSizeChecked = document.querySelector('input[name="main_window_size"]:checked');

@@ -24,6 +24,14 @@ url = "2"
 # Powers the in-app debug console's "system info" panel (RAM/PID/uptime) -
 # see src/logging.rs and the get_system_info command.
 sysinfo = "0.32"
+# Powers the in-app updater (src/updater.rs): fetches manifest.json and
+# downloads the new binary from the GitHub release. Default features pull
+# in rustls rather than a system OpenSSL, so this needs nothing extra in
+# CI on any of the three platforms.
+ureq = "2"
+# Verifies a downloaded update's sha256 against manifest.json before it's
+# ever allowed to replace the running binary.
+sha2 = "0.10"
 
 [profile.release]
 panic = "abort"

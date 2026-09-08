@@ -7,6 +7,7 @@ mod logging;
 mod shortcuts;
 mod themes;
 mod tray;
+mod updater;
 mod window;
 
 use commands::AppState;
@@ -73,6 +74,8 @@ fn main() {
             logging::get_debug_log,
             logging::clear_debug_log,
             logging::log_client_event,
+            updater::check_for_update,
+            updater::apply_update,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
