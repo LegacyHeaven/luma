@@ -1,6 +1,26 @@
 /* Chrome for the Settings page - layered on top of whichever theme.css
    the main search page is using, so it inherits the same color variables. */
 
+/* The theme's `body { overflow: hidden; display: flex; align-items: center;
+   justify-content: center; }` is exactly right for the short search page,
+   but Settings has grown taller than the window (especially with the debug
+   console section) - centered + hidden overflow means the bottom of the
+   page, Save button included, becomes completely unreachable with no way
+   to scroll to it. A plain `body` selector here would still lose to the
+   theme's `body` rule depending on injection order (theme.css is appended
+   into <head> *after* this stylesheet loads, and equal-specificity rules
+   go to whichever comes later) - so this needs a class to reliably win
+   regardless of order. See settings.html's <body class="settings-page">. */
+body.settings-page {
+  display: block;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+body.settings-page .settings-wrapper {
+  margin: 0 auto;
+}
+
 .settings-wrapper {
   max-width: 640px;
   width: 100%;
