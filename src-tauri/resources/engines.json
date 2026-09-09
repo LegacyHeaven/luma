@@ -74,6 +74,7 @@
     { "name": "Unsplash", "action": "https://unsplash.com/s/photos/", "custom": true, "bang": "unsplash", "placeholder": "search free photos" },
     { "name": "Giphy", "action": "https://giphy.com/search/", "custom": true, "bang": "gif", "placeholder": "search gifs" },
     { "name": "MyAnimeList", "action": "https://myanimelist.net/search/all", "param": "q", "bang": "mal", "placeholder": "search anime & manga" },
-    { "name": "Coursera", "action": "https://www.coursera.org/search", "param": "query", "bang": "coursera", "placeholder": "search courses" }
+    { "name": "Coursera", "action": "https://www.coursera.org/search", "param": "query", "bang": "coursera", "placeholder": "search courses" },
+    { "name": "MyPC", "action": "", "bang": "mypc", "local": true, "placeholder": "search files on your pc" }
   ]
 }

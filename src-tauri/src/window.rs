@@ -1,7 +1,54 @@
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 use tauri::{
     window::Color, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
+
+/// How long a main-thread-affine window operation gets before we give up on
+/// it - see `run_on_main_thread_with_timeout` below. Long enough that a
+/// slow-but-working machine never trips it under normal use, short enough
+/// that Julian isn't staring at a frozen app for more than a few seconds
+/// before Luma admits something's wrong.
+const MAIN_THREAD_TIMEOUT: Duration = Duration::from_secs(6);
+
+/// Window creation/navigation on Windows (Win32 + WebView2/COM) and on
+/// macOS (AppKit) has to happen on the main thread. Every `#[tauri::command]`
+/// runs on a tokio worker thread, so Tauri has to hop over to the main
+/// thread internally to actually build or navigate a window - and if that
+/// hop ever wedges (a COM call that never returns, a re-entrant deadlock,
+/// anything), the *whole* main thread's message pump goes down with it.
+/// That's the "in-app browser freezes the whole app, and even the debug
+/// log stops responding" bug Julian reported: the debug console's own
+/// `get_debug_log` calls are themselves commands running on that same
+/// worker pool, so once enough of them are piled up waiting on a wedged
+/// main-thread hop, nothing IPC-based works any more, in any window.
+///
+/// This is the general failsafe Julian asked for: instead of waiting on
+/// that hop forever, wait at most `timeout`, and report a clean error the
+/// caller can show ("failed to open - try again") instead of taking the
+/// rest of the app down with it. Window-creation code should always go
+/// through this rather than calling `WebviewWindowBuilder::build()` (or
+/// `.navigate()`/`.close()` on a window that might not exist yet) directly
+/// from a command handler.
+pub fn run_on_main_thread_with_timeout<T, F>(app: &AppHandle, f: F) -> Result<T, String>
+where
+    T: Send + 'static,
+    F: FnOnce() -> T + Send + 'static,
+{
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.run_on_main_thread(move || {
+        // If we already timed out and returned, the receiver is gone -
+        // send() failing here is expected in that case, not a new bug.
+        let _ = tx.send(f());
+    })
+    .map_err(|e| format!("failed to schedule work on the main thread: {e}"))?;
+
+    rx.recv_timeout(MAIN_THREAD_TIMEOUT).map_err(|_| {
+        "timed out waiting for the main thread - it may be stuck on something else; \
+         try again, and if it keeps happening, restart Luma from the tray icon"
+            .to_string()
+    })
+}
 
 /// Bumped on every show/hide of the spotlight so a delayed "actually hide
 /// now" (see toggle_spotlight/hide_spotlight) can tell whether it's still
@@ -63,7 +110,7 @@ pub fn show_main_window(app: &AppHandle) {
 
             if let Err(err) =
                 WebviewWindowBuilder::new(app, MAIN_LABEL, WebviewUrl::App("index.html".into()))
-                    .title("Luma")
+                    .title("LUMA")
                     .inner_size(width, height)
                     .min_inner_size(480.0, 360.0)
                     .center()
@@ -112,7 +159,7 @@ pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<Web
         SPOTLIGHT_LABEL,
         WebviewUrl::App("index.html?mode=spotlight".into()),
     )
-    .title("Luma")
+    .title("LUMA")
     .inner_size(width, 128.0)
     .resizable(false)
     .decorations(false)
@@ -235,7 +282,31 @@ fn schedule_spotlight_hide(window: &WebviewWindow) {
 /// Settings' "Pick position" button. Reports the click back as a fraction
 /// of the monitor's size (see position_spotlight) and closes itself either
 /// way - clicking picks a spot, Escape cancels without changing anything.
+///
+/// Called from the `open_position_picker` command, which is `async fn` -
+/// see that command's doc comment for why that matters: `WebviewWindowBuilder::build()`
+/// is documented to deadlock Windows/WebView2 when called from a
+/// *synchronous* command (https://github.com/tauri-apps/wry/issues/583),
+/// which is exactly the bug Julian hit ("the pick position fails the same
+/// way as the in-app browser"). Being async gets this off the main thread
+/// so the `run_on_main_thread_with_timeout` hop below can actually
+/// complete instead of deadlocking against itself.
 pub fn open_position_picker(app: &AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window(POSITION_PICKER_LABEL) {
+        let _ = w.set_focus();
+        return Ok(());
+    }
+
+    let for_closure = app.clone();
+    run_on_main_thread_with_timeout(app, move || {
+        open_position_picker_on_main_thread(&for_closure)
+    })?
+}
+
+fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
+    // Re-check now that we're actually on the main thread - two rapid
+    // clicks of "Pick position" could otherwise both pass the check above
+    // and race to create the same-labeled window twice.
     if let Some(w) = app.get_webview_window(POSITION_PICKER_LABEL) {
         let _ = w.set_focus();
         return Ok(());
@@ -254,7 +325,7 @@ pub fn open_position_picker(app: &AppHandle) -> Result<(), String> {
         POSITION_PICKER_LABEL,
         WebviewUrl::App("position-picker.html".into()),
     )
-    .title("Luma")
+    .title("LUMA")
     .inner_size(size.width, size.height)
     .position(pos.x, pos.y)
     .resizable(false)
@@ -270,10 +341,16 @@ pub fn open_position_picker(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-pub fn close_position_picker(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window(POSITION_PICKER_LABEL) {
-        let _ = w.close();
+pub fn close_position_picker(app: &AppHandle) -> Result<(), String> {
+    if app.get_webview_window(POSITION_PICKER_LABEL).is_none() {
+        return Ok(());
     }
+    let for_closure = app.clone();
+    run_on_main_thread_with_timeout(app, move || {
+        if let Some(w) = for_closure.get_webview_window(POSITION_PICKER_LABEL) {
+            let _ = w.close();
+        }
+    })
 }
 
 /// "Built-in browser" mode: a single reusable Luma-branded webview window
@@ -281,6 +358,15 @@ pub fn close_position_picker(app: &AppHandle) {
 /// to your system browser. Uses the OS's native webview engine (Chromium
 /// via WebView2 on Windows; WebKit on macOS/Linux) - see the wiki's
 /// Configuration page for why that's not literally bundled Chromium everywhere.
+///
+/// Called from the `open_result`/`close_builtin_browser` commands, both
+/// `async fn` - see `open_position_picker`'s doc comment for why: creating
+/// or navigating a window from a *synchronous* command is documented to
+/// deadlock on Windows (https://github.com/tauri-apps/wry/issues/583),
+/// which is Julian's "in-app browser freezes the whole app" bug. Wrapped
+/// in `run_on_main_thread_with_timeout` as a general failsafe on top of
+/// that root-cause fix, so a slow/stuck main thread reports a clean error
+/// after a few seconds instead of taking the whole app down with it.
 pub fn open_in_builtin_browser(app: &AppHandle, url_str: &str) -> Result<(), String> {
     let parsed = url::Url::parse(url_str).map_err(|e| {
         let msg = format!("open_in_builtin_browser: url::Url::parse({url_str:?}) failed: {e}");
@@ -288,6 +374,13 @@ pub fn open_in_builtin_browser(app: &AppHandle, url_str: &str) -> Result<(), Str
         msg
     })?;
 
+    let for_closure = app.clone();
+    run_on_main_thread_with_timeout(app, move || {
+        open_in_builtin_browser_on_main_thread(&for_closure, parsed)
+    })?
+}
+
+fn open_in_builtin_browser_on_main_thread(app: &AppHandle, parsed: url::Url) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window(BROWSER_LABEL) {
         crate::logging::info(
             app,
@@ -306,7 +399,7 @@ pub fn open_in_builtin_browser(app: &AppHandle, url_str: &str) -> Result<(), Str
     let toolbar_js = include_str!("../resources/builtin-browser-toolbar.js");
 
     WebviewWindowBuilder::new(app, BROWSER_LABEL, WebviewUrl::External(parsed))
-        .title("Luma Browser")
+        .title("LUMA Browser")
         .inner_size(1100.0, 760.0)
         .min_inner_size(360.0, 320.0)
         .initialization_script(toolbar_js)
@@ -316,8 +409,14 @@ pub fn open_in_builtin_browser(app: &AppHandle, url_str: &str) -> Result<(), Str
     Ok(())
 }
 
-pub fn close_builtin_browser(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window(BROWSER_LABEL) {
-        let _ = w.close();
+pub fn close_builtin_browser(app: &AppHandle) -> Result<(), String> {
+    if app.get_webview_window(BROWSER_LABEL).is_none() {
+        return Ok(());
     }
+    let for_closure = app.clone();
+    run_on_main_thread_with_timeout(app, move || {
+        if let Some(w) = for_closure.get_webview_window(BROWSER_LABEL) {
+            let _ = w.close();
+        }
+    })
 }

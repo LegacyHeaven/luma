@@ -6,15 +6,22 @@
 //! (MSI/NSIS/AppImage/.app), not a bare binary someone downloaded and put
 //! wherever they wanted, so it doesn't fit this distribution model.
 //!
-//! Versioning: release.yml re-uses one GitHub Release tag (`Release`,
-//! renamed from the earlier `1R`) forever and just replaces its assets on
-//! every re-run rather than cutting a new tag per build, so there's no
-//! semver to compare here either. Instead
-//! this compares the running build's embedded git commit (build.rs /
-//! logging::BUILD_SHA) against the commit recorded in a small
-//! `manifest.json` release asset that release.yml publishes alongside the
-//! binaries - "the release has a different commit than the one I was
-//! built from" is the update signal.
+//! Versioning: release.yml can cut a release under any tag name (Julian
+//! wanted updates to keep working "to any newer release, not just one
+//! version" rather than being pinned to whichever tag happened to exist
+//! when a build shipped) so there's no fixed semver to compare here.
+//! Instead this fetches GitHub's "latest release" virtual path
+//! (`/releases/latest/download/...`), which always resolves to whichever
+//! *published* (non-draft, non-prerelease) release is newest - no tag name
+//! baked into the client at all - and compares the running build's
+//! embedded git commit (build.rs / logging::BUILD_SHA) against the commit
+//! recorded in a small `manifest.json` release asset that release.yml
+//! publishes alongside the binaries. "The latest release has a different
+//! commit than the one I was built from" is the update signal, and it
+//! keeps working across any number of future releases with zero client
+//! changes - the exact thing a fixed-tag URL couldn't do (see git history:
+//! this is what replaced the earlier `1R`-then-`Release` fixed-tag scheme,
+//! which needed a client update every time the tag changed).
 //!
 //! Installing: the new binary is downloaded next to the current one and
 //! checksum-verified against manifest.json before anything touches the
@@ -34,11 +41,14 @@ use std::io::{Read, Write};
 use std::path::Path;
 use tauri::{AppHandle, Emitter};
 
-// Renamed from `1R` -> `Release` for Version 2. A build downloaded before
-// this change has the old URL baked in, so it can't self-update past this
-// point - that one release needs a manual re-download; every build from
-// here on updates itself again as normal.
-const RELEASE_BASE_URL: &str = "https://github.com/LegacyHeaven/luma/releases/download/Release";
+// GitHub's "latest release" virtual path - always the newest *published*
+// release's assets, whatever tag it happens to be under. This is what
+// makes "any newer release, not just one version" true: release.yml is
+// free to use any tag (or none at all) going forward and the updater
+// never needs to change again. (A build from before this change has the
+// old fixed-tag URL baked in and needs one manual re-download - every
+// build from here on updates itself indefinitely.)
+const RELEASE_BASE_URL: &str = "https://github.com/LegacyHeaven/luma/releases/latest/download";
 
 #[derive(Debug, Clone, Deserialize)]
 struct AssetEntry {

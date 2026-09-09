@@ -9,11 +9,11 @@ use tauri::{
 /// every window is hidden, which is what lets the global spotlight shortcut
 /// keep working - closing the main window hides it rather than quitting.
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
-    let show_item = MenuItem::with_id(app, "show", "Open Luma", true, None::<&str>)?;
+    let show_item = MenuItem::with_id(app, "show", "Open LUMA", true, None::<&str>)?;
     let spotlight_item =
         MenuItem::with_id(app, "spotlight", "Toggle Spotlight", true, None::<&str>)?;
     let settings_item = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
-    let quit_item = MenuItem::with_id(app, "quit", "Quit Luma", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit", "Quit LUMA", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
 
     let menu = Menu::with_items(
@@ -37,7 +37,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         .icon(icon)
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .tooltip("Luma - press your shortcut to search")
+        .tooltip("LUMA - press your shortcut to search")
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "show" => window::show_main_window(app),
             "spotlight" => {

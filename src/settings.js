@@ -28,7 +28,7 @@
         "position:fixed;top:0;left:0;right:0;z-index:99999;background:#4a0d0d;" +
         "color:#fff;font-family:monospace;font-size:12px;line-height:1.4;" +
         "padding:10px 16px;border-bottom:2px solid #ff4d4d;white-space:pre-wrap;";
-      el.textContent = "Luma: " + message;
+      el.textContent = "LUMA: " + message;
       document.body.appendChild(el);
     } catch (e) {}
   }
@@ -51,6 +51,12 @@
   var disableAnimationsCheckbox = document.getElementById("disable-animations");
   var showSpotlightBrandingCheckbox = document.getElementById("show-spotlight-branding");
   var startAtLoginCheckbox = document.getElementById("start-at-login");
+  var customEnginesList = document.getElementById("custom-engines-list");
+  var newEngineName = document.getElementById("new-engine-name");
+  var newEngineUrl = document.getElementById("new-engine-url");
+  var newEngineBang = document.getElementById("new-engine-bang");
+  var addEngineBtn = document.getElementById("add-engine-btn");
+  var engineFormStatus = document.getElementById("engine-form-status");
   var themeOptionsContainer = document.getElementById("theme-options");
   var customCssTextarea = document.getElementById("custom-css");
   var openThemesFolderBtn = document.getElementById("open-themes-folder");
@@ -194,12 +200,12 @@
     if (!invoke) return;
     invoke("get_system_info")
       .then(function (info) {
-        debugConsoleMeta.textContent = "Luma " + info.app_version + " · build " + info.build_sha + " · pid " + info.pid;
+        debugConsoleMeta.textContent = "LUMA " + info.app_version + " · build " + info.build_sha + " · pid " + info.pid;
         var windowsList = (info.windows || []).map(function (w) {
           return w.label + (w.visible ? " (visible)" : " (hidden)");
         }).join(", ") || "none";
         debugConsoleSysinfo.innerHTML =
-          "<div><b>Memory:</b> " + formatBytes(info.process_rss_bytes) + " used by Luma / " +
+          "<div><b>Memory:</b> " + formatBytes(info.process_rss_bytes) + " used by LUMA / " +
             formatBytes(info.system_used_mem_bytes) + " of " + formatBytes(info.system_total_mem_bytes) + " system</div>" +
           "<div><b>Uptime:</b> " + formatUptime(info.process_uptime_secs) + "</div>" +
           "<div><b>OS:</b> " + info.os + " " + info.os_version + "</div>" +
@@ -402,6 +408,103 @@
       });
   });
 
+  // ----- search engines (default-engine dropdown + custom engines) -----
+  // `local` engines (currently just !mypc) hand off to the OS instead of
+  // resolving to a URL - see vendor/engine/bangdeck.js - so they don't
+  // belong in a "pick your default engine" list. `user_added` marks the
+  // ones from config::CustomEngine (see commands::get_engines), so this
+  // can render just those with a "remove" button.
+  async function loadEngines() {
+    var engineConfig = await invoke("get_engines");
+    var engines = engineConfig.engines || [];
+
+    defaultEngineSelect.innerHTML = "";
+    engines.filter(function (e) { return !e.local; }).forEach(function (engine) {
+      var opt = document.createElement("option");
+      opt.value = engine.name;
+      opt.textContent = engine.name + " (!" + engine.bang + ")";
+      defaultEngineSelect.appendChild(opt);
+    });
+    defaultEngineSelect.value = currentConfig.general.default_engine;
+
+    renderCustomEngines(engines.filter(function (e) { return e.user_added; }));
+  }
+
+  function renderCustomEngines(customEngines) {
+    customEnginesList.innerHTML = "";
+    if (!customEngines.length) {
+      var empty = document.createElement("span");
+      empty.className = "update-status";
+      empty.textContent = "No custom engines yet - add one below.";
+      customEnginesList.appendChild(empty);
+      return;
+    }
+    customEngines.forEach(function (engine) {
+      var row = document.createElement("div");
+      row.className = "engine-row";
+
+      var label = document.createElement("span");
+      label.textContent = engine.name + " ";
+      var bang = document.createElement("span");
+      bang.className = "bang";
+      bang.textContent = "!" + engine.bang;
+      label.appendChild(bang);
+      row.appendChild(label);
+
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "engine-row-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.title = "Remove " + engine.name;
+      removeBtn.addEventListener("click", function () {
+        invoke("remove_custom_engine", { name: engine.name })
+          .then(function () {
+            dlog("info", "settings: removed custom engine " + engine.name);
+            return loadEngines();
+          })
+          .catch(function (err) {
+            dlog("error", "remove_custom_engine invoke failed: " + err);
+            engineFormStatus.textContent = "Couldn't remove it: " + err;
+          });
+      });
+      row.appendChild(removeBtn);
+
+      customEnginesList.appendChild(row);
+    });
+  }
+
+  addEngineBtn.addEventListener("click", function () {
+    if (!invoke) return;
+    var engine = {
+      name: newEngineName.value.trim(),
+      action: newEngineUrl.value.trim(),
+      bang: newEngineBang.value.trim(),
+      placeholder: "",
+    };
+    if (!engine.name || !engine.action || !engine.bang) {
+      engineFormStatus.textContent = "Name, URL, and bang are all required.";
+      return;
+    }
+    addEngineBtn.disabled = true;
+    engineFormStatus.textContent = "Adding…";
+    invoke("add_custom_engine", { engine: engine })
+      .then(function () {
+        newEngineName.value = "";
+        newEngineUrl.value = "";
+        newEngineBang.value = "";
+        engineFormStatus.textContent = "Added " + engine.name + ".";
+        dlog("info", "settings: added custom engine " + engine.name);
+        return loadEngines();
+      })
+      .catch(function (err) {
+        dlog("error", "add_custom_engine invoke failed: " + err);
+        engineFormStatus.textContent = "Couldn't add it: " + err;
+      })
+      .finally(function () {
+        addEngineBtn.disabled = false;
+      });
+  });
+
   // ----- load current config + supporting data -----
   async function boot(tauri) {
     invoke = tauri.core.invoke;
@@ -446,7 +549,7 @@
       var stage = event.payload && event.payload.stage;
       if (stage === "checking") updateStatus.textContent = "Checking the release…";
       else if (stage === "downloading") updateStatus.textContent = "Downloading the update…";
-      else if (stage === "installing") updateStatus.textContent = "Installing - Luma will restart itself…";
+      else if (stage === "installing") updateStatus.textContent = "Installing - LUMA will restart itself…";
     });
 
     // The position-picker overlay saves straight to config.toml and emits
@@ -469,14 +572,7 @@
     }
 
     try {
-      var engineConfig = await invoke("get_engines");
-      (engineConfig.engines || []).forEach(function (engine) {
-        var opt = document.createElement("option");
-        opt.value = engine.name;
-        opt.textContent = engine.name + " (!" + engine.bang + ")";
-        defaultEngineSelect.appendChild(opt);
-      });
-      defaultEngineSelect.value = currentConfig.general.default_engine;
+      await loadEngines();
     } catch (err) {
       dlog("error", "settings: get_engines invoke failed: " + err);
     }
@@ -490,9 +586,9 @@
 
     try {
       var info = await invoke("get_system_info");
-      buildStamp.textContent = "Luma " + info.app_version + " · build " + info.build_sha + " · pid " + info.pid;
+      buildStamp.textContent = "LUMA " + info.app_version + " · build " + info.build_sha + " · pid " + info.pid;
     } catch (err) {
-      buildStamp.textContent = "Luma - build info unavailable (" + err + ")";
+      buildStamp.textContent = "LUMA - build info unavailable (" + err + ")";
     }
 
     dlog("info", "settings: boot() complete");
@@ -580,10 +676,10 @@
         return;
       }
       dlog("error", "settings: window.__TAURI__ never became available after 20 attempts (2s)");
-      buildStamp.textContent = "Luma - internal bridge did not start";
+      buildStamp.textContent = "LUMA - internal bridge did not start";
       showFatalBanner(
         "internal bridge didn't start in this window - nothing here will load or save. " +
-          "Try restarting Luma. The client-side log above still recorded this, even " +
+          "Try restarting LUMA. The client-side log above still recorded this, even " +
           "though it couldn't reach the backend log."
       );
       return;

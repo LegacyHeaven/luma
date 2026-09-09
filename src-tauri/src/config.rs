@@ -101,12 +101,41 @@ impl Default for WindowConfig {
     }
 }
 
+/// A search engine the user added themselves in Settings, on top of the
+/// built-in catalog (see commands::get_engines, which merges the two for
+/// the frontend). Deliberately simpler than the built-in `EngineDef`
+/// shape in resources/engines.json (no separate `param`/`custom` modes to
+/// explain) - just one field to fill in: a URL with `%s` standing in for
+/// the search text, e.g. `https://example.com/search?q=%s`. See
+/// vendor/engine/bangdeck.js's `template` handling for the other half of
+/// this.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CustomEngine {
+    pub name: String,
+    /// A URL containing at least one literal `%s`, replaced with the
+    /// percent-encoded query at search time.
+    pub action: String,
+    /// Bang word, without the leading "!" - stored lowercase.
+    pub bang: String,
+    #[serde(default)]
+    pub placeholder: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct SearchConfig {
+    /// User-added engines from Settings' "Search engines" section - see
+    /// commands::add_custom_engine/remove_custom_engine.
+    pub custom_engines: Vec<CustomEngine>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct LumaConfig {
     pub general: GeneralConfig,
     pub appearance: AppearanceConfig,
     pub window: WindowConfig,
+    pub search: SearchConfig,
 }
 
 pub fn config_dir(app: &AppHandle) -> PathBuf {

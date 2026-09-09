@@ -66,8 +66,11 @@
       delete this.engines[name];
     }
 
+    /** Every searchable engine except `local` ones (like !mypc) - those
+     * hand off to the OS rather than resolving to a URL, so they don't
+     * belong in a "pick your search engine" dropdown. */
     listEngines() {
-      return Object.values(this.engines);
+      return Object.values(this.engines).filter((e) => !e.local);
     }
 
     placeholderFor(name) {
@@ -103,7 +106,14 @@
 
     buildSearchUrl(engineKey, query) {
       const cfg = this.engines[engineKey];
-      if (!cfg || !query) return null;
+      if (!cfg || !query || cfg.local) return null;
+      // User-added engines from Settings (see config::CustomEngine /
+      // commands::get_engines) - a URL containing a literal "%s" that the
+      // (encoded) query drops into, which is friendlier to fill in than
+      // the built-in catalog's param/custom split.
+      if (cfg.template) {
+        return cfg.action.replace(/%s/g, encodeURIComponent(query));
+      }
       if (cfg.custom) {
         return cfg.action + encodeURIComponent(query);
       }
@@ -117,12 +127,22 @@
 
     /**
      * Resolve raw input text (which may contain a "!bang") plus a fallback
-     * engine into a final { engine, query, url } result. Returns null when
-     * there's nothing searchable (empty query).
+     * engine into a final result. Returns null when there's nothing
+     * searchable (empty query). A `local` engine (like !mypc) resolves
+     * with `local: true` and no `url` - the caller is expected to hand
+     * that off to the OS itself (see main.js's onSearch) rather than open
+     * anything as a web address.
      */
     resolve(rawInput, fallbackEngine) {
       const parsed = this.parseQuery(rawInput);
       const engineKey = parsed.engine || fallbackEngine || this.defaultEngine;
+      const cfg = this.engines[engineKey];
+
+      if (cfg && cfg.local) {
+        if (!parsed.query) return null;
+        return { engine: engineKey, query: parsed.query, url: null, local: true };
+      }
+
       const url = this.buildSearchUrl(engineKey, parsed.query);
       if (!url) return null;
       return { engine: engineKey, query: parsed.query, url };

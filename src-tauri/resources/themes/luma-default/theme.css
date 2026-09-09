@@ -50,31 +50,6 @@ body {
   overflow: hidden;
 }
 
-/* viewport corner frame */
-.viewport-frame {
-  position: fixed;
-  inset: 14px;
-  z-index: 5;
-  pointer-events: none;
-}
-
-.vf-corner {
-  position: absolute;
-  width: 26px;
-  height: 26px;
-  border-color: var(--color-light-purple);
-  opacity: .45;
-}
-
-.vf-tl { top: 0; left: 0; border-top: 2px solid; border-left: 2px solid; }
-.vf-tr { top: 0; right: 0; border-top: 2px solid; border-right: 2px solid; }
-.vf-bl { bottom: 0; left: 0; border-bottom: 2px solid; border-left: 2px solid; }
-.vf-br { bottom: 0; right: 0; border-bottom: 2px solid; border-right: 2px solid; }
-
-@media screen and (max-width: 700px) {
-  .viewport-frame { display: none; }
-}
-
 /* top-left link that opens the settings window */
 .home-link {
   position: fixed;
@@ -139,12 +114,15 @@ body {
 
 .particle {
   position: absolute;
+  top: 0;
   width: 2px;
   height: 2px;
   background: var(--color-light-purple);
   border-radius: 50%;
   opacity: 0.3;
   animation: float 20s infinite linear;
+  animation-fill-mode: backwards;
+  will-change: transform, opacity;
 }
 
 @keyframes float {
@@ -206,16 +184,6 @@ body {
 @keyframes status-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: .45; }
-}
-
-.searchbar-tag {
-  font-family: var(--font-family);
-  font-size: 1.1rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--color-light-purple);
-  opacity: .55;
-  margin-bottom: 8px;
 }
 
 /* Engine selector */
@@ -456,14 +424,12 @@ body.spotlight-mode {
   align-items: center;
 }
 
-body.spotlight-mode .viewport-frame,
 body.spotlight-mode .home-link,
 body.spotlight-mode .settings-link,
 body.spotlight-mode .particles,
 body.spotlight-mode .brand,
 body.spotlight-mode .motto,
 body.spotlight-mode .hint,
-body.spotlight-mode .searchbar-tag,
 body.spotlight-mode .engine-selector {
   display: none;
 }

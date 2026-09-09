@@ -76,6 +76,9 @@ fn main() {
             commands::report_spotlight_position,
             commands::cancel_position_pick,
             commands::reset_spotlight_position,
+            commands::add_custom_engine,
+            commands::remove_custom_engine,
+            commands::search_mypc,
             logging::get_system_info,
             logging::get_debug_log,
             logging::clear_debug_log,
@@ -89,7 +92,7 @@ fn main() {
             logging::info(
                 &handle,
                 format!(
-                    "Luma {} (build {}) starting up, pid {}",
+                    "LUMA {} (build {}) starting up, pid {}",
                     env!("CARGO_PKG_VERSION"),
                     logging::BUILD_SHA,
                     std::process::id()

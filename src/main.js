@@ -31,7 +31,7 @@
         "position:fixed;top:0;left:0;right:0;z-index:99999;background:#4a0d0d;" +
         "color:#fff;font-family:monospace;font-size:12px;line-height:1.4;" +
         "padding:10px 16px;border-bottom:2px solid #ff4d4d;white-space:pre-wrap;";
-      el.textContent = "Luma: " + message;
+      el.textContent = "LUMA: " + message;
       document.body.appendChild(el);
     } catch (e) {
       /* if even this fails, there's nothing more we can do client-side */
@@ -56,7 +56,7 @@
         "box-shadow:0 10px 30px rgba(0,0,0,.5);";
 
       var text = document.createElement("span");
-      text.textContent = "A new version of Luma is available.";
+      text.textContent = "A new version of LUMA is available.";
 
       var updateBtn = document.createElement("button");
       updateBtn.type = "button";
@@ -79,7 +79,7 @@
         bridge.event.listen("luma://update-progress", function (event) {
           var stage = event.payload && event.payload.stage;
           if (stage === "downloading") text.textContent = "Downloading the update…";
-          else if (stage === "installing") text.textContent = "Installing - Luma will restart itself…";
+          else if (stage === "installing") text.textContent = "Installing - LUMA will restart itself…";
           else if (stage === "checking") text.textContent = "Checking the release…";
         });
       }
@@ -218,7 +218,22 @@
       // one fixed, engine-agnostic placeholder instead.
       placeholderOverride: isSpotlight ? "search the universe" : null,
       onSearch: function (result) {
-        dlog("info", "search submitted -> resolved url=" + result.url + " engine=" + (result.engine && result.engine.name));
+        // !mypc (see vendor/engine/bangdeck.js's `local` engines) hands
+        // off to the OS's own search facility instead of resolving to a
+        // web address - nothing to open_result here.
+        if (result.local) {
+          dlog("info", "search submitted -> local OS search, query=" + result.query);
+          invoke("search_mypc", { query: result.query })
+            .then(function () {
+              dlog("info", "search_mypc invoke resolved OK");
+            })
+            .catch(function (err) {
+              dlog("error", "search_mypc invoke failed: " + err);
+            });
+          if (isSpotlight) invoke("hide_spotlight");
+          return;
+        }
+        dlog("info", "search submitted -> resolved url=" + result.url + " engine=" + result.engine);
         invoke("open_result", { url: result.url, fromSpotlight: isSpotlight })
           .then(function () {
             dlog("info", "open_result invoke resolved OK");
@@ -333,7 +348,7 @@
       );
       showFatalBanner(
         "internal bridge didn't start in this window - search/open/save won't work " +
-          "right now. Try restarting Luma. If it keeps happening, open Settings and " +
+          "right now. Try restarting LUMA. If it keeps happening, open Settings and " +
           "hold Shift+L, then send the debug log."
       );
       return;

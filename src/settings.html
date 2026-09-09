@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Luma Settings</title>
+  <title>LUMA Settings</title>
   <style>
     html, body { background: #0a0510; margin: 0; }
     @view-transition { navigation: auto; }
@@ -11,12 +11,12 @@
   <link rel="stylesheet" href="settings.css">
 </head>
 <body class="settings-page">
-  <a href="#" class="home-link" id="back-to-search">&#60;/Luma&#62;</a>
+  <a href="#" class="home-link" id="back-to-search">&#60;/LUMA&#62;</a>
   <div class="particles" id="particles"></div>
 
   <div class="wrapper settings-wrapper">
     <p class="brand">Settings<span class="brand-dot">.</span></p>
-    <p class="motto"><span class="status-dot"></span>Configure Luma &amp; BangDeck</p>
+    <p class="motto"><span class="status-dot"></span>Configure LUMA.</p>
 
     <form id="settings-form">
       <section class="settings-section">
@@ -29,13 +29,26 @@
         <h2>Search results open in</h2>
         <div class="settings-row">
           <label class="radio-option"><input type="radio" name="browser_mode" value="system"> Your default browser</label>
-          <label class="radio-option"><input type="radio" name="browser_mode" value="builtin"> Luma's built-in browser window</label>
+          <label class="radio-option"><input type="radio" name="browser_mode" value="builtin"> LUMA's built-in browser window</label>
         </div>
       </section>
 
       <section class="settings-section">
         <h2>Default search engine</h2>
         <select id="default-engine" class="settings-input"></select>
+      </section>
+
+      <section class="settings-section">
+        <h2>Search engines</h2>
+        <p class="help">Add your own - any site with a search URL works. Use <code>%s</code> in the URL for where your search text should go, e.g. <code>https://example.com/search?q=%s</code>.</p>
+        <div class="settings-row" id="custom-engines-list"></div>
+        <div class="settings-row">
+          <input type="text" id="new-engine-name" class="settings-input" placeholder="Name" style="max-width:160px;">
+          <input type="text" id="new-engine-url" class="settings-input" placeholder="https://example.com/search?q=%s" style="flex:2;min-width:220px;">
+          <input type="text" id="new-engine-bang" class="settings-input settings-input-sm" placeholder="bang" style="max-width:90px;">
+          <button type="button" class="btn" id="add-engine-btn">Add engine</button>
+        </div>
+        <span id="engine-form-status" class="update-status"></span>
       </section>
 
       <section class="settings-section">
@@ -75,7 +88,7 @@
 
       <section class="settings-section">
         <h2>Main window size</h2>
-        <p class="help">How big the main Luma window opens. Takes effect immediately on Save.</p>
+        <p class="help">How big the main LUMA window opens. Takes effect immediately on Save.</p>
         <div class="settings-row">
           <label class="radio-option"><input type="radio" name="main_window_size" value="compact"> Compact</label>
           <label class="radio-option"><input type="radio" name="main_window_size" value="default"> Default</label>
@@ -84,13 +97,13 @@
       </section>
 
       <section class="settings-section">
-        <h2>Start Luma at login</h2>
+        <h2>Start LUMA at login</h2>
         <label class="checkbox-option"><input type="checkbox" id="start-at-login"> Launch automatically when I sign in</label>
       </section>
 
       <section class="settings-section">
         <h2>Updates</h2>
-        <p class="help">Luma can check GitHub for a newer build and install it itself - no separate download needed.</p>
+        <p class="help">LUMA can check GitHub for a newer build and install it itself - no separate download needed.</p>
         <div class="settings-row">
           <label class="checkbox-option"><input type="checkbox" id="check-updates-enabled"> Automatically check for updates on launch</label>
         </div>
@@ -106,7 +119,7 @@
         <p class="help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see the wiki's Theming page.</p>
         <div class="settings-row" id="theme-options"></div>
         <button type="button" class="btn" id="open-themes-folder">Open themes folder</button>
-        <p class="help" style="margin-top:12px;margin-bottom:0;">&#9733; A themes marketplace - browse and install community themes without leaving Luma - is in the making.</p>
+        <p class="help" style="margin-top:12px;margin-bottom:0;">&#9733; A themes marketplace - browse and install community themes without leaving LUMA - is in the making.</p>
       </section>
 
       <section class="settings-section">
@@ -118,7 +131,7 @@
       <section class="settings-section" id="debug-section" hidden>
         <h2>Debug log</h2>
         <p class="help">
-          Records every notable thing Luma does (search submitted, results
+          Records every notable thing LUMA does (search submitted, results
           opened, config saved, errors) plus live RAM/process info, so a bug
           can be diagnosed without a terminal. You found this by holding
           <code>Shift+L</code> on this page - it'll stay revealed once
@@ -136,12 +149,12 @@
       </div>
     </form>
 
-    <p class="build-stamp" id="build-stamp">Luma - loading…</p>
+    <p class="build-stamp" id="build-stamp">LUMA - loading…</p>
   </div>
 
   <div id="debug-console" class="debug-console" hidden>
     <div class="debug-console-header">
-      <strong>Luma debug console</strong>
+      <strong>LUMA debug console</strong>
       <span id="debug-console-meta" class="debug-console-meta"></span>
       <span class="debug-console-actions">
         <button type="button" class="btn" id="debug-copy">Copy</button>
