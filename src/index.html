@@ -11,6 +11,60 @@
        only, so it's a no-op (plain instant navigation) on a webview engine
        that doesn't support cross-document view transitions yet. */
     @view-transition { navigation: auto; }
+
+    /* Spotlight fade in/out (main.js drives these off the
+       luma://spotlight-shown / luma://spotlight-hiding events - see
+       window::schedule_spotlight_hide's 220ms grace period, which this is
+       timed to fit inside) plus the global "turn all of that off" escape
+       hatch from Settings → Animations. Lives here rather than in each
+       theme.css since it's chrome behavior, not themable look - same
+       reasoning as the critical background rule above. Uses the theme's
+       own CSS variables (set on :root, so they're visible from any
+       stylesheet) so the brand line re-colors per theme with no extra code. */
+    body.no-animations, body.no-animations * {
+      animation: none !important;
+      transition: none !important;
+    }
+
+    /* transform/opacity are the two properties a compositor can animate
+       on the GPU without re-running layout or paint on every frame -
+       will-change hints the engine to promote this to its own composited
+       layer for the (short) lifetime of the animation. This is as close
+       to "hardware acceleration" as there is a real lever to pull: all
+       three engines Luma runs on (WebView2/Chromium on Windows, WebKitGTK
+       on Linux, WKWebView on macOS) already GPU-composite by default with
+       no toggle to turn that on or off - the actual lever is keeping the
+       CSS itself GPU-cheap, which is why every animation in this file and
+       in the themes sticks to transform/opacity rather than animating
+       width/height/position. */
+    body.spotlight-fade-in { animation: luma-spotlight-fade-in .16s ease-out; will-change: opacity, transform; }
+    body.spotlight-fade-out { animation: luma-spotlight-fade-out .2s ease-in forwards; will-change: opacity, transform; }
+
+    @keyframes luma-spotlight-fade-in {
+      from { opacity: 0; transform: scale(.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes luma-spotlight-fade-out {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0; transform: scale(.97); }
+    }
+
+    .spotlight-brand { display: none; }
+    body.spotlight-mode .spotlight-brand:not([hidden]) {
+      display: block;
+      text-align: center;
+      font-family: var(--font-family, monospace);
+      font-size: 1.3rem;
+      letter-spacing: 3px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--color-white, #fff);
+      opacity: .85;
+      margin-bottom: 10px;
+    }
+    body.spotlight-mode .spotlight-brand .brand-dot {
+      color: var(--color-light-purple, #cf59e6);
+    }
   </style>
 </head>
 <body>
@@ -28,6 +82,7 @@
   <div class="wrapper">
     <p class="brand">Luma<span class="brand-dot">.</span></p>
     <p class="motto"><span class="status-dot"></span>One search. Every direction.</p>
+    <p class="spotlight-brand" id="spotlight-brand" hidden>Luma<span class="brand-dot">.</span></p>
 
     <div class="search-shell">
       <div class="engine-selector" id="engine-selector">

@@ -24,6 +24,14 @@ pub struct GeneralConfig {
     /// and shows the "Update available" banner - see src/updater.rs. The
     /// Settings page's "Check for updates" button works either way.
     pub check_for_updates: bool,
+    /// Show a small "LUMA." wordmark above the spotlight bar, mirroring the
+    /// main window's brand line (but never the motto - the spotlight stays
+    /// a single search line either way).
+    pub show_spotlight_branding: bool,
+    /// Disables the fade-in/out on the spotlight and the main window's
+    /// entrance motion - for anyone who finds it distracting, or a machine
+    /// where it's just extra work for no benefit.
+    pub disable_animations: bool,
 }
 
 impl Default for GeneralConfig {
@@ -36,6 +44,8 @@ impl Default for GeneralConfig {
             close_spotlight_on_blur: true,
             debug_logging: false,
             check_for_updates: true,
+            show_spotlight_branding: false,
+            disable_animations: false,
         }
     }
 }
@@ -62,8 +72,16 @@ impl Default for AppearanceConfig {
 #[serde(default)]
 pub struct WindowConfig {
     pub spotlight_width: u32,
-    /// "top-center" or "center"
+    /// "top-center" (legacy), "center" (default), or "custom" (a point the
+    /// user picked - see spotlight_custom_x/y below).
     pub spotlight_position: String,
+    /// Fraction (0.0-1.0) of the primary monitor's width/height where the
+    /// user clicked with Settings' "Pick position" overlay - only
+    /// meaningful when spotlight_position == "custom". Stored as a
+    /// fraction rather than raw pixels so it survives a resolution change
+    /// reasonably. See window::position_spotlight / window::open_position_picker.
+    pub spotlight_custom_x: Option<f64>,
+    pub spotlight_custom_y: Option<f64>,
     /// "compact" | "default" | "roomy" - see window::main_window_dimensions().
     /// Julian's feedback was that the main window felt too big by default,
     /// so "default" here is deliberately smaller than the original 900x640,
@@ -75,7 +93,9 @@ impl Default for WindowConfig {
     fn default() -> Self {
         Self {
             spotlight_width: 640,
-            spotlight_position: "top-center".into(),
+            spotlight_position: "center".into(),
+            spotlight_custom_x: None,
+            spotlight_custom_y: None,
             main_window_size: "default".into(),
         }
     }

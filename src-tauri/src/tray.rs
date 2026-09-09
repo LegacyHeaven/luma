@@ -47,6 +47,8 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
                     app,
                     cfg.window.spotlight_width as f64,
                     &cfg.window.spotlight_position,
+                    cfg.window.spotlight_custom_x,
+                    cfg.window.spotlight_custom_y,
                 );
             }
             "settings" => {

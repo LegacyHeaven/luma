@@ -163,6 +163,8 @@ pub fn toggle_spotlight(app: AppHandle, state: State<AppState>) {
         &app,
         cfg.window.spotlight_width as f64,
         &cfg.window.spotlight_position,
+        cfg.window.spotlight_custom_x,
+        cfg.window.spotlight_custom_y,
     );
 }
 
@@ -174,4 +176,64 @@ pub fn hide_spotlight(app: AppHandle) {
 #[tauri::command]
 pub fn show_main_window(app: AppHandle) {
     window::show_main_window(&app);
+}
+
+/// Settings' "Pick position" button - opens the fullscreen click-to-choose
+/// overlay (see window::open_position_picker). The overlay reports back
+/// through `report_spotlight_position` or `cancel_position_pick`, never
+/// directly - it has no config access of its own.
+#[tauri::command]
+pub fn open_position_picker(app: AppHandle) -> Result<(), String> {
+    window::open_position_picker(&app)
+}
+
+/// The position-picker overlay calls this when the user clicks a spot.
+/// `x_frac`/`y_frac` are fractions (0.0-1.0) of the primary monitor's size.
+/// Saves straight to config and closes the overlay - per Julian's spec,
+/// picking a spot *is* saving it, with no separate "Save" step - then lets
+/// the spotlight (and Settings, if open) know the position changed.
+#[tauri::command]
+pub fn report_spotlight_position(
+    app: AppHandle,
+    state: State<AppState>,
+    x_frac: f64,
+    y_frac: f64,
+) -> Result<(), String> {
+    {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.window.spotlight_position = "custom".into();
+        cfg.window.spotlight_custom_x = Some(x_frac.clamp(0.0, 1.0));
+        cfg.window.spotlight_custom_y = Some(y_frac.clamp(0.0, 1.0));
+        crate::config::save(&app, &cfg)?;
+    }
+    window::close_position_picker(&app);
+    let _ = app.emit("luma://config-changed", ());
+    crate::logging::info(
+        &app,
+        format!("report_spotlight_position: saved custom position ({x_frac:.4}, {y_frac:.4})"),
+    );
+    Ok(())
+}
+
+/// Escape on the position-picker overlay - closes it without touching
+/// config. Still emits config-changed (a harmless no-op refresh) so
+/// Settings' "Pick position" button re-enables itself either way - it has
+/// no other way to learn the overlay is gone.
+#[tauri::command]
+pub fn cancel_position_pick(app: AppHandle) {
+    window::close_position_picker(&app);
+    let _ = app.emit("luma://config-changed", ());
+}
+
+/// Settings' "Reset to default" button for the spotlight position - back
+/// to always-centered, discarding any picked point.
+#[tauri::command]
+pub fn reset_spotlight_position(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    cfg.window.spotlight_position = "center".into();
+    cfg.window.spotlight_custom_x = None;
+    cfg.window.spotlight_custom_y = None;
+    crate::config::save(&app, &cfg)?;
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
 }

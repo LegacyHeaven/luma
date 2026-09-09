@@ -52,6 +52,8 @@ fn main() {
                             app,
                             cfg.window.spotlight_width as f64,
                             &cfg.window.spotlight_position,
+                            cfg.window.spotlight_custom_x,
+                            cfg.window.spotlight_custom_y,
                         );
                     }
                 })
@@ -70,6 +72,10 @@ fn main() {
             commands::toggle_spotlight,
             commands::hide_spotlight,
             commands::show_main_window,
+            commands::open_position_picker,
+            commands::report_spotlight_position,
+            commands::cancel_position_pick,
+            commands::reset_spotlight_position,
             logging::get_system_info,
             logging::get_debug_log,
             logging::clear_debug_log,

@@ -15,7 +15,7 @@
   --color-gray: #c4c4c4;
   --box-first-color: #1f0e18;
   --box-border-color: #5c1f3f;
-  --font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  --font-family: 'Poppins', 'Quicksand', 'Comic Sans MS', 'Segoe UI', sans-serif;
   /* Filled magnifying-glass glyph used as a CSS mask for the spotlight
      pill's search icon - painted with background-color, so it picks up
      whichever accent color this theme defines with zero per-theme code. */
@@ -37,10 +37,9 @@ body {
   min-height: 100vh;
   font-family: var(--font-family);
   background-color: var(--color-dark-mode);
-  background-image:
-    linear-gradient(rgba(255, 46, 136, .05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 46, 136, .05) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background-image: radial-gradient(circle at 20% 15%, rgba(255,143,199,.10), transparent 45%),
+    radial-gradient(circle at 80% 85%, rgba(255,46,136,.08), transparent 50%);
+  background-size: auto;
   color: var(--color-white);
   display: flex;
   align-items: center;
@@ -139,43 +138,45 @@ body {
 
 .particle {
   position: absolute;
-  width: 2px;
-  height: 2px;
+  width: 4px;
+  height: 4px;
   background: var(--color-light-purple);
   border-radius: 50%;
-  opacity: 0.3;
-  animation: float 20s infinite linear;
+  opacity: 0.4;
+  animation: float 14s infinite ease-in-out;
 }
 
 @keyframes float {
-  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-  10% { opacity: 0.3; }
-  90% { opacity: 0.3; }
-  100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+  0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+  10% { opacity: 0.4; }
+  50% { transform: translateY(50vh) translateX(18px); }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(-100px) translateX(-10px); opacity: 0; }
 }
 
 .wrapper {
   text-align: center;
   z-index: 1;
   position: relative;
-  animation: fadeInUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: fadeInUp .9s cubic-bezier(.34,1.56,.64,1);
   width: 100%;
   max-width: 640px;
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(40px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(46px) scale(.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .brand {
   font-family: var(--font-family);
   font-size: 3.2rem;
-  letter-spacing: 4px;
-  font-weight: 700;
+  letter-spacing: 2px;
+  font-weight: 800;
   color: var(--color-white);
   margin-bottom: 6px;
   text-transform: uppercase;
+  text-shadow: 0 0 22px rgba(255, 46, 136, .35);
 }
 
 .brand .brand-dot {
@@ -227,19 +228,20 @@ body {
 
 .engine-current {
   font-family: var(--font-family);
-  font-size: 1.8rem;
-  letter-spacing: 3px;
+  font-size: 1.7rem;
+  letter-spacing: 1px;
   text-transform: uppercase;
+  font-weight: 700;
   color: var(--color-light-purple);
   cursor: pointer;
-  padding: 8px 18px;
+  padding: 9px 20px;
   min-width: 260px;
   max-width: 90vw;
   text-align: center;
-  border: 1px solid var(--box-border-color);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, .02);
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border: 2px solid var(--box-border-color);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .03);
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
   position: relative;
   user-select: none;
 }
@@ -371,26 +373,27 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid var(--box-border-color);
-  background: rgba(255, 255, 255, .02);
-  border-radius: 6px;
-  padding: 14px 26px;
+  border: 2px solid var(--box-border-color);
+  background: rgba(255, 255, 255, .03);
+  border-radius: 999px;
+  padding: 15px 28px;
   width: 560px;
   max-width: 88vw;
   margin: 0 auto;
-  transition: border-color .4s ease, box-shadow .4s ease;
-  animation: searchboxPulse 4.5s ease-in-out infinite;
+  transition: border-color .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
+  animation: searchboxPulse 3.2s ease-in-out infinite;
 }
 
 @keyframes searchboxPulse {
   0%, 100% { box-shadow: 0 0 0 rgba(255, 46, 136, 0); }
-  50% { box-shadow: 0 0 18px rgba(255, 46, 136, .15); }
+  50% { box-shadow: 0 0 22px rgba(255, 46, 136, .22); }
 }
 
 .search-box:focus-within {
   border-color: var(--color-purple);
-  box-shadow: 0 0 30px rgba(255, 46, 136, .25);
+  box-shadow: 0 0 34px rgba(255, 46, 136, .3);
   animation: none;
+  transform: scale(1.015);
 }
 
 .search-box .terminal-prompt {
@@ -424,7 +427,7 @@ body {
   display: inline-block;
   color: var(--color-light-purple);
   font-size: 2.4rem;
-  animation: terminal-blink 1.3s step-start infinite;
+  animation: terminal-blink 1.1s step-start infinite;
 }
 
 @keyframes terminal-blink {

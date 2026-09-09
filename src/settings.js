@@ -45,7 +45,11 @@
   var defaultEngineSelect = document.getElementById("default-engine");
   var closeOnBlurCheckbox = document.getElementById("close-on-blur");
   var spotlightWidthInput = document.getElementById("spotlight-width");
-  var spotlightPositionSelect = document.getElementById("spotlight-position");
+  var pickPositionBtn = document.getElementById("pick-position-btn");
+  var resetPositionBtn = document.getElementById("reset-position-btn");
+  var spotlightPositionStatus = document.getElementById("spotlight-position-status");
+  var disableAnimationsCheckbox = document.getElementById("disable-animations");
+  var showSpotlightBrandingCheckbox = document.getElementById("show-spotlight-branding");
   var startAtLoginCheckbox = document.getElementById("start-at-login");
   var themeOptionsContainer = document.getElementById("theme-options");
   var customCssTextarea = document.getElementById("custom-css");
@@ -353,6 +357,51 @@
     }
   });
 
+  // ----- spotlight position (Pick position / Reset) -----
+  // Unlike the rest of this form, picking or resetting the spotlight's
+  // position takes effect immediately rather than waiting for Save - see
+  // commands::report_spotlight_position/reset_spotlight_position, which is
+  // what Julian asked for ("after that the clicked position is saved").
+  function describePosition(cfg) {
+    if (!cfg) return "";
+    if (cfg.window.spotlight_position === "custom" &&
+        cfg.window.spotlight_custom_x != null && cfg.window.spotlight_custom_y != null) {
+      return "Currently: a custom picked spot (" +
+        Math.round(cfg.window.spotlight_custom_x * 100) + "%, " +
+        Math.round(cfg.window.spotlight_custom_y * 100) + "% of your screen).";
+    }
+    return "Currently: screen center (default).";
+  }
+
+  pickPositionBtn.addEventListener("click", function () {
+    if (!invoke) return;
+    pickPositionBtn.disabled = true;
+    spotlightPositionStatus.textContent = "Click anywhere on your screen…";
+    invoke("open_position_picker").catch(function (err) {
+      dlog("error", "open_position_picker invoke failed: " + err);
+      spotlightPositionStatus.textContent = "Couldn't open the position picker: " + err;
+      pickPositionBtn.disabled = false;
+    });
+  });
+
+  resetPositionBtn.addEventListener("click", function () {
+    if (!invoke) return;
+    invoke("reset_spotlight_position")
+      .then(function () {
+        if (currentConfig) {
+          currentConfig.window.spotlight_position = "center";
+          currentConfig.window.spotlight_custom_x = null;
+          currentConfig.window.spotlight_custom_y = null;
+        }
+        spotlightPositionStatus.textContent = describePosition(currentConfig);
+        dlog("info", "settings: spotlight position reset to center");
+      })
+      .catch(function (err) {
+        dlog("error", "reset_spotlight_position invoke failed: " + err);
+        spotlightPositionStatus.textContent = "Couldn't reset the position: " + err;
+      });
+  });
+
   // ----- load current config + supporting data -----
   async function boot(tauri) {
     invoke = tauri.core.invoke;
@@ -381,7 +430,9 @@
     document.querySelector('input[name="browser_mode"][value="' + currentConfig.general.browser_mode + '"]').checked = true;
     closeOnBlurCheckbox.checked = !!currentConfig.general.close_spotlight_on_blur;
     spotlightWidthInput.value = currentConfig.window.spotlight_width;
-    spotlightPositionSelect.value = currentConfig.window.spotlight_position;
+    spotlightPositionStatus.textContent = describePosition(currentConfig);
+    disableAnimationsCheckbox.checked = !!currentConfig.general.disable_animations;
+    showSpotlightBrandingCheckbox.checked = !!currentConfig.general.show_spotlight_branding;
     var mainSizeInput = document.querySelector(
       'input[name="main_window_size"][value="' + (currentConfig.window.main_window_size || "default") + '"]'
     );
@@ -396,6 +447,20 @@
       if (stage === "checking") updateStatus.textContent = "Checking the release…";
       else if (stage === "downloading") updateStatus.textContent = "Downloading the update…";
       else if (stage === "installing") updateStatus.textContent = "Installing - Luma will restart itself…";
+    });
+
+    // The position-picker overlay saves straight to config.toml and emits
+    // this (see commands::report_spotlight_position) - re-fetch so this
+    // window's status line reflects the freshly-picked spot, and
+    // re-enable the button either way (picked, or cancelled with Escape).
+    tauri.event.listen("luma://config-changed", async function () {
+      pickPositionBtn.disabled = false;
+      try {
+        currentConfig = await invoke("get_config");
+        spotlightPositionStatus.textContent = describePosition(currentConfig);
+      } catch (err) {
+        dlog("warn", "settings: re-fetching config after config-changed failed: " + err);
+      }
     });
 
     if (currentConfig.general.debug_logging) {
@@ -475,8 +540,14 @@
     updated.general.start_at_login = startAtLoginCheckbox.checked;
     updated.general.debug_logging = debugLoggingEnabled.checked;
     updated.general.check_for_updates = checkUpdatesEnabled.checked;
+    updated.general.disable_animations = disableAnimationsCheckbox.checked;
+    updated.general.show_spotlight_branding = showSpotlightBrandingCheckbox.checked;
     updated.window.spotlight_width = parseInt(spotlightWidthInput.value, 10) || 640;
-    updated.window.spotlight_position = spotlightPositionSelect.value;
+    // spotlight_position/custom_x/custom_y are NOT set here - Pick
+    // position/Reset (above) write those straight to config.toml the
+    // moment they happen, and `updated` is cloned from the freshly
+    // re-fetched currentConfig, so a normal Save just carries them through
+    // unchanged instead of stomping on whatever the picker last set.
     var mainSizeChecked = document.querySelector('input[name="main_window_size"]:checked');
     updated.window.main_window_size = mainSizeChecked ? mainSizeChecked.value : "default";
     updated.appearance.theme = selectedThemeId || updated.appearance.theme;

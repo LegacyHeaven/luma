@@ -12,8 +12,12 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release as (e.g. v0.1.0)"
+        description: "Tag to release as - use 'Release' for the normal rolling release the in-app updater watches (see src-tauri/src/updater.rs's RELEASE_BASE_URL); a different tag makes a one-off release the updater ignores"
         required: true
+        default: "Release"
+      release_title:
+        description: "Human-readable release title (e.g. 'Luma Version 2') - shown on the GitHub release page. Leave blank to just use the tag."
+        required: false
 
 permissions:
   contents: write
@@ -90,8 +94,8 @@ jobs:
           merge-multiple: true
 
       # The in-app updater (src-tauri/src/updater.rs) has no version tag to
-      # compare against - this workflow re-uses the same `1R` release tag
-      # forever instead of cutting a new one per build - so it compares
+      # compare against - this workflow re-uses the same `Release` release
+      # tag forever instead of cutting a new one per build - so it compares
       # this file's `commit` field against the running build's own
       # embedded commit (build.rs) instead. Must stay in the platform-key
       # <-> asset_name shape updater.rs's platform_key() expects.
@@ -128,7 +132,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          name: "Luma ${{ github.event.inputs.tag || github.ref_name }}"
+          name: "${{ github.event.inputs.release_title || format('Luma {0}', github.event.inputs.tag || github.ref_name) }}"
           draft: true
           files: dist/*
           body: |

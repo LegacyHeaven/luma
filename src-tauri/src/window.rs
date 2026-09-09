@@ -1,6 +1,15 @@
+use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::{
     window::Color, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
+
+/// Bumped on every show/hide of the spotlight so a delayed "actually hide
+/// now" (see toggle_spotlight/hide_spotlight) can tell whether it's still
+/// the most recent request before it fires - otherwise a fast
+/// hide-then-show within the fade-out window would hide a spotlight the
+/// user just reopened. Process-wide is fine: there's only ever one
+/// spotlight window.
+static SPOTLIGHT_GENERATION: AtomicU64 = AtomicU64::new(0);
 
 /// The theme's `--color-dark-mode`. Set as the window's actual background
 /// (not just the page's CSS background) so navigating from the main window
@@ -8,9 +17,19 @@ use tauri::{
 /// flash while the new document is loading.
 const APP_BACKGROUND: Color = Color(10, 5, 16, 255);
 
+/// Fully transparent (alpha 0). `transparent: true` on the WebviewWindow
+/// alone isn't enough on Windows - WebView2 still paints its own opaque
+/// default background wherever the page doesn't, which shows up as a hard
+/// rectangular box around the spotlight pill instead of the pill floating
+/// free on the wallpaper. Explicitly setting the webview's own background
+/// to this is what actually gets rid of it (Windows-only in practice;
+/// harmless to set everywhere).
+const FULLY_TRANSPARENT: Color = Color(0, 0, 0, 0);
+
 pub const MAIN_LABEL: &str = "main";
 pub const SPOTLIGHT_LABEL: &str = "spotlight";
 pub const BROWSER_LABEL: &str = "browser";
+pub const POSITION_PICKER_LABEL: &str = "position-picker";
 
 /// Main window size presets (width, height) - see `WindowConfig::main_window_size`.
 /// "default" here is already smaller than Luma's original 900x640, which
@@ -98,24 +117,40 @@ pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<Web
     .resizable(false)
     .decorations(false)
     .transparent(true)
+    .background_color(FULLY_TRANSPARENT)
     .always_on_top(true)
     .skip_taskbar(true)
     .visible(false)
     .shadow(false)
     .build()?;
 
-    position_spotlight(&window, "top-center");
+    position_spotlight(&window, "center", None, None);
 
     Ok(window)
 }
 
-/// Places the spotlight window either dead-center or a third of the way
-/// down the primary monitor (the classic Spotlight/launcher position).
-pub fn position_spotlight(window: &WebviewWindow, placement: &str) {
-    if placement == "center" {
+/// Places the spotlight window - "center" (the default, dead-center on the
+/// primary monitor) or "custom" (centered on a point the user picked with
+/// the Settings "Pick position" click-to-choose overlay, stored as a
+/// fraction of the primary monitor's size so it survives a resolution
+/// change reasonably). Falls back to center whenever a custom position
+/// isn't actually available, so a bad/missing value can never strand the
+/// spotlight off-screen.
+pub fn position_spotlight(
+    window: &WebviewWindow,
+    placement: &str,
+    x_frac: Option<f64>,
+    y_frac: Option<f64>,
+) {
+    if placement != "custom" {
         let _ = window.center();
         return;
     }
+
+    let (Some(x_frac), Some(y_frac)) = (x_frac, y_frac) else {
+        let _ = window.center();
+        return;
+    };
 
     let Ok(Some(monitor)) = window.primary_monitor() else {
         let _ = window.center();
@@ -131,13 +166,21 @@ pub fn position_spotlight(window: &WebviewWindow, placement: &str) {
     };
     let win_size = win_size.to_logical::<f64>(scale);
 
-    let x = screen_pos.x + (screen_size.width - win_size.width) / 2.0;
-    let y = screen_pos.y + screen_size.height * 0.18;
+    // The clicked point becomes the *center* of the spotlight, not its
+    // top-left corner - that's what "spawn from the middle there" means.
+    let x = screen_pos.x + x_frac * screen_size.width - win_size.width / 2.0;
+    let y = screen_pos.y + y_frac * screen_size.height - win_size.height / 2.0;
 
     let _ = window.set_position(tauri::Position::Logical(tauri::LogicalPosition { x, y }));
 }
 
-pub fn toggle_spotlight(app: &AppHandle, width: f64, placement: &str) {
+pub fn toggle_spotlight(
+    app: &AppHandle,
+    width: f64,
+    placement: &str,
+    x_frac: Option<f64>,
+    y_frac: Option<f64>,
+) {
     match ensure_spotlight_window(app, width) {
         Ok(window) => {
             let visible = window.is_visible().unwrap_or(false);
@@ -146,9 +189,10 @@ pub fn toggle_spotlight(app: &AppHandle, width: f64, placement: &str) {
                 format!("toggle_spotlight: currently visible={visible}, toggling"),
             );
             if visible {
-                let _ = window.hide();
+                schedule_spotlight_hide(&window);
             } else {
-                position_spotlight(&window, placement);
+                SPOTLIGHT_GENERATION.fetch_add(1, Ordering::SeqCst);
+                position_spotlight(&window, placement, x_frac, y_frac);
                 let _ = window.show();
                 let _ = window.set_focus();
                 let _ = window.emit("luma://spotlight-shown", ());
@@ -163,7 +207,72 @@ pub fn toggle_spotlight(app: &AppHandle, width: f64, placement: &str) {
 
 pub fn hide_spotlight(app: &AppHandle) {
     if let Some(w) = spotlight_window(app) {
-        let _ = w.hide();
+        schedule_spotlight_hide(&w);
+    }
+}
+
+/// Lets the frontend play its fade-out animation before the native window
+/// actually disappears (see main.js's "luma://spotlight-hiding" listener),
+/// with a fixed grace period as a floor - so it hides promptly even with
+/// animations disabled, or if the page never got a chance to react. Guards
+/// against a fast hide-then-show race with SPOTLIGHT_GENERATION: if
+/// anything else (another hide, or a show) happened after this one was
+/// scheduled, this call is a no-op instead of hiding a window the user
+/// just reopened.
+fn schedule_spotlight_hide(window: &WebviewWindow) {
+    let gen = SPOTLIGHT_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+    let _ = window.emit("luma://spotlight-hiding", ());
+    let target = window.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(220));
+        if SPOTLIGHT_GENERATION.load(Ordering::SeqCst) == gen {
+            let _ = target.hide();
+        }
+    });
+}
+
+/// Fullscreen, click-through-free overlay on the primary monitor, used by
+/// Settings' "Pick position" button. Reports the click back as a fraction
+/// of the monitor's size (see position_spotlight) and closes itself either
+/// way - clicking picks a spot, Escape cancels without changing anything.
+pub fn open_position_picker(app: &AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window(POSITION_PICKER_LABEL) {
+        let _ = w.set_focus();
+        return Ok(());
+    }
+
+    let monitor = app
+        .primary_monitor()
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "no primary monitor found".to_string())?;
+    let scale = monitor.scale_factor();
+    let size = monitor.size().to_logical::<f64>(scale);
+    let pos = monitor.position().to_logical::<f64>(scale);
+
+    let window = WebviewWindowBuilder::new(
+        app,
+        POSITION_PICKER_LABEL,
+        WebviewUrl::App("position-picker.html".into()),
+    )
+    .title("Luma")
+    .inner_size(size.width, size.height)
+    .position(pos.x, pos.y)
+    .resizable(false)
+    .decorations(false)
+    .transparent(true)
+    .background_color(FULLY_TRANSPARENT)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    let _ = window.set_focus();
+    Ok(())
+}
+
+pub fn close_position_picker(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window(POSITION_PICKER_LABEL) {
+        let _ = w.close();
     }
 }
 

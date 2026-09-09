@@ -47,12 +47,29 @@
           <label>Width
             <input type="number" id="spotlight-width" class="settings-input settings-input-sm" min="360" max="1200" step="10">
           </label>
-          <label>Position
-            <select id="spotlight-position" class="settings-input settings-input-sm">
-              <option value="top-center">Top-center</option>
-              <option value="center">Screen center</option>
-            </select>
-          </label>
+        </div>
+        <p class="help">Where the spotlight appears - screen center by default, or click anywhere to pick a spot.</p>
+        <div class="settings-row">
+          <span id="spotlight-position-status" class="update-status"></span>
+        </div>
+        <div class="settings-row">
+          <button type="button" class="btn" id="pick-position-btn">Pick position&hellip;</button>
+          <button type="button" class="btn" id="reset-position-btn">Reset to default (center)</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Animations</h2>
+        <p class="help">The spotlight's fade in/out and the main window's entrance motion. Turn this off for a snappier, fully static feel.</p>
+        <div class="settings-row">
+          <label class="checkbox-option"><input type="checkbox" id="disable-animations"> Disable animations</label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>Spotlight branding</h2>
+        <div class="settings-row">
+          <label class="checkbox-option"><input type="checkbox" id="show-spotlight-branding"> Show "LUMA." above the spotlight bar</label>
         </div>
       </section>
 
@@ -89,6 +106,7 @@
         <p class="help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see the wiki's Theming page.</p>
         <div class="settings-row" id="theme-options"></div>
         <button type="button" class="btn" id="open-themes-folder">Open themes folder</button>
+        <p class="help" style="margin-top:12px;margin-bottom:0;">&#9733; A themes marketplace - browse and install community themes without leaving Luma - is in the making.</p>
       </section>
 
       <section class="settings-section">

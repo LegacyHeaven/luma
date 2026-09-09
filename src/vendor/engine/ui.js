@@ -41,6 +41,11 @@
     const onSearch = opts.onSearch || function () {};
     const getPreferredEngine = opts.getPreferredEngine || function () { return null; };
     const setPreferredEngine = opts.setPreferredEngine || function () {};
+    // Fixed placeholder that wins over every engine's own `placeholder`
+    // (e.g. "search the web", "search wikipedia") - used by the spotlight
+    // window, where there's no visible engine indicator to make a
+    // per-engine placeholder make sense. See main.js.
+    const placeholderOverride = opts.placeholderOverride || null;
 
     const currentEngineEl = doc.getElementById("current-engine");
     const engineListEl = doc.getElementById("engine-list");
@@ -87,7 +92,7 @@
       if (!deck.engines[name]) return;
       currentEngine = name;
       setPreferredEngine(name);
-      inputEl.placeholder = deck.placeholderFor(name);
+      inputEl.placeholder = placeholderOverride || deck.placeholderFor(name);
       refreshEngineDisplay(true);
     }
 

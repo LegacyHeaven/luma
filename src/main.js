@@ -119,6 +119,28 @@
     document.body.classList.add("spotlight-mode");
   }
 
+  // Re-adds `cls` even if it's already present, forcing the CSS animation
+  // named in that class's rule to restart from frame 0 - a bare
+  // classList.add() on a class that's already there is a no-op, which
+  // would otherwise leave a stale fade playing (or none at all) on a fast
+  // hide-then-show. The offsetWidth read forces layout, flushing the
+  // removal before the class goes back on.
+  function restartAnimation(el, cls, otherCls) {
+    if (otherCls) el.classList.remove(otherCls);
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
+
+  function applyAnimationSetting(disabled) {
+    document.body.classList.toggle("no-animations", !!disabled);
+  }
+
+  function applyBrandingSetting(show) {
+    var el = document.getElementById("spotlight-brand");
+    if (el) el.hidden = !show;
+  }
+
   function applyThemeCss(css) {
     var style = document.getElementById("luma-theme-style");
     if (!style) {
@@ -168,6 +190,8 @@
       dlog("error", "get_theme_css invoke failed: " + err);
     }
     applyCustomCss(config.appearance.custom_css);
+    applyAnimationSetting(config.general && config.general.disable_animations);
+    if (isSpotlight) applyBrandingSetting(config.general && config.general.show_spotlight_branding);
 
     try {
       engineConfig = await invoke("get_engines");
@@ -186,6 +210,13 @@
       deck: deck,
       particles: !isSpotlight,
       autofocus: true,
+      // The bang engine indicator is hidden in spotlight mode (no room,
+      // and it'd give away which engine you're on when the point of the
+      // pill is that you don't have to think about it) - so a per-engine
+      // placeholder like "search the web" or "search wikipedia" is
+      // misleading there with nothing on screen to explain it. Pin it to
+      // one fixed, engine-agnostic placeholder instead.
+      placeholderOverride: isSpotlight ? "search the universe" : null,
       onSearch: function (result) {
         dlog("info", "search submitted -> resolved url=" + result.url + " engine=" + (result.engine && result.engine.name));
         invoke("open_result", { url: result.url, fromSpotlight: isSpotlight })
@@ -212,6 +243,8 @@
         var freshThemeCss = await invoke("get_theme_css", { themeId: freshConfig.appearance.theme });
         applyThemeCss(freshThemeCss);
         applyCustomCss(freshConfig.appearance.custom_css);
+        applyAnimationSetting(freshConfig.general && freshConfig.general.disable_animations);
+        if (isSpotlight) applyBrandingSetting(freshConfig.general && freshConfig.general.show_spotlight_branding);
         dlog("info", (isSpotlight ? "spotlight" : "main") + ": re-applied theme '" + freshConfig.appearance.theme + "' after config change");
       } catch (err) {
         dlog("error", "config-changed handler failed: " + err);
@@ -256,6 +289,20 @@
       tauri.event.listen("luma://spotlight-shown", function () {
         ui.clear();
         ui.focusInput();
+        if (!document.body.classList.contains("no-animations")) {
+          restartAnimation(document.body, "spotlight-fade-in", "spotlight-fade-out");
+        }
+      });
+
+      // Backend fires this right when it starts the 220ms grace period
+      // before actually hiding the window (see
+      // window::schedule_spotlight_hide) - this is what plays during that
+      // window. With animations off there's nothing to play, so skip it
+      // rather than adding a class that'd just sit there doing nothing.
+      tauri.event.listen("luma://spotlight-hiding", function () {
+        if (!document.body.classList.contains("no-animations")) {
+          restartAnimation(document.body, "spotlight-fade-out", "spotlight-fade-in");
+        }
       });
 
       if (closeOnBlur) {

@@ -6,9 +6,10 @@
 //! (MSI/NSIS/AppImage/.app), not a bare binary someone downloaded and put
 //! wherever they wanted, so it doesn't fit this distribution model.
 //!
-//! Versioning: release.yml re-uses one GitHub Release tag (`1R`) forever
-//! and just replaces its assets on every re-run rather than cutting a new
-//! tag per build, so there's no semver to compare here either. Instead
+//! Versioning: release.yml re-uses one GitHub Release tag (`Release`,
+//! renamed from the earlier `1R`) forever and just replaces its assets on
+//! every re-run rather than cutting a new tag per build, so there's no
+//! semver to compare here either. Instead
 //! this compares the running build's embedded git commit (build.rs /
 //! logging::BUILD_SHA) against the commit recorded in a small
 //! `manifest.json` release asset that release.yml publishes alongside the
@@ -33,7 +34,11 @@ use std::io::{Read, Write};
 use std::path::Path;
 use tauri::{AppHandle, Emitter};
 
-const RELEASE_BASE_URL: &str = "https://github.com/LegacyHeaven/luma/releases/download/1R";
+// Renamed from `1R` -> `Release` for Version 2. A build downloaded before
+// this change has the old URL baked in, so it can't self-update past this
+// point - that one release needs a manual re-download; every build from
+// here on updates itself again as normal.
+const RELEASE_BASE_URL: &str = "https://github.com/LegacyHeaven/luma/releases/download/Release";
 
 #[derive(Debug, Clone, Deserialize)]
 struct AssetEntry {

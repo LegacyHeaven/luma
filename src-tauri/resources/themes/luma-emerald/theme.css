@@ -15,7 +15,7 @@
   --color-gray: #c4c4c4;
   --box-first-color: #0d1f19;
   --box-border-color: #1f5c3f;
-  --font-family: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  --font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   /* Filled magnifying-glass glyph used as a CSS mask for the spotlight
      pill's search icon - painted with background-color, so it picks up
      whichever accent color this theme defines with zero per-theme code. */
@@ -37,10 +37,8 @@ body {
   min-height: 100vh;
   font-family: var(--font-family);
   background-color: var(--color-dark-mode);
-  background-image:
-    linear-gradient(rgba(16, 185, 129, .05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 185, 129, .05) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background-image: radial-gradient(ellipse at 50% 100%, rgba(16, 185, 129, .07), transparent 60%);
+  background-size: auto;
   color: var(--color-white);
   display: flex;
   align-items: center;
@@ -139,43 +137,44 @@ body {
 
 .particle {
   position: absolute;
-  width: 2px;
-  height: 2px;
+  width: 3px;
+  height: 6px;
   background: var(--color-light-purple);
-  border-radius: 50%;
-  opacity: 0.3;
-  animation: float 20s infinite linear;
+  border-radius: 40% 40% 50% 50%;
+  opacity: 0.25;
+  animation: float 28s infinite linear;
 }
 
 @keyframes float {
   0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-  10% { opacity: 0.3; }
-  90% { opacity: 0.3; }
-  100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+  10% { opacity: 0.25; }
+  90% { opacity: 0.25; }
+  100% { transform: translateY(-100px) rotate(140deg); opacity: 0; }
 }
 
 .wrapper {
   text-align: center;
   z-index: 1;
   position: relative;
-  animation: fadeInUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: fadeInUp 1.8s ease-out;
   width: 100%;
   max-width: 640px;
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(40px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .brand {
   font-family: var(--font-family);
-  font-size: 3.2rem;
-  letter-spacing: 4px;
-  font-weight: 700;
+  font-size: 3.1rem;
+  letter-spacing: 1px;
+  font-weight: 400;
+  font-style: italic;
   color: var(--color-white);
   margin-bottom: 6px;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .brand .brand-dot {
@@ -227,9 +226,10 @@ body {
 
 .engine-current {
   font-family: var(--font-family);
-  font-size: 1.8rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  font-size: 1.7rem;
+  letter-spacing: 1px;
+  text-transform: none;
+  font-style: italic;
   color: var(--color-light-purple);
   cursor: pointer;
   padding: 8px 18px;
@@ -237,9 +237,9 @@ body {
   max-width: 90vw;
   text-align: center;
   border: 1px solid var(--box-border-color);
-  border-radius: 4px;
+  border-radius: 14px 20px 16px 18px;
   background: rgba(255, 255, 255, .02);
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all .6s ease;
   position: relative;
   user-select: none;
 }
@@ -373,30 +373,30 @@ body {
   gap: 10px;
   border: 1px solid var(--box-border-color);
   background: rgba(255, 255, 255, .02);
-  border-radius: 6px;
+  border-radius: 18px 26px 20px 24px;
   padding: 14px 26px;
   width: 560px;
   max-width: 88vw;
   margin: 0 auto;
-  transition: border-color .4s ease, box-shadow .4s ease;
-  animation: searchboxPulse 4.5s ease-in-out infinite;
+  transition: border-color .6s ease, box-shadow .6s ease;
+  animation: searchboxPulse 6s ease-in-out infinite;
 }
 
 @keyframes searchboxPulse {
   0%, 100% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
-  50% { box-shadow: 0 0 18px rgba(16, 185, 129, .15); }
+  50% { box-shadow: 0 0 16px rgba(16, 185, 129, .13); }
 }
 
 .search-box:focus-within {
   border-color: var(--color-purple);
-  box-shadow: 0 0 30px rgba(16, 185, 129, .25);
+  box-shadow: 0 0 26px rgba(16, 185, 129, .2);
   animation: none;
 }
 
 .search-box .terminal-prompt {
-  font-size: 2.4rem;
+  font-size: 2.2rem;
   color: var(--color-light-purple);
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .search-box form {
@@ -423,8 +423,8 @@ body {
 .search-box .terminal-cursor {
   display: inline-block;
   color: var(--color-light-purple);
-  font-size: 2.4rem;
-  animation: terminal-blink 1.3s step-start infinite;
+  font-size: 2.2rem;
+  animation: terminal-blink 1.8s ease-in-out infinite;
 }
 
 @keyframes terminal-blink {
