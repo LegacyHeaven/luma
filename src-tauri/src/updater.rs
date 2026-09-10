@@ -151,6 +151,32 @@ fn emit_progress(app: &AppHandle, stage: &str, detail: impl Into<String>) {
     );
 }
 
+/// Where the Windows update-helper script (see install_and_relaunch below
+/// and resources/windows-update-helper.ps1) leaves a note if it ultimately
+/// fails to swap the files. Only relevant on Windows: the process that
+/// kicks off `apply_update` there has to exit unconditionally before the
+/// swap can happen (the running .exe can't replace itself), so if the
+/// swap then fails there is no live Tauri command left to report an error
+/// through - this file on disk is the only channel back to the next
+/// launch. macOS/Linux do the swap in-process before exiting, so a
+/// failure there already returns a normal `Err` from `apply_update` and
+/// never needs this.
+fn update_failure_marker_path() -> std::path::PathBuf {
+    std::env::temp_dir().join("luma-update-failed.txt")
+}
+
+/// Called once on startup by the main window (see main.js's boot()) right
+/// alongside check_for_update. Reads and clears the marker above, if one
+/// is there, so the frontend can tell the user the last automatic update
+/// didn't take instead of it just quietly having not happened.
+#[tauri::command]
+pub fn take_last_update_failure() -> Option<String> {
+    let path = update_failure_marker_path();
+    let text = fs::read_to_string(&path).ok()?;
+    let _ = fs::remove_file(&path);
+    Some(text)
+}
+
 /// Downloads, verifies, and installs the update for this platform, then
 /// relaunches - on success this process exits and never actually returns
 /// `Ok`, so the frontend's `invoke("apply_update")` promise is expected to
@@ -269,7 +295,17 @@ fn install_and_relaunch(
     let script = include_str!("../resources/windows-update-helper.ps1")
         .replace("__PID__", &pid.to_string())
         .replace("__OLD__", &current_exe.to_string_lossy())
-        .replace("__NEW__", &new_path.to_string_lossy());
+        .replace("__NEW__", &new_path.to_string_lossy())
+        .replace(
+            "__MARKER__",
+            &update_failure_marker_path().to_string_lossy(),
+        )
+        .replace(
+            "__LOG__",
+            &std::env::temp_dir()
+                .join(format!("luma-update-{pid}.log"))
+                .to_string_lossy(),
+        );
 
     let script_path = std::env::temp_dir().join(format!("luma-update-{pid}.ps1"));
     fs::write(&script_path, script).map_err(|e| e.to_string())?;

@@ -112,6 +112,47 @@
     }
   }
 
+  // Shown once on launch if the *previous* run's auto-update failed to
+  // finish - see updater::take_last_update_failure. On Windows the
+  // process that kicks off an update has to exit before the file swap
+  // can happen, so a failure there can't report back to a running
+  // window; this is what makes that failure visible instead of the app
+  // just quietly staying on the old version with no explanation.
+  function showUpdateFailedBanner(message) {
+    try {
+      if (document.getElementById("luma-update-failed-banner")) return;
+
+      var el = document.createElement("div");
+      el.id = "luma-update-failed-banner";
+      el.style.cssText =
+        "position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:9998;" +
+        "display:flex;align-items:center;gap:12px;max-width:calc(100% - 40px);" +
+        "background:rgba(43,26,4,.96);color:#fff;font-family:monospace;font-size:13px;" +
+        "padding:10px 14px;border-radius:8px;border:1px solid rgba(230,160,50,.5);" +
+        "box-shadow:0 10px 30px rgba(0,0,0,.5);";
+
+      var text = document.createElement("span");
+      text.textContent = message;
+
+      var dismissBtn = document.createElement("button");
+      dismissBtn.type = "button";
+      dismissBtn.textContent = "Dismiss";
+      dismissBtn.style.cssText =
+        "font-family:monospace;font-size:12px;padding:5px 10px;border-radius:5px;" +
+        "border:1px solid transparent;background:transparent;color:#e0c9a6;" +
+        "cursor:pointer;opacity:.85;flex-shrink:0;";
+      dismissBtn.addEventListener("click", function () {
+        el.remove();
+      });
+
+      el.appendChild(text);
+      el.appendChild(dismissBtn);
+      document.body.appendChild(el);
+    } catch (e) {
+      dlog("warn", "showUpdateFailedBanner failed: " + e);
+    }
+  }
+
   var params = new URLSearchParams(window.location.search);
   var isSpotlight = params.get("mode") === "spotlight";
 
@@ -286,6 +327,20 @@
         })
         .catch(function (err) {
           dlog("warn", "check_for_update invoke failed: " + err);
+        });
+
+      // Windows-only in practice (see take_last_update_failure) - a
+      // no-op Ok(None) everywhere else. Checked once per launch so a
+      // failed background swap from last time doesn't just go unnoticed.
+      invoke("take_last_update_failure")
+        .then(function (message) {
+          if (message) {
+            dlog("warn", "last update failed: " + message);
+            showUpdateFailedBanner(message);
+          }
+        })
+        .catch(function (err) {
+          dlog("warn", "take_last_update_failure invoke failed: " + err);
         });
     }
 
