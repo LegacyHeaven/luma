@@ -36,5 +36,25 @@ fn main() {
     // done from the same checkout.
     println!("cargo:rerun-if-changed=../.git/HEAD");
 
-    tauri_build::build()
+    // Registers close_builtin_browser/open_in_system_browser as commands
+    // Tauri's ACL system knows how to permission (autogenerates
+    // `allow-close-builtin-browser` / `allow-open-in-system-browser`, see
+    // capabilities/builtin-browser-remote.json). Without an app manifest
+    // like this, Tauri has no manifest entry to grant those commands
+    // *against at all* - it doesn't matter what a capability's JSON says,
+    // there's nothing for it to reference - and a plain `tauri_build::build()`
+    // never creates one. That's the actual reason the built-in browser's
+    // toolbar buttons ("Open in system browser", the "x" close button) did
+    // nothing: every custom command is already open to *local* Luma content
+    // with no ACL needed, but Tauri always enforces ACL for commands called
+    // from *remote* content - which is exactly what the toolbar is, since
+    // it's injected into whatever external site the user searched to - and
+    // there was no manifest entry for it to possibly be allowed under.
+    tauri_build::try_build(
+        tauri_build::Attributes::new().app_manifest(
+            tauri_build::AppManifest::new()
+                .commands(&["close_builtin_browser", "open_in_system_browser"]),
+        ),
+    )
+    .expect("failed to run tauri-build");
 }

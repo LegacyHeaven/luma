@@ -15,6 +15,18 @@ body.settings-page {
   display: block;
   overflow-y: auto;
   height: 100vh;
+  /* Every theme's body has a background-image (a subtle radial-gradient
+     glow, sized "auto" - i.e. sized to fill exactly one box). The default
+     attachment, "scroll", sizes and positions that image against body's
+     own *visible* box (100vh here), not the much taller area Settings
+     actually scrolls through - so as soon as the page is taller than one
+     screen, the browser tiles that one glow-sized image to cover the rest,
+     and you get a second (and third...) copy of the gradient repeating
+     every 100vh as you scroll - each theme's colors showing up somewhere
+     they don't belong. "local" ties the background to the element's full
+     scrollable content instead of just its visible box, so it's sized
+     and painted once across the real page height - no repeat, no bands. */
+  background-attachment: local;
 }
 
 body.settings-page .settings-wrapper {

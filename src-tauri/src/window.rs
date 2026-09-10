@@ -73,6 +73,74 @@ const APP_BACKGROUND: Color = Color(10, 5, 16, 255);
 /// harmless to set everywhere).
 const FULLY_TRANSPARENT: Color = Color(0, 0, 0, 0);
 
+/// Windows 11 only: turns off DWM's automatic Mica/system-backdrop material
+/// on an undecorated, per-pixel-transparent window.
+///
+/// `transparent(true)` + `background_color(FULLY_TRANSPARENT)` above are
+/// the whole story on Windows 10 and on macOS/Linux - but on Windows 11,
+/// DWM composites its own default backdrop (Mica, as of 22H2) behind any
+/// undecorated ("popup"-style) window unless told not to, *on top of* the
+/// window's own transparency. The window is still genuinely per-pixel
+/// transparent underneath - this is a separate compositor-level tint DWM
+/// adds for windows it thinks want a "frosted glass" look - and it's what
+/// was actually showing up as a solid dark box around the spotlight pill
+/// even though every CSS and Tauri-level transparency setting was already
+/// correct (confirmed against a live screenshot from Windows 11, and by
+/// reading tao 0.35.3's own window-creation code: it calls the legacy
+/// `DwmEnableBlurBehindWindow` Vista/7-era API for `transparent: true`, but
+/// never the modern `DWMWA_SYSTEMBACKDROP_TYPE` attribute Windows 11 needs).
+/// `DwmSetWindowAttribute(DWMWA_SYSTEMBACKDROP_TYPE, DWMSBT_NONE)` is that
+/// missing call - safe to make on every Windows version (older DWM just
+/// ignores an attribute it doesn't recognize), so this isn't OS-version-gated.
+#[cfg(windows)]
+fn disable_system_backdrop(app: &AppHandle, window: &WebviewWindow) {
+    use windows::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMSBT_NONE, DWMWA_SYSTEMBACKDROP_TYPE,
+    };
+
+    let hwnd = match window.hwnd() {
+        Ok(h) => h,
+        Err(err) => {
+            crate::logging::warn(
+                app,
+                format!(
+                    "disable_system_backdrop: couldn't get hwnd for {}: {err}",
+                    window.label()
+                ),
+            );
+            return;
+        }
+    };
+
+    let backdrop_none = DWMSBT_NONE.0;
+    // Safety: `hwnd` comes straight from the just-built window (still valid
+    // and owned by this process), and `backdrop_none` is a plain i32 whose
+    // address and size we pass through exactly as DwmSetWindowAttribute
+    // requires - this mirrors the C usage in Microsoft's own DWM docs.
+    let result = unsafe {
+        DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_SYSTEMBACKDROP_TYPE,
+            &backdrop_none as *const _ as *const std::ffi::c_void,
+            std::mem::size_of_val(&backdrop_none) as u32,
+        )
+    };
+    if let Err(err) = result {
+        // Not fatal - worst case the window looks the way it did before
+        // this fix (a visible backdrop box), not broken in some new way.
+        crate::logging::warn(
+            app,
+            format!(
+                "disable_system_backdrop: DwmSetWindowAttribute failed for {}: {err}",
+                window.label()
+            ),
+        );
+    }
+}
+
+#[cfg(not(windows))]
+fn disable_system_backdrop(_app: &AppHandle, _window: &WebviewWindow) {}
+
 pub const MAIN_LABEL: &str = "main";
 pub const SPOTLIGHT_LABEL: &str = "spotlight";
 pub const BROWSER_LABEL: &str = "browser";
@@ -171,6 +239,7 @@ pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<Web
     .shadow(false)
     .build()?;
 
+    disable_system_backdrop(app, &window);
     position_spotlight(&window, "center", None, None);
 
     Ok(window)
@@ -337,6 +406,7 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
     .build()
     .map_err(|e| e.to_string())?;
 
+    disable_system_backdrop(app, &window);
     let _ = window.set_focus();
     Ok(())
 }
@@ -396,17 +466,83 @@ fn open_in_builtin_browser_on_main_thread(app: &AppHandle, parsed: url::Url) -> 
         app,
         format!("open_in_builtin_browser: creating new window for {parsed}"),
     );
-    let toolbar_js = include_str!("../resources/builtin-browser-toolbar.js");
+    let toolbar_js = include_str!("../resources/builtin-browser-toolbar.js")
+        .replace("__THEME_VARS__", &theme_vars_css(app));
 
     WebviewWindowBuilder::new(app, BROWSER_LABEL, WebviewUrl::External(parsed))
         .title("LUMA Browser")
         .inner_size(1100.0, 760.0)
         .min_inner_size(360.0, 320.0)
-        .initialization_script(toolbar_js)
+        .initialization_script(&toolbar_js)
         .build()
         .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+/// The current theme's colors, as `--luma-*: value;\n` declarations ready
+/// to drop into a `:root { ... }` block - see builtin-browser-toolbar.js's
+/// `__THEME_VARS__` placeholder.
+///
+/// The built-in browser window shows *external* page content, which never
+/// loads any of Luma's own theme.css - so the toolbar injected on top of it
+/// has no `var(--color-purple)` etc. to resolve against, and was always
+/// stuck with one hardcoded look regardless of the theme actually picked
+/// in Settings. Pulling the handful of colors the toolbar needs out of the
+/// current theme's real CSS text and templating them straight into the
+/// injected script's own `:root` block is what lets it actually match.
+///
+/// This is a small line-oriented scan for `--name: value;`, not a real CSS
+/// parser - it doesn't need to be, since every theme.css (built-in or a
+/// user's own custom one, see the wiki's Theming page) declares these once
+/// in a single `:root { ... }` block in exactly this shape. Falls back to
+/// Luma Default's own values for anything a theme doesn't define, so a
+/// custom theme missing one of these can never leave the toolbar with a
+/// broken/unset variable.
+fn theme_vars_css(app: &AppHandle) -> String {
+    // (the toolbar's variable name, the theme.css variable to read it
+    // from, Luma Default's own value as the fallback)
+    const WANTED: &[(&str, &str, &str)] = &[
+        ("luma-bg", "box-first-color", "#180d29"),
+        ("luma-border", "box-border-color", "#3a1f5c"),
+        ("luma-accent", "color-light-purple", "#cf59e6"),
+        ("luma-text", "color-white", "#fff"),
+        ("luma-muted", "color-gray", "#c4c4c4"),
+        (
+            "luma-font",
+            "font-family",
+            "'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace",
+        ),
+    ];
+
+    let theme_id = app
+        .try_state::<crate::commands::AppState>()
+        .map(|s| s.config.lock().unwrap().appearance.theme.clone())
+        .unwrap_or_else(|| "luma-default".into());
+    let css = crate::themes::css_for(app, &theme_id).unwrap_or_default();
+
+    let mut out = String::new();
+    for (toolbar_name, theme_var, fallback) in WANTED {
+        let value = find_css_var(&css, theme_var).unwrap_or_else(|| (*fallback).to_string());
+        out.push_str(&format!("  --{toolbar_name}: {value};\n"));
+    }
+    out
+}
+
+/// Finds the first `--name: value;` declaration in a block of CSS text and
+/// returns `value`, trimmed. See `theme_vars_css` for why this is
+/// deliberately not a full CSS parser.
+fn find_css_var(css: &str, name: &str) -> Option<String> {
+    let prefix = format!("--{name}:");
+    for line in css.lines() {
+        if let Some(rest) = line.trim().strip_prefix(&prefix) {
+            let value = rest.split(';').next().unwrap_or(rest).trim();
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
 }
 
 pub fn close_builtin_browser(app: &AppHandle) -> Result<(), String> {

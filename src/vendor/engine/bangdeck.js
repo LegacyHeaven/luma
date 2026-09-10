@@ -48,7 +48,14 @@
     }
 
     _register(engine) {
-      if (!engine || !engine.name || !engine.action || !engine.bang) return;
+      if (!engine || !engine.name || !engine.bang) return;
+      // `local` engines (like !mypc) legitimately have no `action` URL -
+      // they hand off to the OS instead of building a search URL - so
+      // only *non-local* engines need a truthy `action` here. Without
+      // this carve-out, `!engine.action` is true for an empty string and
+      // silently drops every local engine before it's ever registered,
+      // making its bang look "not present" even though engines.json has it.
+      if (!engine.local && !engine.action) return;
       this.engines[engine.name] = engine;
       this.bangMap[engine.bang.toLowerCase()] = engine.name;
     }
