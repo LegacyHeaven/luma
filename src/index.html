@@ -7,6 +7,17 @@
   <style>
     /* Critical CSS so the window isn't white for a frame before the theme loads. */
     html, body { background: #0a0510; margin: 0; }
+    /* Spotlight mode needs the *window itself* fully transparent - the
+       only thing that should have paint on it is the pill (theme.css's
+       .search-shell), floating free over the desktop. `html` always
+       fills the entire window no matter what `body` does, so even though
+       theme.css's `body.spotlight-mode` rule already resets body's own
+       background to transparent, the opaque #0a0510 above (still in
+       effect on `html`, never touched by that rule) painted right
+       through as a solid box around the pill regardless. main.js adds
+       this class to <html> as well as <body> when ?mode=spotlight for
+       exactly this reason. */
+    html.spotlight-mode { background: transparent; }
     /* Cross-fades into/out of settings.html instead of a hard cut - opt-in
        only, so it's a no-op (plain instant navigation) on a webview engine
        that doesn't support cross-document view transitions yet. */

@@ -1,12 +1,36 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default permissions granted to all of Luma's windows (main browser-style window, the floating spotlight, and the built-in browser window).",
+  "description": "Default permissions granted to all of Luma's windows (main browser-style window, the floating spotlight, and the built-in browser window). Every app-defined command Luma has needs an explicit allow-* entry here (or in another capability covering its window) - see build.rs's long comment on why: defining an app manifest at all makes Tauri start enforcing ACL on every app command everywhere, not just the ones the manifest was written for.",
   "windows": ["main", "spotlight", "browser"],
   "permissions": [
     "core:default",
     "opener:default",
     "global-shortcut:default",
-    "autostart:default"
+    "autostart:default",
+    "allow-get-config",
+    "allow-save-config",
+    "allow-list-themes",
+    "allow-reveal-themes-folder",
+    "allow-get-engines",
+    "allow-get-theme-css",
+    "allow-open-result",
+    "allow-toggle-spotlight",
+    "allow-hide-spotlight",
+    "allow-show-main-window",
+    "allow-open-position-picker",
+    "allow-report-spotlight-position",
+    "allow-cancel-position-pick",
+    "allow-reset-spotlight-position",
+    "allow-add-custom-engine",
+    "allow-remove-custom-engine",
+    "allow-search-mypc",
+    "allow-get-system-info",
+    "allow-get-debug-log",
+    "allow-clear-debug-log",
+    "allow-log-client-event",
+    "allow-check-for-update",
+    "allow-apply-update",
+    "allow-take-last-update-failure"
   ]
 }

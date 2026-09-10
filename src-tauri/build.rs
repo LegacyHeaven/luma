@@ -36,25 +36,60 @@ fn main() {
     // done from the same checkout.
     println!("cargo:rerun-if-changed=../.git/HEAD");
 
-    // Registers close_builtin_browser/open_in_system_browser as commands
-    // Tauri's ACL system knows how to permission (autogenerates
-    // `allow-close-builtin-browser` / `allow-open-in-system-browser`, see
-    // capabilities/builtin-browser-remote.json). Without an app manifest
-    // like this, Tauri has no manifest entry to grant those commands
-    // *against at all* - it doesn't matter what a capability's JSON says,
-    // there's nothing for it to reference - and a plain `tauri_build::build()`
-    // never creates one. That's the actual reason the built-in browser's
-    // toolbar buttons ("Open in system browser", the "x" close button) did
-    // nothing: every custom command is already open to *local* Luma content
-    // with no ACL needed, but Tauri always enforces ACL for commands called
-    // from *remote* content - which is exactly what the toolbar is, since
-    // it's injected into whatever external site the user searched to - and
-    // there was no manifest entry for it to possibly be allowed under.
-    tauri_build::try_build(
-        tauri_build::Attributes::new().app_manifest(
-            tauri_build::AppManifest::new()
-                .commands(&["close_builtin_browser", "open_in_system_browser"]),
-        ),
-    )
+    // Registers every one of Luma's own commands as ones Tauri's ACL
+    // system knows how to permission (autogenerates an `allow-<command>`
+    // permission for each, kebab-cased - see capabilities/default.json and
+    // capabilities/builtin-browser-remote.json, which grant them).
+    //
+    // IMPORTANT, hard-won the expensive way (2.1.1 round 2 shipped this
+    // broken): defining an app manifest AT ALL - even for just one or two
+    // commands - flips a single *global* switch inside Tauri
+    // (`RuntimeAuthority::has_app_manifest()`, set once from whether the
+    // ACL map has an app entry at all, not per-window or per-command) that
+    // makes it start enforcing ACL on *every* app-defined command, from
+    // *every* window, local content included. Before this file defined a
+    // manifest at all (`tauri_build::build()`, no `AppManifest`), local
+    // content was implicitly trusted for every app command with zero ACL
+    // needed - which is why the built-in browser toolbar's two buttons
+    // needing a manifest+capability at all was surprising in the first
+    // place. The instant a manifest exists for *any* command, that
+    // blanket local trust is gone for the *whole app*, and every command
+    // needs an explicit `allow-*` permission in some capability that
+    // covers its window, or every window's IPC calls start failing ACL
+    // and the UI breaks outright (get_config, get_engines, etc. all
+    // silently rejected - this is exactly what happened). So: every
+    // command in main.rs's `generate_handler!` list has to be listed here
+    // too, and granted in capabilities/default.json - not just the ones
+    // that strictly need a *new* grant.
+    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
+        tauri_build::AppManifest::new().commands(&[
+            "get_config",
+            "save_config",
+            "list_themes",
+            "reveal_themes_folder",
+            "get_engines",
+            "get_theme_css",
+            "open_result",
+            "open_in_system_browser",
+            "close_builtin_browser",
+            "toggle_spotlight",
+            "hide_spotlight",
+            "show_main_window",
+            "open_position_picker",
+            "report_spotlight_position",
+            "cancel_position_pick",
+            "reset_spotlight_position",
+            "add_custom_engine",
+            "remove_custom_engine",
+            "search_mypc",
+            "get_system_info",
+            "get_debug_log",
+            "clear_debug_log",
+            "log_client_event",
+            "check_for_update",
+            "apply_update",
+            "take_last_update_failure",
+        ]),
+    ))
     .expect("failed to run tauri-build");
 }

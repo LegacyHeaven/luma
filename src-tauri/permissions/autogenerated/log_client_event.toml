@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-log-client-event"
+description = "Enables the log_client_event command without any pre-configured scope."
+commands.allow = ["log_client_event"]
+
+[[permission]]
+identifier = "deny-log-client-event"
+description = "Denies the log_client_event command without any pre-configured scope."
+commands.deny = ["log_client_event"]

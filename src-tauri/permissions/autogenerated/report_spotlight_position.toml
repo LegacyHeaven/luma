@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-report-spotlight-position"
+description = "Enables the report_spotlight_position command without any pre-configured scope."
+commands.allow = ["report_spotlight_position"]
+
+[[permission]]
+identifier = "deny-report-spotlight-position"
+description = "Denies the report_spotlight_position command without any pre-configured scope."
+commands.deny = ["report_spotlight_position"]

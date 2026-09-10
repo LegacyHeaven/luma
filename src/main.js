@@ -158,6 +158,10 @@
 
   if (isSpotlight) {
     document.body.classList.add("spotlight-mode");
+    // Also on <html>, not just <body> - see index.html's
+    // `html.spotlight-mode { background: transparent }` rule for why:
+    // html's own background paints through regardless of body's.
+    document.documentElement.classList.add("spotlight-mode");
   }
 
   // Re-adds `cls` even if it's already present, forcing the CSS animation
