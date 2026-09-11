@@ -225,7 +225,8 @@ pub fn remove_custom_app(
 }
 
 #[tauri::command]
-pub async fn search_mypc(query: String) -> Result<(), String> {
+pub async fn search_mypc(app: AppHandle, query: String) -> Result<(), String> {
+    let _ = &app;
     let query = query.trim();
     if query.is_empty() {
         return Err("nothing to search for".into());
@@ -233,14 +234,8 @@ pub async fn search_mypc(query: String) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        let uri = match std::env::var("USERPROFILE") {
-            Ok(home) if !home.trim().is_empty() => format!(
-                "search-ms:query={}&crumb=location:{}&",
-                percent_encode(query),
-                percent_encode(&home)
-            ),
-            _ => format!("search-ms:query={}", percent_encode(query)),
-        };
+        let uri = format!("search-ms:query={}", percent_encode(query));
+        crate::logging::info(&app, format!("search_mypc: launching explorer.exe {uri:?}"));
         std::process::Command::new("explorer.exe")
             .arg(uri)
             .spawn()

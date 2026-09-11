@@ -2,6 +2,22 @@
 
 All notable changes to Luma are documented here.
 
+## 2.4.3
+
+- Reverted the `!mypc` location-scoped search added in 2.4.1/2.4.2.
+  2.4.2's fix matched Microsoft's own documented syntax for
+  `search-ms:`'s `crumb=location:` parameter exactly (URL-encoded
+  path and all), but live testing showed Windows still can't resolve
+  it - it throws the same "Download an app to open this link" dialog
+  either way. Rather than guess at another encoding blind, `!mypc`
+  now sends a plain `search-ms:query=` request with no location
+  crumb, which is what 2.4.0 did before this regression - it opens
+  Windows Search without the "no app" error, though the search isn't
+  scoped to a specific folder. It also logs the exact URI it builds
+  to the in-app debug console, so the next attempt at real
+  location-scoping can be checked against real data instead of
+  another blind guess.
+
 ## 2.4.2
 
 - Fixed `!mypc` throwing a "download an app to open this" dialog instead
