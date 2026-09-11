@@ -1,15 +1,3 @@
-//! A small in-memory log the Settings page's debug console (Shift+L) reads
-//! from, plus the `get_system_info` command it uses for the RAM/PID/uptime
-//! panel.
-//!
-//! This exists because release builds have
-//! `windows_subsystem = "windows"` (see main.rs) - there's no console
-//! attached, so a plain `eprintln!` is invisible to anyone who isn't
-//! launching Luma from a terminal themselves. Routing every notable event
-//! through `log()` here means it's still `eprintln!`'d for that case, but
-//! *also* kept in a ring buffer and pushed live to any window listening
-//! for `luma://log`, so it's visible from inside the app itself.
-
 use serde::Serialize;
 use std::collections::VecDeque;
 use std::sync::Mutex;
@@ -19,16 +7,13 @@ use tauri::{AppHandle, Emitter, Manager};
 
 const MAX_LOG_ENTRIES: usize = 1000;
 
-/// Git commit this binary was built from (see build.rs). "unknown" for a
-/// build done outside a git checkout (e.g. from a source tarball).
 pub const BUILD_SHA: &str = concat!(env!("LUMA_BUILD_SHA"), env!("LUMA_BUILD_DIRTY"));
 
 #[derive(Debug, Clone, Serialize)]
 pub struct LogEntry {
     pub ts_ms: u64,
     pub level: String,
-    /// "rust" for anything logged from this side, "js" for events the
-    /// frontend reported back via the `log_client_event` command.
+
     pub source: String,
     pub message: String,
 }
@@ -68,9 +53,6 @@ fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
-/// Records one log line: prints it (visible if Luma was launched from a
-/// terminal), stores it in the ring buffer, and emits it live so an open
-/// debug console updates immediately without polling.
 pub fn log(app: &AppHandle, level: &str, source: &str, message: impl Into<String>) {
     let entry = LogEntry {
         ts_ms: now_ms(),
@@ -115,10 +97,7 @@ pub struct SystemInfo {
     pub shortcut: String,
     pub browser_mode: String,
     pub theme: String,
-    /// Label + visible state for every currently-existing window (main /
-    /// spotlight / browser) - lets you see at a glance whether e.g. a
-    /// second spotlight window got created, or the built-in browser window
-    /// never opened at all.
+
     pub windows: Vec<WindowInfo>,
 }
 
@@ -128,9 +107,6 @@ pub struct WindowInfo {
     pub visible: bool,
 }
 
-/// Gathers a snapshot of "what is Luma actually doing right now" - process
-/// memory, uptime, the live config, and which windows exist - for the
-/// debug console's system-info panel.
 #[tauri::command]
 pub fn get_system_info(
     app: AppHandle,
@@ -193,10 +169,6 @@ pub fn clear_debug_log(state: tauri::State<AppLog>) {
     state.clear();
 }
 
-/// Lets the frontend push its own events (e.g. "search submitted", or an
-/// uncaught JS error) into the same unified log the Rust side writes to,
-/// so the debug console shows one merged timeline regardless of which
-/// window (main/spotlight/settings) something happened in.
 #[tauri::command]
 pub fn log_client_event(app: AppHandle, level: String, message: String) {
     log(&app, &level, "js", message);

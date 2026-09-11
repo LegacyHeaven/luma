@@ -1,44 +1,3 @@
-//! A hand-rolled updater, not Tauri's official updater plugin.
-//!
-//! Luma ships as a single "no installer, no bundle" executable per
-//! platform (`bundle.active: false` in tauri.conf.json, see release.yml) -
-//! the official plugin only knows how to replace specific bundle formats
-//! (MSI/NSIS/AppImage/.app), not a bare binary someone downloaded and put
-//! wherever they wanted, so it doesn't fit this distribution model.
-//!
-//! Versioning: release.yml can cut a release under any tag name (Julian
-//! wanted updates to keep working "to any newer release, not just one
-//! version" rather than being pinned to whichever tag happened to exist
-//! when a build shipped) so there's no fixed semver to compare here.
-//! Instead this fetches GitHub's "latest release" virtual path
-//! (`/releases/latest/download/...`), which always resolves to whichever
-//! *published* (non-draft, non-prerelease) release is newest - no tag name
-//! baked into the client at all - and compares the running build's
-//! embedded git commit (build.rs / logging::BUILD_SHA) against the commit
-//! recorded in a small `manifest.json` release asset that release.yml
-//! publishes alongside the binaries. "The latest release has a different
-//! commit than the one I was built from" is the update signal, and it
-//! keeps working across any number of future releases with zero client
-//! changes - the exact thing a fixed-tag URL couldn't do (see git history:
-//! this is what replaced the earlier `1R`-then-`Release` fixed-tag scheme,
-//! which needed a client update every time the tag changed).
-//!
-//! Installing: the new binary is downloaded next to the current one and
-//! checksum-verified against manifest.json before anything touches the
-//! running executable, then swapped into place synchronously, in-process,
-//! on every platform - no detached helper process or external script of
-//! any kind (there used to be a PowerShell helper for Windows; it's gone,
-//! see install_and_relaunch below for why).
-//!
-//! macOS/Linux can rename a file directly over the path of their own
-//! already-running executable (the OS keeps the old inode alive for the
-//! current process), so that's a one-step swap-and-relaunch. Windows can't
-//! overwrite the running .exe directly, but the OS loader opens it with
-//! FILE_SHARE_DELETE, so *renaming it aside* works fine while the process
-//! keeps running from the already-mapped file - rename the running exe to
-//! `<name>.old`, rename the downloaded build into its place, spawn it,
-//! then clean up the `.old` file.
-
 use crate::logging;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -48,13 +7,6 @@ use std::io::{Read, Write};
 use std::path::Path;
 use tauri::{AppHandle, Emitter};
 
-// GitHub's "latest release" virtual path - always the newest *published*
-// release's assets, whatever tag it happens to be under. This is what
-// makes "any newer release, not just one version" true: release.yml is
-// free to use any tag (or none at all) going forward and the updater
-// never needs to change again. (A build from before this change has the
-// old fixed-tag URL baked in and needs one manual re-download - every
-// build from here on updates itself indefinitely.)
 const RELEASE_BASE_URL: &str = "https://github.com/LegacyHeaven/luma/releases/latest/download";
 
 #[derive(Debug, Clone, Deserialize)]
@@ -80,15 +32,10 @@ pub struct UpdateStatus {
     pub error: Option<String>,
 }
 
-/// This build's commit, with any "-dirty" suffix stripped - a local dev
-/// build off a modified tree should never be compared as if it were an
-/// ordinary release build.
 fn own_commit() -> String {
     logging::BUILD_SHA.trim_end_matches("-dirty").to_string()
 }
 
-/// The key manifest.json uses for this platform - must match what
-/// release.yml writes into it.
 fn platform_key() -> Option<&'static str> {
     match (std::env::consts::OS, std::env::consts::ARCH) {
         ("linux", "x86_64") => Some("linux-x64"),
@@ -109,11 +56,6 @@ fn fetch_manifest() -> Result<Manifest, String> {
     serde_json::from_str(&body).map_err(|e| format!("manifest.json didn't parse: {e}"))
 }
 
-/// Called on main-window launch (if enabled) and from the Settings page's
-/// "Check for updates" button. Never fails loudly to the caller - a
-/// failed check (offline, GitHub unreachable) just comes back with
-/// `checked_ok: false` so the frontend can quietly skip showing anything
-/// rather than nagging with an error banner on every offline launch.
 #[tauri::command]
 pub fn check_for_update(app: AppHandle) -> UpdateStatus {
     let current = own_commit();
@@ -158,10 +100,6 @@ fn emit_progress(app: &AppHandle, stage: &str, detail: impl Into<String>) {
     );
 }
 
-/// Downloads, verifies, and installs the update for this platform, then
-/// relaunches - on success this process exits and never actually returns
-/// `Ok`, so the frontend's `invoke("apply_update")` promise is expected to
-/// just hang until the window closes rather than resolve normally.
 #[tauri::command]
 pub fn apply_update(app: AppHandle) -> Result<(), String> {
     let key = platform_key().ok_or_else(|| "no update available for this platform".to_string())?;
@@ -182,9 +120,7 @@ pub fn apply_update(app: AppHandle) -> Result<(), String> {
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "luma".into())
     );
-    // Downloaded next to the current executable (not into a system temp
-    // dir) so the final install step is a same-filesystem rename, never a
-    // cross-device copy that could fail partway through.
+
     let tmp_path = current_exe.with_file_name(tmp_name);
 
     logging::info(&app, format!("apply_update: downloading {download_url}"));
@@ -246,9 +182,6 @@ fn install_and_relaunch(
     perms.set_mode(0o755);
     fs::set_permissions(new_path, perms).map_err(|e| e.to_string())?;
 
-    // Renaming over our own already-running executable is safe on
-    // Unix-likes: the process keeps its existing file mapped by inode, so
-    // this doesn't crash the process that's doing the renaming.
     fs::rename(new_path, current_exe).map_err(|e| e.to_string())?;
 
     logging::info(app, "apply_update: installed, relaunching");
@@ -258,11 +191,6 @@ fn install_and_relaunch(
     std::process::exit(0);
 }
 
-/// A fresh download can sit locked for a few seconds right after landing on
-/// disk - Windows Defender/SmartScreen doing a reputation-check scan on an
-/// unsigned .exe is the usual cause - so a rename that's about to fail gets
-/// a few retries instead of giving up on the first one. Unix doesn't need
-/// this (no such lock exists there), so it's Windows-only.
 #[cfg(target_os = "windows")]
 fn rename_with_retry(from: &Path, to: &Path) -> std::io::Result<()> {
     let mut last_err = None;
@@ -280,14 +208,6 @@ fn rename_with_retry(from: &Path, to: &Path) -> std::io::Result<()> {
     Err(last_err.expect("loop always sets last_err before running out of attempts"))
 }
 
-/// No PowerShell, no detached helper process - both used to be needed
-/// because the running .exe was assumed to be un-renameable while
-/// executing, but Windows actually opens the running image with
-/// FILE_SHARE_DELETE, so renaming it aside works fine from right here.
-/// That also means a failure is a normal `Err` returned straight to the
-/// frontend, same as macOS/Linux, instead of vanishing into a detached
-/// process that can be killed the moment this one exits (which is exactly
-/// what the old helper script suffered from).
 #[cfg(target_os = "windows")]
 fn install_and_relaunch(
     app: &AppHandle,
@@ -306,16 +226,12 @@ fn install_and_relaunch(
         .map_err(|e| format!("couldn't move the running build aside: {e}"))?;
 
     if let Err(err) = rename_with_retry(new_path, current_exe) {
-        // Put things back the way they were rather than leaving the app
-        // with nothing at all at `current_exe`.
         let _ = fs::rename(&old_path, current_exe);
         return Err(format!("couldn't move the new build into place: {err}"));
     }
 
     logging::info(app, "apply_update: installed, relaunching");
     if let Err(err) = std::process::Command::new(current_exe).spawn() {
-        // The new build is genuinely installed at this point - only the
-        // relaunch itself failed - so report it but don't roll back.
         return Err(format!("update installed but relaunch failed: {err}"));
     }
 

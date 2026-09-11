@@ -1,4 +1,3 @@
-// Prevents an additional console window on Windows in release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
@@ -19,18 +18,7 @@ fn main() {
     tauri::Builder::default()
         .manage(logging::AppLog::new())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            // A second launch (double-clicking the binary again, or the OS
-            // relaunching it) shouldn't spawn a second Luma - focus the
-            // window from the instance that's already running instead.
-            // Without this, two processes end up racing for the same
-            // global shortcut and the loser's Alt+Space silently no-ops.
-            //
-            // If you're staring at the debug console wondering why a fix
-            // "isn't taking effect": this line firing means you're looking
-            // at an OLD process that never fully quit - check the build
-            // sha in the system-info panel against what you just
-            // downloaded. Quit Luma from the tray icon (not just closing
-            // the window) and relaunch to be sure you're on the new build.
+
             logging::info(app, "second instance launch detected - focusing existing window instead of starting a new one");
             window::show_main_window(app);
         }))
@@ -43,9 +31,7 @@ fn main() {
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _shortcut, event| {
-                    // Any registered shortcut currently just toggles the
-                    // spotlight - Luma only ever registers the one hotkey
-                    // from config.general.shortcut at a time.
+
                     if event.state() == ShortcutState::Pressed {
                         let state = app.state::<AppState>();
                         let cfg = state.config.lock().unwrap().clone();
@@ -108,10 +94,6 @@ fn main() {
             let cfg = config::load(&handle);
             config::ensure_themes_dir(&handle);
 
-            // The window array in tauri.conf.json creates the main window
-            // at its default size before this closure ever runs, so a
-            // saved "compact"/"roomy" preference needs to be applied here -
-            // a no-op resize when it's already "default".
             window::apply_main_window_size(&handle, &cfg.window.main_window_size);
 
             app.manage(AppState {
@@ -149,10 +131,7 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Closing the main window hides it instead of quitting - Luma
-            // keeps living in the tray so the global shortcut keeps working.
-            // The spotlight window hides itself the same way on blur (see
-            // the frontend's blur handler) rather than through this hook.
+
             if window.label() == window::MAIN_LABEL {
                 if let WindowEvent::CloseRequested { api, .. } = event {
                     api.prevent_close();

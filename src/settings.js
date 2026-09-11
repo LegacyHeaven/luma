@@ -1,13 +1,3 @@
-/**
- * Luma desktop app - Settings page. Loads the current config.toml (via
- * get_config), lets you edit it, and writes it back with save_config.
- *
- * Also owns the debug console: hold Shift+L on this page to reveal a
- * "Debug log" section; turning it on opens a live console showing every
- * notable thing Luma does plus RAM/process info. See debug-log.js for the
- * client-side half of this and src-tauri/src/logging.rs for the backend
- * half.
- */
 (function () {
   "use strict";
 
@@ -84,9 +74,8 @@
 
   var currentConfig = null;
   var selectedThemeId = null;
-  var invoke = null; // set once the Tauri bridge is confirmed ready
+  var invoke = null; 
 
-  // ----- shortcut recorder -----
   var KEY_CODE_MAP = {
     Space: "Space", Enter: "Enter", Tab: "Tab", Escape: "Escape", Backspace: "Backspace",
     ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right",
@@ -107,7 +96,7 @@
   shortcutInput.addEventListener("keydown", function (e) {
     e.preventDefault();
     var token = codeToToken(e);
-    if (!token) return; // modifier-only keydown; wait for the real key
+    if (!token) return; 
 
     var parts = [];
     if (e.ctrlKey) parts.push("Control");
@@ -120,11 +109,6 @@
     shortcutInput.blur();
   });
 
-  // ----- debug console -----
-
-  // Shift+L reveals the (otherwise hidden) debug section. Doesn't fire
-  // while the shortcut recorder or another text field has focus, so it
-  // can't clash with actually typing "L".
   document.addEventListener("keydown", function (e) {
     var tag = document.activeElement && document.activeElement.tagName;
     var typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
@@ -158,24 +142,16 @@
     if (atBottom) debugConsoleLog.scrollTop = debugConsoleLog.scrollHeight;
   }
 
-  // Every JS-side dlog() call writes to localStorage immediately *and*
-  // separately asks the Rust side to log the same message (so it shows up
-  // even from a different window, and to prove the IPC bridge is actually
-  // alive) - so the same message legitimately shows up in both
-  // `serverEntries` and the client's own localStorage copy, a few ms
-  // apart. Dedupe by source+message within a loose time window rather
-  // than requiring an exact ts_ms match, so that pair collapses to one
-  // line instead of showing every event twice.
   function mergedLogEntries(serverEntries) {
     var clientEntries = window.LumaDebugLog ? window.LumaDebugLog.all() : [];
     var all = (serverEntries || []).concat(clientEntries).sort(function (a, b) { return a.ts_ms - b.ts_ms; });
 
-    var lastSeenAt = {}; // "source|message" -> ts_ms of the last kept copy
+    var lastSeenAt = {}; 
     var out = [];
     all.forEach(function (e) {
       var key = e.source + "|" + e.message;
       var last = lastSeenAt[key];
-      if (last !== undefined && e.ts_ms - last < 3000) return; // same event, other pipe
+      if (last !== undefined && e.ts_ms - last < 3000) return; 
       lastSeenAt[key] = e.ts_ms;
       out.push(e);
     });
@@ -297,10 +273,6 @@
     }
   });
 
-  // ----- updates -----
-  // See check_for_update/apply_update in src-tauri/src/updater.rs - same
-  // commands the main window's "Update available" banner uses on launch,
-  // this is just the manual/visible half of it.
   var pendingUpdate = null;
 
   function checkForUpdates() {
@@ -341,9 +313,7 @@
     updateStatus.textContent = "Starting the update…";
 
     invoke("apply_update").catch(function (err) {
-      // A real failure resolves here; success instead ends with this
-      // window going away as the app restarts, so there's no "it worked"
-      // branch to handle on this side.
+
       dlog("error", "apply_update invoke failed: " + err);
       updateStatus.textContent = "Update failed: " + err;
       installUpdateBtn.disabled = false;
@@ -365,11 +335,6 @@
     }
   });
 
-  // ----- spotlight position (Pick position / Reset) -----
-  // Unlike the rest of this form, picking or resetting the spotlight's
-  // position takes effect immediately rather than waiting for Save - see
-  // commands::report_spotlight_position/reset_spotlight_position, which is
-  // what Julian asked for ("after that the clicked position is saved").
   function describePosition(cfg) {
     if (!cfg) return "";
     if (cfg.window.spotlight_position === "custom" &&
@@ -410,12 +375,6 @@
       });
   });
 
-  // ----- search engines (default-engine dropdown + custom engines) -----
-  // `local` engines (currently just !mypc) hand off to the OS instead of
-  // resolving to a URL - see vendor/engine/bangdeck.js - so they don't
-  // belong in a "pick your default engine" list. `user_added` marks the
-  // ones from config::CustomEngine (see commands::get_engines), so this
-  // can render just those with a "remove" button.
   async function loadEngines() {
     var engineConfig = await invoke("get_engines");
     var engines = engineConfig.engines || [];
@@ -475,9 +434,6 @@
     });
   }
 
-  // ----- more search engines (built-in catalog, off by default) -----
-  // Google/MyPC/Open are always on and not part of this list - see
-  // config::SearchConfig::enabled_builtin_engines.
   async function loadBuiltinEngines() {
     var allEngines = await invoke("list_all_builtin_engines");
     renderBuiltinEngines(
@@ -524,7 +480,6 @@
     });
   }
 
-  // ----- custom selected apps (!open's file-picker fallback) -----
   function renderCustomApps(customApps) {
     customAppsList.innerHTML = "";
     if (!customApps.length) {
@@ -598,7 +553,6 @@
       });
   });
 
-  // ----- load current config + supporting data -----
   async function boot(tauri) {
     invoke = tauri.core.invoke;
     dlog("info", "settings window: boot() starting");
@@ -645,10 +599,6 @@
       else if (stage === "installing") updateStatus.textContent = "Installing - LUMA will restart itself…";
     });
 
-    // The position-picker overlay saves straight to config.toml and emits
-    // this (see commands::report_spotlight_position) - re-fetch so this
-    // window's status line reflects the freshly-picked spot, and
-    // re-enable the button either way (picked, or cancelled with Escape).
     tauri.event.listen("luma://config-changed", async function () {
       pickPositionBtn.disabled = false;
       try {
@@ -734,11 +684,7 @@
     updated.general.disable_animations = disableAnimationsCheckbox.checked;
     updated.general.show_spotlight_branding = showSpotlightBrandingCheckbox.checked;
     updated.window.spotlight_width = parseInt(spotlightWidthInput.value, 10) || 640;
-    // spotlight_position/custom_x/custom_y are NOT set here - Pick
-    // position/Reset (above) write those straight to config.toml the
-    // moment they happen, and `updated` is cloned from the freshly
-    // re-fetched currentConfig, so a normal Save just carries them through
-    // unchanged instead of stomping on whatever the picker last set.
+
     var mainSizeChecked = document.querySelector('input[name="main_window_size"]:checked');
     updated.window.main_window_size = mainSizeChecked ? mainSizeChecked.value : "default";
     updated.appearance.theme = selectedThemeId || updated.appearance.theme;

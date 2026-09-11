@@ -1,8 +1,3 @@
-/**
- * Luma desktop app - shared bootstrap for both the normal "browser-style"
- * main window and the floating spotlight window (index.html is used for
- * both; ?mode=spotlight is what tells them apart).
- */
 (function () {
   "use strict";
 
@@ -14,14 +9,6 @@
     return window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__ : null;
   }
 
-  // If this never shows up, nothing that needs `invoke()` will work - the
-  // search box, opening results, and (on the settings page) saving are
-  // all IPC calls through this bridge. Rather than let the whole script
-  // silently die on `tauri.core.invoke` if it's missing, wait a couple
-  // seconds for it to appear (Tauri injects it before page scripts run,
-  // so this should be instant, but this makes a real absence visible
-  // instead of a blank nothing-happens) and put a message on screen if it
-  // truly never does.
   function showFatalBanner(message) {
     try {
       if (document.getElementById("luma-fatal-banner")) return;
@@ -34,14 +21,10 @@
       el.textContent = "LUMA: " + message;
       document.body.appendChild(el);
     } catch (e) {
-      /* if even this fails, there's nothing more we can do client-side */
+
     }
   }
 
-  // A small "Update available" toast for the main window - see
-  // check_for_update/apply_update in src-tauri/src/updater.rs. Styled
-  // inline rather than through theme.css since this is chrome, not
-  // themable page content (same reasoning as showFatalBanner above).
   function showUpdateBanner(invoke) {
     try {
       if (document.getElementById("luma-update-banner")) return;
@@ -90,9 +73,7 @@
         updateBtn.disabled = true;
         laterBtn.remove();
         invoke("apply_update").catch(function (err) {
-          // A genuine failure resolves here; success instead just ends
-          // with this whole window going away as the app restarts, so
-          // there's no matching "it worked" branch to handle.
+
           dlog("error", "apply_update invoke failed: " + err);
           text.textContent = "Update failed: " + err;
           updateBtn.disabled = false;
@@ -117,18 +98,10 @@
 
   if (isSpotlight) {
     document.body.classList.add("spotlight-mode");
-    // Also on <html>, not just <body> - see index.html's
-    // `html.spotlight-mode { background: transparent }` rule for why:
-    // html's own background paints through regardless of body's.
+
     document.documentElement.classList.add("spotlight-mode");
   }
 
-  // Re-adds `cls` even if it's already present, forcing the CSS animation
-  // named in that class's rule to restart from frame 0 - a bare
-  // classList.add() on a class that's already there is a no-op, which
-  // would otherwise leave a stale fade playing (or none at all) on a fast
-  // hide-then-show. The offsetWidth read forces layout, flushing the
-  // removal before the class goes back on.
   function restartAnimation(el, cls, otherCls) {
     if (otherCls) el.classList.remove(otherCls);
     el.classList.remove(cls);
@@ -214,18 +187,10 @@
       deck: deck,
       particles: !isSpotlight,
       autofocus: true,
-      // The bang engine indicator is hidden in spotlight mode (no room,
-      // and it'd give away which engine you're on when the point of the
-      // pill is that you don't have to think about it) - so a per-engine
-      // placeholder like "search the web" or "search wikipedia" is
-      // misleading there with nothing on screen to explain it. Pin it to
-      // one fixed, engine-agnostic placeholder instead.
+
       placeholderOverride: isSpotlight ? "search the universe" : null,
       onSearch: function (result) {
-        // `local` engines (see vendor/engine/bangdeck.js) hand off to the
-        // OS instead of resolving to a web address - which command they
-        // hand off to depends on which local engine this was, so this
-        // can't just always call search_mypc now that !open exists too.
+
         if (result.local) {
           dlog("info", "search submitted -> local, engine=" + result.engine + " query=" + result.query);
           if (result.engine === "Open") {
@@ -234,9 +199,7 @@
                 dlog("info", "open_app invoke resolved OK");
               })
               .catch(function (err) {
-                // Sentinel from commands::APP_NOT_FOUND - nothing on this
-                // PC matched the name, so ask the user to point at it
-                // themselves instead of just showing an error.
+
                 if (err === "__LUMA_APP_NOT_FOUND__") {
                   dlog("info", "open_app: \"" + result.query + "\" not found, opening file picker");
                   invoke("pick_app_for", { name: result.query }).catch(function (pickErr) {
@@ -271,12 +234,6 @@
 
     dlog("info", "UI mounted, ready for input");
 
-    // The spotlight window is created once and then just shown/hidden by
-    // toggle_spotlight - it never reloads index.html - so without this,
-    // changing the theme in Settings would only be visible in the spotlight
-    // after quitting and relaunching Luma. save_config emits this once the
-    // new config is written; re-fetching and re-applying the theme/custom
-    // CSS here is what makes the spotlight pill re-color live instead.
     tauri.event.listen("luma://config-changed", async function () {
       try {
         var freshConfig = await invoke("get_config");
@@ -291,12 +248,6 @@
       }
     });
 
-    // Only the main window checks for updates on launch - the spotlight is
-    // a small floating search bar, and it's the one window guaranteed to
-    // exist right after startup (the spotlight/browser windows are created
-    // lazily). See src-tauri/src/updater.rs for why this isn't Tauri's
-    // official updater plugin, and settings.js for the manual "Check for
-    // updates" button that calls the same commands.
     if (!isSpotlight && (!config.general || config.general.check_for_updates !== false)) {
       invoke("check_for_update")
         .then(function (status) {
@@ -334,11 +285,6 @@
         }
       });
 
-      // Backend fires this right when it starts the 220ms grace period
-      // before actually hiding the window (see
-      // window::schedule_spotlight_hide) - this is what plays during that
-      // window. With animations off there's nothing to play, so skip it
-      // rather than adding a class that'd just sit there doing nothing.
       tauri.event.listen("luma://spotlight-hiding", function () {
         if (!document.body.classList.contains("no-animations")) {
           restartAnimation(document.body, "spotlight-fade-out", "spotlight-fade-in");

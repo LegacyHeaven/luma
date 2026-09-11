@@ -55,9 +55,6 @@ pub fn save_config(
 
     *state.config.lock().unwrap() = new_config;
 
-    // Lets any open window (chiefly the spotlight, which is created once
-    // and never reloads) know it should re-fetch config/theme CSS and
-    // re-apply it live - see main.js's "luma://config-changed" listener.
     let _ = app.emit("luma://config-changed", ());
 
     crate::logging::info(&app, "save_config: saved successfully");
@@ -78,8 +75,6 @@ pub fn reveal_themes_folder(app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-/// The engine catalog, compiled straight into the binary so a downloaded
-/// `luma` executable has no separate resource file to lose track of.
 const ENGINES_JSON: &str = include_str!("../resources/engines.json");
 
 fn builtin_bangs() -> Vec<String> {
@@ -95,15 +90,6 @@ fn builtin_bangs() -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// The frontend fetches the engine catalog through this command rather than
-/// a `<script src>`, so the same code path runs in `cargo tauri dev` and in
-/// a release build. Trims the ~70-entry built-in catalog down to whichever
-/// ones are in `search.enabled_builtin_engines` (see config::SearchConfig)
-/// before merging in the user's own engines from Settings' "Search
-/// engines" section (see config::CustomEngine) - marked `template: true` so
-/// bangdeck.js knows to substitute `%s` rather than treat `action` as a
-/// fixed base URL, and `user_added: true` so Settings can tell them apart
-/// from the built-in catalog when rendering its "remove" list.
 #[tauri::command]
 pub fn get_engines(state: State<AppState>) -> Result<serde_json::Value, String> {
     let mut value: serde_json::Value =
@@ -138,19 +124,12 @@ pub fn get_engines(state: State<AppState>) -> Result<serde_json::Value, String> 
     Ok(value)
 }
 
-/// The full built-in catalog, unfiltered - only for Settings' "more search
-/// engines" checklist, which needs to show (and toggle) the ones
-/// `get_engines` is currently hiding.
 #[tauri::command]
 pub fn list_all_builtin_engines() -> Result<serde_json::Value, String> {
     let value: serde_json::Value = serde_json::from_str(ENGINES_JSON).map_err(|e| e.to_string())?;
     Ok(value.get("engines").cloned().unwrap_or_default())
 }
 
-/// Settings' "Add engine" form. Deliberately picky about validation here
-/// rather than in the frontend alone - config.toml can be hand-edited, and
-/// a bad entry there would otherwise silently break every search that
-/// falls through to the default engine.
 #[tauri::command]
 pub fn add_custom_engine(
     app: AppHandle,
@@ -196,7 +175,6 @@ pub fn add_custom_engine(
     Ok(())
 }
 
-/// Settings' "remove" button next to a custom engine.
 #[tauri::command]
 pub fn remove_custom_engine(
     app: AppHandle,
@@ -210,8 +188,6 @@ pub fn remove_custom_engine(
     Ok(())
 }
 
-/// Settings' toggle for one of the built-in engines get_engines is
-/// otherwise hiding (see config::SearchConfig::enabled_builtin_engines).
 #[tauri::command]
 pub fn set_builtin_engine_enabled(
     app: AppHandle,
@@ -235,7 +211,6 @@ pub fn set_builtin_engine_enabled(
     Ok(())
 }
 
-/// Settings' "remove" button next to a saved custom app (see CustomApp).
 #[tauri::command]
 pub fn remove_custom_app(
     app: AppHandle,
@@ -249,30 +224,6 @@ pub fn remove_custom_app(
     Ok(())
 }
 
-/// `!mypc` - Julian's requested "OS integration" bang: search this
-/// computer itself (files, and whatever else each platform's own search
-/// facility indexes) instead of the web. There's no cross-platform API for
-/// this, so each platform hands off to whatever it already has, rather
-/// than Luma trying to maintain its own file index:
-///
-/// - Windows: opens Explorer's own federated search UI via the
-///   `search-ms:` URI, pre-filled with the query - genuinely searches
-///   files/folders across the indexed locations (Documents, Desktop, ...).
-/// - macOS: there's no public API to pre-fill Spotlight's own search
-///   field, so this queries Spotlight's index directly with `mdfind`
-///   (fast, read-only) and reveals the best match in Finder.
-/// - Linux: no standard desktop-search protocol to hook into, so this
-///   does the same best-match-and-reveal thing as macOS with `find`.
-///
-/// Every branch only ever *launches* another already-installed program
-/// (Explorer/Finder/the file manager) - Luma itself never reads file
-/// contents or lists directories.
-///
-/// `async fn`: the macOS/Linux branches block on an external process
-/// (`mdfind`/`find`) that can take a moment on a big home folder - async
-/// keeps that off the main thread like every other command that might not
-/// return instantly, rather than risking a smaller version of the same
-/// "the whole app hangs" problem this session's other fixes went after.
 #[tauri::command]
 pub async fn search_mypc(query: String) -> Result<(), String> {
     let query = query.trim();
@@ -318,10 +269,6 @@ fn home_dir() -> String {
     std::env::var("HOME").unwrap_or_default()
 }
 
-/// Shared by the macOS/Linux branches of search_mypc: runs a local search
-/// command, takes its first result, and reveals/opens it with a second
-/// command - never Luma's own process reading the file, just handing a
-/// path to a tool the OS already provides.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn reveal_best_match(
     search_cmd: &str,
@@ -355,11 +302,6 @@ fn reveal_best_match(
     }
 }
 
-/// Minimal percent-encoding for building the `search-ms:` URI above - only
-/// the small fixed allow-list of characters that never need escaping in a
-/// URI component are left alone; everything else (spaces, punctuation, and
-/// non-ASCII, byte-by-byte, which is correct for UTF-8) is escaped. Avoids
-/// pulling in a whole crate just for this one query parameter.
 #[cfg(target_os = "windows")]
 fn percent_encode(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
@@ -374,17 +316,8 @@ fn percent_encode(input: &str) -> String {
     out
 }
 
-/// Sentinel error `open_app` returns when it genuinely couldn't find the
-/// app anywhere - main.js checks for this exact string (not just "any
-/// error") to know when to fall back to the native file picker instead of
-/// just showing the error as-is.
 pub const APP_NOT_FOUND: &str = "__LUMA_APP_NOT_FOUND__";
 
-/// `!open <name>` - Julian's requested native-app launcher. Checks apps the
-/// user already picked by hand first (see CustomApp/pick_app_for), then
-/// falls back to each platform's own way of resolving an installed app by
-/// name. Never Luma's own list of what's installed - every branch hands
-/// off to a tool/API the OS already provides.
 #[tauri::command]
 pub fn open_app(state: State<AppState>, query: String) -> Result<(), String> {
     let query = query.trim();
@@ -409,11 +342,6 @@ pub fn open_app(state: State<AppState>, query: String) -> Result<(), String> {
     find_and_launch_app(query).map_err(|_| APP_NOT_FOUND.to_string())
 }
 
-/// Settings' "custom selected apps" list is populated entirely by this -
-/// the picker `open_app` falls back to once it can't resolve `name` any
-/// other way. Saves the pick under `name` so the exact same `!open <name>`
-/// launches it directly next time, then launches it immediately so picking
-/// the file *is* the search result.
 #[tauri::command]
 pub fn pick_app_for(app: AppHandle, state: State<AppState>, name: String) -> Result<(), String> {
     use tauri_plugin_dialog::DialogExt;
@@ -457,9 +385,6 @@ pub fn pick_app_for(app: AppHandle, state: State<AppState>, name: String) -> Res
     launch_app_path(&path)
 }
 
-/// Launches a path already known to point at an app (a saved CustomApp, or
-/// one just picked by hand) - platform-appropriate handoff, same "never
-/// read the file ourselves" rule as search_mypc.
 fn launch_app_path(path: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
@@ -493,9 +418,6 @@ fn launch_app_path(path: &str) -> Result<(), String> {
     }
 }
 
-/// Resolves an installed app by name without any saved mapping - each
-/// platform's own way of doing that, mirroring search_mypc's per-platform
-/// split.
 #[cfg(target_os = "windows")]
 fn find_and_launch_app(query: &str) -> Result<(), String> {
     let query_lower = query.to_lowercase();
@@ -520,10 +442,6 @@ fn find_and_launch_app(query: &str) -> Result<(), String> {
     Err("not found".into())
 }
 
-/// Recursively scans a Start Menu folder for a `.lnk` whose filename
-/// contains `query_lower` - launching the shortcut itself (rather than
-/// resolving its target) sidesteps needing a `.lnk`-parsing dependency
-/// just for this.
 #[cfg(target_os = "windows")]
 fn find_shortcut(dir: &std::path::Path, query_lower: &str) -> Option<std::path::PathBuf> {
     let entries = std::fs::read_dir(dir).ok()?;
@@ -555,7 +473,6 @@ fn find_shortcut(dir: &std::path::Path, query_lower: &str) -> Option<std::path::
 
 #[cfg(target_os = "macos")]
 fn find_and_launch_app(query: &str) -> Result<(), String> {
-    // macOS already resolves an installed app by (partial) name for us.
     let status = std::process::Command::new("open")
         .args(["-a", query])
         .status()
@@ -627,18 +544,6 @@ pub fn get_theme_css(app: AppHandle, theme_id: String) -> Result<String, String>
     themes::css_for(&app, &theme_id).ok_or_else(|| format!("theme '{theme_id}' not found"))
 }
 
-/// Called by the frontend once it has resolved a `!bang`/plain query into a
-/// concrete URL (see src/vendor/engine/bangdeck.js) - decides whether to hand
-/// it to the system browser or Luma's built-in browser window, per config.
-///
-/// `async fn`, not a plain fn: the "builtin" path can create/navigate a
-/// window (see window::open_in_builtin_browser), and doing that from a
-/// *synchronous* command is a documented Windows/WebView2 deadlock
-/// (https://github.com/tauri-apps/wry/issues/583) - this was Julian's
-/// "in-app browser freezes the whole app, and even the debug log stops
-/// responding" bug. Being async runs this on the async runtime instead of
-/// blocking the main thread, so the main-thread hop window creation needs
-/// can actually complete.
 #[tauri::command]
 pub async fn open_result(
     app: AppHandle,
@@ -719,25 +624,11 @@ pub fn show_main_window(app: AppHandle) {
     window::show_main_window(&app);
 }
 
-/// Settings' "Pick position" button - opens the fullscreen click-to-choose
-/// overlay (see window::open_position_picker). The overlay reports back
-/// through `report_spotlight_position` or `cancel_position_pick`, never
-/// directly - it has no config access of its own.
-///
-/// `async fn` - see window::open_position_picker's doc comment: creating
-/// this window from a synchronous command is the documented Windows
-/// deadlock (wry#583) behind "the pick position fails the same way as the
-/// in-app browser".
 #[tauri::command]
 pub async fn open_position_picker(app: AppHandle) -> Result<(), String> {
     window::open_position_picker(&app)
 }
 
-/// The position-picker overlay calls this when the user clicks a spot.
-/// `x_frac`/`y_frac` are fractions (0.0-1.0) of the primary monitor's size.
-/// Saves straight to config and closes the overlay - per Julian's spec,
-/// picking a spot *is* saving it, with no separate "Save" step - then lets
-/// the spotlight (and Settings, if open) know the position changed.
 #[tauri::command]
 pub async fn report_spotlight_position(
     app: AppHandle,
@@ -761,10 +652,6 @@ pub async fn report_spotlight_position(
     Ok(())
 }
 
-/// Escape on the position-picker overlay - closes it without touching
-/// config. Still emits config-changed (a harmless no-op refresh) so
-/// Settings' "Pick position" button re-enables itself either way - it has
-/// no other way to learn the overlay is gone.
 #[tauri::command]
 pub async fn cancel_position_pick(app: AppHandle) -> Result<(), String> {
     window::close_position_picker(&app)?;
@@ -772,8 +659,6 @@ pub async fn cancel_position_pick(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Settings' "Reset to default" button for the spotlight position - back
-/// to always-centered, discarding any picked point.
 #[tauri::command]
 pub fn reset_spotlight_position(app: AppHandle, state: State<AppState>) -> Result<(), String> {
     let mut cfg = state.config.lock().unwrap();

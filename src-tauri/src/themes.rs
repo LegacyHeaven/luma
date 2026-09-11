@@ -10,14 +10,10 @@ pub struct ThemeInfo {
     pub author: String,
     #[serde(rename = "type")]
     pub kind: String,
-    /// Absolute filesystem path to the theme's CSS file.
+
     pub css_path: String,
 }
 
-/// Lists every theme found under `<config dir>/themes/*/theme.json`.
-/// This is the user-writable "skins folder" - dropping a new theme folder
-/// there (with a theme.json + theme.css) is all it takes to make it
-/// selectable, no restart required.
 pub fn list_themes(app: &AppHandle) -> Vec<ThemeInfo> {
     config::ensure_themes_dir(app);
     let dir = config::themes_dir(app);

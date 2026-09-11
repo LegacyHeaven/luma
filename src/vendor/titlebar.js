@@ -1,20 +1,3 @@
-/**
- * Luma's own title bar - main window and settings page (both are the same
- * physical Tauri window, `main`, navigated between as plain HTML pages).
- * Both windows Luma still gives an OS frame to (`main`, and the built-in
- * browser - see builtin-browser-toolbar.js for that one) are created with
- * `decorations: false`, so without this there would be no way to drag,
- * minimize, maximize, or close them at all.
- *
- * Not used in spotlight mode - that window is a small floating pill, not a
- * normal window, and was already frameless/undecorated on purpose.
- *
- * Structural only (position, size, drag region, button behavior) - colors
- * come from the active theme's CSS custom properties, with the same
- * fallbacks `theme_vars_css`/builtin-browser-toolbar.js already use, so it
- * re-themes for free and still looks right for the one frame before the
- * theme stylesheet finishes loading.
- */
 (function () {
   var params = new URLSearchParams(window.location.search);
   if (params.get("mode") === "spotlight") return;
@@ -71,11 +54,6 @@
     ].join("\n");
     document.head.appendChild(style);
 
-    // A plain fixed div, not the home-link or any clickable element,
-    // covering the full width - `data-tauri-drag-region` only arms
-    // dragging on elements whose own event target matches it, so buttons
-    // layered on top (see #luma-titlebar-controls, appended after and at
-    // a higher z-index) stay independently clickable.
     var dragRegion = document.createElement("div");
     dragRegion.id = "luma-titlebar-drag";
     dragRegion.setAttribute("data-tauri-drag-region", "");
@@ -118,9 +96,7 @@
 
     if (current) {
       syncMaximizeIcon();
-      // Covers a double-click on the drag region (Tauri toggles maximize
-      // there on its own) and an OS-level snap/restore, neither of which
-      // fires a click on maximizeBtn itself.
+
       current.onResized(syncMaximizeIcon);
     }
   }

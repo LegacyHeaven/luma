@@ -6,31 +6,21 @@ use tauri::{AppHandle, Manager};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GeneralConfig {
-    /// e.g. "Alt+Space" - parsed by tauri-plugin-global-shortcut.
     pub shortcut: String,
-    /// "system" (your default OS browser) or "builtin" (Luma's own webview window).
+
     pub browser_mode: String,
-    /// Engine name (matches an entry in engines.json) used when no !bang is typed.
+
     pub default_engine: String,
     pub start_at_login: bool,
-    /// Hide the spotlight window automatically when it loses focus.
+
     pub close_spotlight_on_blur: bool,
-    /// Persists whether the Settings page's debug console section (Shift+L
-    /// to reveal it) should stay open on future launches. The debug log
-    /// itself is always collected regardless of this flag - it only
-    /// controls whether the section/console auto-shows.
+
     pub debug_logging: bool,
-    /// Whether the main window silently checks for a new build on launch
-    /// and shows the "Update available" banner - see src/updater.rs. The
-    /// Settings page's "Check for updates" button works either way.
+
     pub check_for_updates: bool,
-    /// Show a small "LUMA." wordmark above the spotlight bar, mirroring the
-    /// main window's brand line (but never the motto - the spotlight stays
-    /// a single search line either way).
+
     pub show_spotlight_branding: bool,
-    /// Disables the fade-in/out on the spotlight and the main window's
-    /// entrance motion - for anyone who finds it distracting, or a machine
-    /// where it's just extra work for no benefit.
+
     pub disable_animations: bool,
 }
 
@@ -53,9 +43,8 @@ impl Default for GeneralConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppearanceConfig {
-    /// Theme id - must match a folder name under the themes directory.
     pub theme: String,
-    /// Extra CSS appended after the theme's stylesheet.
+
     pub custom_css: String,
 }
 
@@ -72,20 +61,12 @@ impl Default for AppearanceConfig {
 #[serde(default)]
 pub struct WindowConfig {
     pub spotlight_width: u32,
-    /// "top-center" (legacy), "center" (default), or "custom" (a point the
-    /// user picked - see spotlight_custom_x/y below).
+
     pub spotlight_position: String,
-    /// Fraction (0.0-1.0) of the primary monitor's width/height where the
-    /// user clicked with Settings' "Pick position" overlay - only
-    /// meaningful when spotlight_position == "custom". Stored as a
-    /// fraction rather than raw pixels so it survives a resolution change
-    /// reasonably. See window::position_spotlight / window::open_position_picker.
+
     pub spotlight_custom_x: Option<f64>,
     pub spotlight_custom_y: Option<f64>,
-    /// "compact" | "default" | "roomy" - see window::main_window_dimensions().
-    /// Julian's feedback was that the main window felt too big by default,
-    /// so "default" here is deliberately smaller than the original 900x640,
-    /// and "compact" gives an even smaller option.
+
     pub main_window_size: String,
 }
 
@@ -101,30 +82,17 @@ impl Default for WindowConfig {
     }
 }
 
-/// A search engine the user added themselves in Settings, on top of the
-/// built-in catalog (see commands::get_engines, which merges the two for
-/// the frontend). Deliberately simpler than the built-in `EngineDef`
-/// shape in resources/engines.json (no separate `param`/`custom` modes to
-/// explain) - just one field to fill in: a URL with `%s` standing in for
-/// the search text, e.g. `https://example.com/search?q=%s`. See
-/// vendor/engine/bangdeck.js's `template` handling for the other half of
-/// this.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CustomEngine {
     pub name: String,
-    /// A URL containing at least one literal `%s`, replaced with the
-    /// percent-encoded query at search time.
+
     pub action: String,
-    /// Bang word, without the leading "!" - stored lowercase.
+
     pub bang: String,
     #[serde(default)]
     pub placeholder: String,
 }
 
-/// An app the user picked by hand (via the native file picker) after
-/// `!open <name>` couldn't find it any other way - see
-/// commands::open_app/pick_app_for. Kept indefinitely so the same `!open
-/// <name>` launches it directly next time, no picker needed.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CustomApp {
     pub name: String,
@@ -134,19 +102,10 @@ pub struct CustomApp {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SearchConfig {
-    /// User-added engines from Settings' "Search engines" section - see
-    /// commands::add_custom_engine/remove_custom_engine.
     pub custom_engines: Vec<CustomEngine>,
-    /// Apps saved through `!open`'s file-picker fallback - see CustomApp.
+
     pub custom_apps: Vec<CustomApp>,
-    /// Which of engines.json's *built-in* entries show up in the engine
-    /// picker/bang list - everything else in the catalog stays dormant
-    /// until turned on in Settings, so a fresh install isn't showing ~70
-    /// engines at once. Google/MyPC/Open are the three Julian wanted on
-    /// from the start; existing installs upgrading to this pick up the
-    /// same trimmed-down default rather than staying on the old "all of
-    /// them" behavior, since a config.toml written before this field
-    /// existed has no value for it either.
+
     pub enabled_builtin_engines: Vec<String>,
 }
 
@@ -183,9 +142,6 @@ pub fn themes_dir(app: &AppHandle) -> PathBuf {
     config_dir(app).join("themes")
 }
 
-/// Load config.toml, creating it with defaults if it doesn't exist yet.
-/// A config file with a parse error also falls back to defaults rather
-/// than crashing the app.
 pub fn load(app: &AppHandle) -> LumaConfig {
     let path = config_path(app);
 
@@ -223,10 +179,6 @@ pub fn save(app: &AppHandle, cfg: &LumaConfig) -> Result<(), String> {
     fs::write(&path, text).map_err(|e| e.to_string())
 }
 
-/// The built-in themes' files, compiled straight into the binary. Seeding
-/// `<config dir>/themes/<id>` from these (rather than from resource files
-/// next to the executable) is what lets a bare downloaded `luma` binary
-/// work with zero other files alongside it.
 const BUILTIN_THEMES: &[(&str, &str, &str)] = &[
     (
         "luma-default",
@@ -255,15 +207,6 @@ const BUILTIN_THEMES: &[(&str, &str, &str)] = &[
     ),
 ];
 
-/// Makes sure every built-in theme folder under `<config dir>/themes/`
-/// exists and matches the copy compiled into this binary.
-///
-/// This always overwrites the built-in themes' files (not just on first
-/// run) - they're not a place users are meant to edit in place (the
-/// Theming docs tell people to copy the folder first), so re-seeding them
-/// on every launch is what makes a Luma update actually change how the
-/// app looks instead of a user's on-disk copy silently going stale. Anyone
-/// customizing keeps their own theme folder, which this never touches.
 pub fn ensure_themes_dir(app: &AppHandle) {
     for (id, css, json) in BUILTIN_THEMES {
         let dest = themes_dir(app).join(id);

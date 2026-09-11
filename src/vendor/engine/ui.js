@@ -1,21 +1,3 @@
-/**
- * Luma search UI controller - the DOM behavior for the search box, shared
- * by the main window and the spotlight window (both use src/index.html).
- *
- * It expects a fixed DOM shape (see src/index.html):
- *
- *   <div class="engine-selector" id="engine-selector">
- *     <button id="current-engine"></button>
- *     <div id="engine-list" role="listbox"></div>
- *   </div>
- *   <div class="search-box">
- *     <form id="search-form"><input id="search-input"></form>
- *   </div>
- *   <div id="particles" class="particles"></div>
- *
- * Opening the resolved URL is delegated to `onSearch`, since that differs
- * between the system browser and Luma's built-in browser window.
- */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) {
     module.exports = factory();
@@ -25,26 +7,13 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  /**
-   * @param {Object} opts
-   * @param {import('./bangdeck.js').BangDeck} opts.deck   a constructed BangDeck instance
-   * @param {Document} [opts.document]
-   * @param {(result: {engine:string, query:string, url:string}, newTab: boolean) => void} opts.onSearch
-   * @param {() => string|null} [opts.getPreferredEngine]  read last-chosen engine (persistence)
-   * @param {(engine: string) => void} [opts.setPreferredEngine]
-   * @param {boolean} [opts.particles=true]
-   * @param {boolean} [opts.autofocus=true]
-   */
   function mount(opts) {
     const doc = opts.document || document;
     const deck = opts.deck;
     const onSearch = opts.onSearch || function () {};
     const getPreferredEngine = opts.getPreferredEngine || function () { return null; };
     const setPreferredEngine = opts.setPreferredEngine || function () {};
-    // Fixed placeholder that wins over every engine's own `placeholder`
-    // (e.g. "search the web", "search wikipedia") - used by the spotlight
-    // window, where there's no visible engine indicator to make a
-    // per-engine placeholder make sense. See main.js.
+
     const placeholderOverride = opts.placeholderOverride || null;
 
     const currentEngineEl = doc.getElementById("current-engine");
@@ -195,7 +164,6 @@
       inputEl.select();
     }
 
-    // ----- init -----
     renderEngineList();
     setEngine(currentEngine);
     if (opts.particles !== false) createParticles();

@@ -1,13 +1,6 @@
 use std::process::Command;
 
 fn main() {
-    // Embeds the git commit this binary was built from + whether the tree
-    // was dirty, so the Settings page (and the debug console) can show a
-    // version stamp that's actually trustworthy - "is this really the
-    // build I just downloaded, or is an old process still running?" is
-    // otherwise impossible for a user to answer on their own. Falls back
-    // to "unknown" rather than failing the build when there's no .git
-    // around (e.g. a source tarball with the git history stripped).
     let sha = Command::new("git")
         .args(["rev-parse", "--short=12", "HEAD"])
         .output()
@@ -32,35 +25,8 @@ fn main() {
         if dirty { "-dirty" } else { "" }
     );
 
-    // Rebuild if HEAD moves, so a stale sha never lingers across builds
-    // done from the same checkout.
     println!("cargo:rerun-if-changed=../.git/HEAD");
 
-    // Registers every one of Luma's own commands as ones Tauri's ACL
-    // system knows how to permission (autogenerates an `allow-<command>`
-    // permission for each, kebab-cased - see capabilities/default.json and
-    // capabilities/builtin-browser-remote.json, which grant them).
-    //
-    // IMPORTANT, hard-won the expensive way (2.1.1 round 2 shipped this
-    // broken): defining an app manifest AT ALL - even for just one or two
-    // commands - flips a single *global* switch inside Tauri
-    // (`RuntimeAuthority::has_app_manifest()`, set once from whether the
-    // ACL map has an app entry at all, not per-window or per-command) that
-    // makes it start enforcing ACL on *every* app-defined command, from
-    // *every* window, local content included. Before this file defined a
-    // manifest at all (`tauri_build::build()`, no `AppManifest`), local
-    // content was implicitly trusted for every app command with zero ACL
-    // needed - which is why the built-in browser toolbar's two buttons
-    // needing a manifest+capability at all was surprising in the first
-    // place. The instant a manifest exists for *any* command, that
-    // blanket local trust is gone for the *whole app*, and every command
-    // needs an explicit `allow-*` permission in some capability that
-    // covers its window, or every window's IPC calls start failing ACL
-    // and the UI breaks outright (get_config, get_engines, etc. all
-    // silently rejected - this is exactly what happened). So: every
-    // command in main.rs's `generate_handler!` list has to be listed here
-    // too, and granted in capabilities/default.json - not just the ones
-    // that strictly need a *new* grant.
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "get_config",

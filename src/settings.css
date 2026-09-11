@@ -1,31 +1,8 @@
-/* Chrome for the Settings page - layered on top of whichever theme.css
-   the main search page is using, so it inherits the same color variables. */
-
-/* The theme's `body { overflow: hidden; display: flex; align-items: center;
-   justify-content: center; }` is exactly right for the short search page,
-   but Settings has grown taller than the window (especially with the debug
-   console section) - centered + hidden overflow means the bottom of the
-   page, Save button included, becomes completely unreachable with no way
-   to scroll to it. A plain `body` selector here would still lose to the
-   theme's `body` rule depending on injection order (theme.css is appended
-   into <head> *after* this stylesheet loads, and equal-specificity rules
-   go to whichever comes later) - so this needs a class to reliably win
-   regardless of order. See settings.html's <body class="settings-page">. */
 body.settings-page {
   display: block;
   overflow-y: auto;
   height: 100vh;
-  /* Every theme's body has a background-image (a subtle radial-gradient
-     glow, sized "auto" - i.e. sized to fill exactly one box). The default
-     attachment, "scroll", sizes and positions that image against body's
-     own *visible* box (100vh here), not the much taller area Settings
-     actually scrolls through - so as soon as the page is taller than one
-     screen, the browser tiles that one glow-sized image to cover the rest,
-     and you get a second (and third...) copy of the gradient repeating
-     every 100vh as you scroll - each theme's colors showing up somewhere
-     they don't belong. "local" ties the background to the element's full
-     scrollable content instead of just its visible box, so it's sized
-     and painted once across the real page height - no repeat, no bands. */
+
   background-attachment: local;
 }
 
@@ -210,13 +187,6 @@ textarea.settings-input {
 
 #install-update-btn { margin-top: 12px; }
 
-/* ----- Debug console (Settings, hold Shift+L) ----- */
-
-/* `display: flex` here would otherwise beat the browser's default
-   `[hidden] { display: none }` rule - equal specificity, but an author
-   stylesheet always wins over the user-agent one regardless of order -
-   so the console would stay visible even with the `hidden` attribute set.
-   Scoping the flex rule to :not([hidden]) keeps the attribute in charge. */
 .debug-console:not([hidden]) {
   position: fixed;
   inset: 20px;

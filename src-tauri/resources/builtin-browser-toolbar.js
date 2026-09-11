@@ -1,20 +1,3 @@
-/**
- * Injected (via WebviewWindowBuilder::initialization_script) into Luma's
- * "built-in browser" window, on top of whatever external site the user
- * searched to. This window is created with `decorations: false` (see
- * window.rs), so this bar is its *only* chrome - back/forward/reload, an
- * escape hatch to the system browser, a drag region, and its own
- * minimize/maximize/close, standing in for the OS title bar this window
- * doesn't have.
- *
- * __THEME_VARS__ below is replaced with a handful of real CSS custom
- * property declarations (see window.rs's theme_vars_css) before this
- * script is ever injected - this window shows *external* page content
- * that never loads any of Luma's own stylesheets, so a plain
- * `var(--color-purple)` wouldn't resolve to anything here on its own.
- * Templating the actual values in is what lets this toolbar match
- * whichever theme is currently selected, instead of one hardcoded look.
- */
 (function () {
   if (window.__lumaToolbarInjected) return;
   window.__lumaToolbarInjected = true;
@@ -55,9 +38,6 @@
     return b;
   }
 
-  // Plainer than `button()` above - these stand in for an OS title bar's
-  // own controls, so they get that style (borderless, wide hit target)
-  // instead of looking like one more toolbar action.
   function windowButton(label, title, onClick, closeStyle) {
     var b = document.createElement("button");
     b.type = "button";
@@ -85,10 +65,7 @@
 
     var bar = document.createElement("div");
     bar.id = "__luma_toolbar__";
-    // The bar itself is the drag region (an OS title bar stand-in, this
-    // window has no other one) - everything inside it is a normal
-    // clickable child without the attribute, so buttons and the url label
-    // stay independently interactive; only empty space in the bar drags.
+
     bar.setAttribute("data-tauri-drag-region", "");
     bar.style.cssText = [
       "position:fixed", "top:0", "left:0", "right:0", "height:34px",
@@ -124,10 +101,6 @@
       if (current) current.toggleMaximize();
     }));
 
-    // Routed through the close_builtin_browser command (not a direct
-    // getCurrentWindow().close()) so it goes through the same
-    // main-thread-timeout-guarded path every other window-affecting
-    // command here does - see window.rs's run_on_main_thread_with_timeout.
     bar.appendChild(windowButton("✕", "Close this window", function () {
       invoke("close_builtin_browser", {});
     }, true));
@@ -143,7 +116,7 @@
   } else {
     mount();
   }
-  // Some sites replace <body> after their own JS runs - retry briefly.
+
   setTimeout(mount, 400);
   setTimeout(mount, 1200);
 })();

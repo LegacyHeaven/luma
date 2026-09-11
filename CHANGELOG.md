@@ -2,6 +2,13 @@
 
 All notable changes to Luma are documented here.
 
+## 2.4.0
+
+- Cleaned up the codebase - removed explanatory code comments throughout
+  the Rust and JavaScript source and every theme's CSS. No behavior
+  change; verified with a clean `cargo build`, `cargo clippy`, `cargo
+  fmt --check`, and a syntax check on every JS file.
+
 ## 2.3.0
 
 - Luma now draws its own title bar - on every platform, the main window

@@ -1,11 +1,3 @@
-/*
- * Luma Amber theme.
- *
- * To make your own theme: copy this folder, edit the variables in
- * :root, restyle whatever else you like, and update theme.json's
- * "id"/"name"/"author". See the wiki's Theming page.
- */
-
 :root {
   --color-white: #fff;
   --color-dark-mode: #140d06;
@@ -16,9 +8,7 @@
   --box-first-color: #1f160d;
   --box-border-color: #5c3f1f;
   --font-family: 'Courier New', 'American Typewriter', 'Special Elite', Georgia, monospace;
-  /* Filled magnifying-glass glyph used as a CSS mask for the spotlight
-     pill's search icon - painted with background-color, so it picks up
-     whichever accent color this theme defines with zero per-theme code. */
+
   --search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 2a8 8 0 1 0 4.9 14.32l5.39 5.39 1.41-1.42-5.39-5.38A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z'/%3E%3C/svg%3E");
 }
 
@@ -31,11 +21,7 @@
 
 html {
   font-size: 62.5%;
-  /* Body always paints a full themed background (color + gradient) over
-     its own box, including the scrollable area on tall pages like
-     Settings - html should never need to show its own color once this
-     stylesheet is active, so this keeps it from peeking through as a
-     mismatched seam during scroll/overscroll. */
+
   background: transparent;
 }
 
@@ -55,7 +41,6 @@ body {
   overflow: hidden;
 }
 
-/* top-left link that opens the settings window */
 .home-link {
   position: fixed;
   top: 8px;
@@ -106,7 +91,6 @@ body {
   transform: translateY(-2px);
 }
 
-/* Animated background particles */
 .particles {
   position: fixed;
   top: 0;
@@ -198,7 +182,6 @@ body {
   50% { opacity: .45; }
 }
 
-/* Engine selector */
 .engine-selector {
   display: inline-block;
   margin-bottom: 40px;
@@ -346,7 +329,6 @@ body {
   color: var(--color-light-purple);
 }
 
-/* Search box */
 .search-box {
   display: flex;
   align-items: center;
@@ -425,12 +407,6 @@ body {
   opacity: 1;
 }
 
-/* ===== Spotlight-mode specific (desktop floating window) =====
- * A clean, fully-rounded "pill" search bar - no brand/motto, no engine
- * selector, no hint text - a search icon plus the input, in the style of
- * Windows Spotlight/macOS Spotlight. Every color here comes from the
- * theme's own variables (or an rgba() built from them), so switching
- * themes re-colors the pill automatically with no extra code. */
 body.spotlight-mode {
   padding: 0;
   background: transparent;
@@ -498,7 +474,6 @@ body.spotlight-mode .search-box input {
   font-size: 1.9rem;
 }
 
-/* Narrow-window styles (the main window can be resized down quite small) */
 @media (max-width: 768px) {
   .search-box { width: 85vw; padding: 12px 18px; }
   .search-box input, .search-box .terminal-prompt, .search-box .terminal-cursor { font-size: 1.9rem; }

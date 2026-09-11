@@ -1,10 +1,3 @@
-/**
- * BangDeck - the search/bang engine that powers Luma's search box.
- * Framework-agnostic, dependency-free, loaded directly as a script tag.
- *
- *   const deck = new BangDeckModule.BangDeck(engineConfig);
- *   deck.resolve("!yt lofi beats"); // -> { engine: "YouTube", url: "..." }
- */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) {
     module.exports = factory();
@@ -14,27 +7,8 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  /**
-   * @typedef {Object} EngineDef
-   * @property {string} name
-   * @property {string} action     base URL for the search request
-   * @property {string} [param]    query-string key (omit when `custom` is true)
-   * @property {boolean} [custom]  when true, the query is appended directly to `action`
-   * @property {Object<string,string>} [extra] extra fixed query params
-   * @property {string} bang       bang word, without the leading "!"
-   * @property {string} [placeholder]
-   */
-
-  /**
-   * BangDeck resolves "!bang query" / plain "query" text into a concrete
-   * search URL for a configured set of engines. It owns no DOM and no
-   * network calls - callers decide how to open the resulting URL
-   * (new tab, redirect, in-app browser window, system browser, ...).
-   */
   class BangDeck {
-    /**
-     * @param {{defaultEngine?: string, engines: EngineDef[]}} config
-     */
+
     constructor(config) {
       if (!config || !Array.isArray(config.engines)) {
         throw new Error("BangDeck: config.engines must be an array");
@@ -49,23 +23,16 @@
 
     _register(engine) {
       if (!engine || !engine.name || !engine.bang) return;
-      // `local` engines (like !mypc) legitimately have no `action` URL -
-      // they hand off to the OS instead of building a search URL - so
-      // only *non-local* engines need a truthy `action` here. Without
-      // this carve-out, `!engine.action` is true for an empty string and
-      // silently drops every local engine before it's ever registered,
-      // making its bang look "not present" even though engines.json has it.
+
       if (!engine.local && !engine.action) return;
       this.engines[engine.name] = engine;
       this.bangMap[engine.bang.toLowerCase()] = engine.name;
     }
 
-    /** Merge in (or overwrite) engines at runtime - used for user custom bangs. */
     addEngines(list) {
       (list || []).forEach((e) => this._register(e));
     }
 
-    /** Remove an engine by name (e.g. a user disabling a default one). */
     removeEngine(name) {
       const e = this.engines[name];
       if (!e) return;
@@ -73,9 +40,6 @@
       delete this.engines[name];
     }
 
-    /** Every searchable engine except `local` ones (like !mypc) - those
-     * hand off to the OS rather than resolving to a URL, so they don't
-     * belong in a "pick your search engine" dropdown. */
     listEngines() {
       return Object.values(this.engines).filter((e) => !e.local);
     }
@@ -85,12 +49,6 @@
       return (e && e.placeholder) || "search";
     }
 
-    /**
-     * "!yt lofi beats" -> { engine: "YouTube", query: "lofi beats" }
-     * "plain text"     -> { engine: null, query: "plain text" }
-     * Unknown bang words are treated as literal query text (so "!" typos
-     * don't silently vanish).
-     */
     parseQuery(raw) {
       const trimmed = (raw || "").trim();
       const match = trimmed.match(/^!(\S+)\s+([\s\S]+)$/);
@@ -104,7 +62,6 @@
       return { engine: null, query: trimmed };
     }
 
-    /** Live-preview helper: which engine would a partially-typed "!bang" resolve to right now? */
     peekBangEngine(raw) {
       const match = (raw || "").match(/^!(\S+)/);
       if (!match) return null;
@@ -114,10 +71,7 @@
     buildSearchUrl(engineKey, query) {
       const cfg = this.engines[engineKey];
       if (!cfg || !query || cfg.local) return null;
-      // User-added engines from Settings (see config::CustomEngine /
-      // commands::get_engines) - a URL containing a literal "%s" that the
-      // (encoded) query drops into, which is friendlier to fill in than
-      // the built-in catalog's param/custom split.
+
       if (cfg.template) {
         return cfg.action.replace(/%s/g, encodeURIComponent(query));
       }
@@ -132,14 +86,6 @@
       return url.toString();
     }
 
-    /**
-     * Resolve raw input text (which may contain a "!bang") plus a fallback
-     * engine into a final result. Returns null when there's nothing
-     * searchable (empty query). A `local` engine (like !mypc) resolves
-     * with `local: true` and no `url` - the caller is expected to hand
-     * that off to the OS itself (see main.js's onSearch) rather than open
-     * anything as a web address.
-     */
     resolve(rawInput, fallbackEngine) {
       const parsed = this.parseQuery(rawInput);
       const engineKey = parsed.engine || fallbackEngine || this.defaultEngine;
