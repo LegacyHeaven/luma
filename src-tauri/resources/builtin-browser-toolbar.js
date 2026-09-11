@@ -1,8 +1,11 @@
 /**
  * Injected (via WebviewWindowBuilder::initialization_script) into Luma's
  * "built-in browser" window, on top of whatever external site the user
- * searched to. Adds a minimal back/forward/reload bar plus an escape
- * hatch to the system browser, since this window has no native chrome.
+ * searched to. This window is created with `decorations: false` (see
+ * window.rs), so this bar is its *only* chrome - back/forward/reload, an
+ * escape hatch to the system browser, a drag region, and its own
+ * minimize/maximize/close, standing in for the OS title bar this window
+ * doesn't have.
  *
  * __THEME_VARS__ below is replaced with a handful of real CSS custom
  * property declarations (see window.rs's theme_vars_css) before this
@@ -52,16 +55,45 @@
     return b;
   }
 
+  // Plainer than `button()` above - these stand in for an OS title bar's
+  // own controls, so they get that style (borderless, wide hit target)
+  // instead of looking like one more toolbar action.
+  function windowButton(label, title, onClick, closeStyle) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.title = title;
+    b.style.cssText =
+      "background:transparent;border:none;color:var(--luma-muted,#c4c4c4);" +
+      "width:34px;height:34px;cursor:pointer;font:13px var(--luma-font,monospace);" +
+      "transition:background-color .12s ease,color .12s ease;flex-shrink:0;";
+    b.addEventListener("mouseenter", function () {
+      b.style.backgroundColor = closeStyle ? "#e5484d" : "rgba(255,255,255,.08)";
+      b.style.color = "#fff";
+    });
+    b.addEventListener("mouseleave", function () {
+      b.style.backgroundColor = "transparent";
+      b.style.color = "var(--luma-muted, #c4c4c4)";
+    });
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
   function mount() {
     if (document.getElementById("__luma_toolbar__")) return;
     injectThemeVars();
 
     var bar = document.createElement("div");
     bar.id = "__luma_toolbar__";
+    // The bar itself is the drag region (an OS title bar stand-in, this
+    // window has no other one) - everything inside it is a normal
+    // clickable child without the attribute, so buttons and the url label
+    // stay independently interactive; only empty space in the bar drags.
+    bar.setAttribute("data-tauri-drag-region", "");
     bar.style.cssText = [
       "position:fixed", "top:0", "left:0", "right:0", "height:34px",
       "z-index:2147483647", "display:flex", "align-items:center", "gap:6px",
-      "padding:0 8px", "background:var(--luma-bg, #180d29)", "backdrop-filter:blur(6px)",
+      "padding:0 0 0 8px", "background:var(--luma-bg, #180d29)", "backdrop-filter:blur(6px)",
       "-webkit-backdrop-filter:blur(6px)",
       "font-family:var(--luma-font, monospace)", "color:var(--luma-text, #fff)",
       "border-bottom:1px solid var(--luma-border, #3a1f5c)", "box-sizing:border-box",
@@ -82,12 +114,23 @@
       invoke("open_in_system_browser", { url: location.href });
     }));
 
-    bar.appendChild(button("✕", "Close this window", function () {
-      invoke("close_builtin_browser", {});
+    var tauriWindow = window.__TAURI__ && window.__TAURI__.window;
+    var current = tauriWindow ? tauriWindow.getCurrentWindow() : null;
+
+    bar.appendChild(windowButton("—", "Minimize", function () {
+      if (current) current.minimize();
+    }));
+    bar.appendChild(windowButton("▢", "Maximize / restore", function () {
+      if (current) current.toggleMaximize();
     }));
 
-    var spacer = document.createElement("div");
-    spacer.style.height = "34px";
+    // Routed through the close_builtin_browser command (not a direct
+    // getCurrentWindow().close()) so it goes through the same
+    // main-thread-timeout-guarded path every other window-affecting
+    // command here does - see window.rs's run_on_main_thread_with_timeout.
+    bar.appendChild(windowButton("✕", "Close this window", function () {
+      invoke("close_builtin_browser", {});
+    }, true));
 
     document.documentElement.appendChild(bar);
     if (document.body) {

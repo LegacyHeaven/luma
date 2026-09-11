@@ -2,6 +2,15 @@
 
 All notable changes to Luma are documented here.
 
+## 2.3.0
+
+- Luma now draws its own title bar - on every platform, the main window
+  and the built-in browser window no longer show the OS's own frame.
+  Dragging works from the empty space in the bar, and it has its own
+  minimize, maximize/restore, and close controls styled to match the
+  active theme, similar to apps like Discord that draw their own window
+  chrome instead of relying on the OS's.
+
 ## 2.2.1
 
 - Fixed the auto-updater on Windows: it downloaded the new build but never

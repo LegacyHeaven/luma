@@ -183,6 +183,9 @@ pub fn show_main_window(app: &AppHandle) {
                     .min_inner_size(480.0, 360.0)
                     .center()
                     .background_color(APP_BACKGROUND)
+                    // No OS title bar - index.html/vendor/titlebar.js draw
+                    // Luma's own, the same way on every platform.
+                    .decorations(false)
                     .build()
             {
                 crate::logging::error(app, format!("failed to recreate main window: {err}"));
@@ -488,6 +491,11 @@ fn open_in_builtin_browser_on_main_thread(app: &AppHandle, parsed: url::Url) -> 
         .inner_size(1100.0, 760.0)
         .min_inner_size(360.0, 320.0)
         .initialization_script(&toolbar_js)
+        // Same custom title bar treatment as the main window - the
+        // injected toolbar above draws its own drag region and window
+        // controls, so the OS's own frame would just be a second,
+        // redundant title bar stacked on top of it.
+        .decorations(false)
         .build()
         .map_err(|e| e.to_string())?;
 

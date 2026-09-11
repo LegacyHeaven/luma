@@ -56,10 +56,13 @@ body {
   overflow: hidden;
 }
 
-/* top-left link that opens the settings window */
+/* top-left link that opens the settings window - sits inside the custom
+   title bar's 44px band now (see vendor/titlebar.js), so `top` is small
+   enough to vertically center it there instead of the old fixed 24px from
+   before Luma drew its own title bar. */
 .home-link {
   position: fixed;
-  top: 24px;
+  top: 8px;
   left: 24px;
   z-index: 6;
   font-family: var(--font-family);

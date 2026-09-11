@@ -57,7 +57,7 @@ body {
 /* top-left link that opens the settings window */
 .home-link {
   position: fixed;
-  top: 24px;
+  top: 8px;
   left: 24px;
   z-index: 6;
   font-family: var(--font-family);
