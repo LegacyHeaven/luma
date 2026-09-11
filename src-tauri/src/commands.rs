@@ -234,13 +234,25 @@ pub async fn search_mypc(app: AppHandle, query: String) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        let uri = format!("search-ms:query={}", percent_encode(query));
-        crate::logging::info(&app, format!("search_mypc: launching explorer.exe {uri:?}"));
-        std::process::Command::new("explorer.exe")
-            .arg(uri)
-            .spawn()
-            .map_err(|e| format!("couldn't open Windows Search: {e}"))?;
-        Ok(())
+        let home = std::env::var("USERPROFILE").unwrap_or_default();
+        if home.trim().is_empty() {
+            return Err("could not find your home folder".into());
+        }
+        crate::logging::info(
+            &app,
+            format!("search_mypc: scanning {home:?} for {query:?}"),
+        );
+        match windows_find_match(&home, query) {
+            Some(path) => {
+                crate::logging::info(&app, format!("search_mypc: revealing {path:?}"));
+                std::process::Command::new("explorer.exe")
+                    .arg(format!("/select,{path}"))
+                    .spawn()
+                    .map_err(|e| format!("couldn't open Explorer: {e}"))?;
+                Ok(())
+            }
+            None => Err(format!("nothing on your PC matched \"{query}\"")),
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -305,17 +317,53 @@ fn reveal_best_match(
 }
 
 #[cfg(target_os = "windows")]
-fn percent_encode(input: &str) -> String {
-    let mut out = String::with_capacity(input.len());
-    for b in input.bytes() {
-        match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(b as char)
+fn windows_find_match(root: &str, query: &str) -> Option<String> {
+    use std::collections::VecDeque;
+    use std::time::{Duration, Instant};
+
+    const SKIP_DIRS: &[&str] = &[
+        "appdata",
+        "node_modules",
+        ".git",
+        "$recycle.bin",
+        "windows",
+        "programdata",
+        "program files",
+        "program files (x86)",
+    ];
+    const MAX_VISITED: usize = 40_000;
+    let budget = Duration::from_secs(3);
+
+    let query_lower = query.to_lowercase();
+    let start = Instant::now();
+    let mut queue: VecDeque<std::path::PathBuf> = VecDeque::new();
+    queue.push_back(std::path::PathBuf::from(root));
+    let mut visited = 0usize;
+
+    while let Some(dir) = queue.pop_front() {
+        if start.elapsed() > budget || visited > MAX_VISITED {
+            break;
+        }
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            visited += 1;
+            let path = entry.path();
+            let name_lossy = entry.file_name().to_string_lossy().to_lowercase();
+            if name_lossy.contains(&query_lower) {
+                return Some(path.to_string_lossy().to_string());
             }
-            _ => out.push_str(&format!("%{b:02X}")),
+            if path.is_dir() && !SKIP_DIRS.contains(&name_lossy.as_str()) {
+                queue.push_back(path);
+            }
+            if visited > MAX_VISITED {
+                break;
+            }
         }
     }
-    out
+    None
 }
 
 pub const APP_NOT_FOUND: &str = "__LUMA_APP_NOT_FOUND__";

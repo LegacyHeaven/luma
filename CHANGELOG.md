@@ -2,6 +2,26 @@
 
 All notable changes to Luma are documented here.
 
+## 2.4.4
+
+- `!mypc` on Windows no longer goes through the `search-ms:` protocol at
+  all. 2.4.3's bare `search-ms:query=` fallback looked safe (no error
+  dialog) but live testing plus the new diagnostic log showed it wasn't
+  actually searching anything - Explorer was just jumping to whichever
+  folder happened to share the query's name, the same "opens some
+  unrelated folder instead of searching" behavior Julian originally
+  reported, just with a different folder. Combined with 2.4.2's finding
+  that the documented `crumb=location:` parameter throws a "no app"
+  error no matter how it's encoded, that protocol just isn't reliable
+  for this on Windows 11. `!mypc` now does its own bounded,
+  case-insensitive filename search of your home folder (skipping
+  `AppData`, `.git`, `node_modules`, and a few other heavy/irrelevant
+  folders, capped at a few seconds and 40,000 entries) and reveals the
+  first match directly in Explorer - the same self-contained approach
+  `!mypc` already used on macOS (`mdfind`) and Linux (`find`), instead
+  of leaning on an OS URI protocol whose real-world behavior kept not
+  matching its own documentation.
+
 ## 2.4.3
 
 - Reverted the `!mypc` location-scoped search added in 2.4.1/2.4.2.
