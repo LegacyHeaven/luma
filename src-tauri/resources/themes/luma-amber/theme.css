@@ -1,11 +1,11 @@
 :root {
-  --color-white: #fff;
-  --color-dark-mode: #140d06;
+  --color-white: #ffe9b3;
+  --color-dark-mode: #120b02;
   --color-purple: #f59e0b;
-  --color-light-purple: #fbbf24;
+  --color-light-purple: #ffcf6b;
   --color-light-blue: #fde68a;
-  --color-gray: #c4c4c4;
-  --box-first-color: #1f160d;
+  --color-gray: #c9a468;
+  --box-first-color: #1c1305;
   --box-border-color: #5c3f1f;
   --font-family: 'Courier New', 'American Typewriter', 'Special Elite', Georgia, monospace;
 
@@ -29,8 +29,8 @@ body {
   min-height: 100vh;
   font-family: var(--font-family);
   background-color: var(--color-dark-mode);
-  background-image: radial-gradient(ellipse at 50% 45%, rgba(245, 158, 11, .07), transparent 65%),
-    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.35) 100%);
+  background-image: radial-gradient(ellipse at 50% 42%, rgba(245, 158, 11, .1), transparent 60%),
+    radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0, 0, 0, .55) 100%);
   background-size: auto;
   color: var(--color-white);
   display: flex;
@@ -39,6 +39,51 @@ body {
   position: relative;
   padding: 40px 20px;
   overflow: hidden;
+  text-shadow: 0 0 3px rgba(245, 158, 11, .35);
+}
+
+/* CRT phosphor scanlines, sat over everything but the fixed corner links -
+   this is what actually reads as "an old monitor" instead of just a warm
+   palette swap. Kept faint so long search sessions stay readable. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, .18) 1px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0) 3px
+  );
+  mix-blend-mode: multiply;
+  animation: crt-roll 9s linear infinite;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: rgba(245, 158, 11, .02);
+  animation: crt-flicker 6.5s infinite;
+}
+
+@keyframes crt-roll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 120px; }
+}
+
+@keyframes crt-flicker {
+  0%, 100% { opacity: .3; }
+  4% { opacity: .75; }
+  6% { opacity: .25; }
+  46% { opacity: .3; }
+  48% { opacity: .6; }
+  50% { opacity: .3; }
 }
 
 .home-link {
@@ -51,21 +96,21 @@ body {
   letter-spacing: 1px;
   color: var(--color-gray);
   text-decoration: none;
-  border: 1px solid var(--box-border-color);
+  border: 2px solid var(--box-border-color);
   padding: 8px 14px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, .02);
-  transition: border-color .3s, color .3s;
+  border-radius: 0;
+  background: rgba(0, 0, 0, .25);
+  transition: border-color .2s, color .2s;
 }
 
 .home-link:hover {
   border-color: var(--color-purple);
   color: var(--color-white);
-  transform: translateY(-2px);
+  transform: none;
 }
 
 .home-link:active {
-  transform: translateY(0) scale(.96);
+  transform: scale(.96);
 }
 
 .settings-link {
@@ -78,17 +123,17 @@ body {
   letter-spacing: 1px;
   color: var(--color-gray);
   text-decoration: none;
-  border: 1px solid var(--box-border-color);
+  border: 2px solid var(--box-border-color);
   padding: 8px 14px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, .02);
-  transition: border-color .3s, color .3s;
+  border-radius: 0;
+  background: rgba(0, 0, 0, .25);
+  transition: border-color .2s, color .2s;
 }
 
 .settings-link:hover {
   border-color: var(--color-purple);
   color: var(--color-white);
-  transform: translateY(-2px);
+  transform: none;
 }
 
 .particles {
@@ -101,6 +146,8 @@ body {
   z-index: 0;
 }
 
+/* Dust motes drifting up past the tube, not neon dots - slower, dimmer,
+   flickering in and out rather than smoothly fading. */
 .particle {
   position: absolute;
   top: 0;
@@ -108,37 +155,36 @@ body {
   height: 2px;
   background: var(--color-light-purple);
   border-radius: 50%;
-  opacity: 0.3;
-  animation: float 18s infinite ease-in-out;
+  opacity: 0.2;
+  animation: float 24s infinite steps(18);
   animation-fill-mode: backwards;
   will-change: transform, opacity;
 }
 
 @keyframes float {
-  0%, 100% { opacity: 0; transform: translateY(100vh); }
-  8% { opacity: .35; }
-  12% { opacity: .05; }
-  16% { opacity: .3; }
-  50% { transform: translateY(40vh); }
-  92% { opacity: .3; }
-  100% { transform: translateY(-100px); }
+  0% { transform: translateY(100vh); opacity: 0; }
+  6% { opacity: .22; }
+  50% { opacity: .06; }
+  92% { opacity: .22; }
+  100% { transform: translateY(-100px); opacity: 0; }
 }
 
 .wrapper {
   text-align: center;
   z-index: 1;
   position: relative;
-  animation: fadeInUp 1.6s ease-out;
+  animation: crt-warmup 1.1s steps(6, end);
   width: 100%;
   max-width: 640px;
 }
 
-@keyframes fadeInUp {
-  0% { opacity: 0; }
-  8% { opacity: .6; }
-  14% { opacity: .15; }
-  22% { opacity: .8; }
-  100% { opacity: 1; }
+@keyframes crt-warmup {
+  0% { opacity: 0; filter: brightness(3) blur(2px); }
+  20% { opacity: .3; filter: brightness(.4); }
+  30% { opacity: .9; filter: brightness(2); }
+  45% { opacity: .5; }
+  60% { opacity: 1; filter: brightness(1) blur(0); }
+  100% { opacity: 1; filter: none; }
 }
 
 .brand {
@@ -149,7 +195,7 @@ body {
   color: var(--color-white);
   margin-bottom: 6px;
   text-transform: uppercase;
-  text-shadow: 0 0 14px rgba(245, 158, 11, .5);
+  text-shadow: 0 0 2px rgba(245, 158, 11, .8), 0 0 18px rgba(245, 158, 11, .5);
 }
 
 .brand .brand-dot {
@@ -162,8 +208,13 @@ body {
   color: var(--color-gray);
   letter-spacing: 2px;
   text-transform: uppercase;
-  opacity: .55;
+  opacity: .6;
   margin-bottom: 30px;
+}
+
+.motto::before {
+  content: '> ';
+  opacity: .8;
 }
 
 .motto .status-dot {
@@ -174,12 +225,12 @@ body {
   background: var(--color-light-blue);
   margin-right: 8px;
   box-shadow: 0 0 6px var(--color-light-blue);
-  animation: status-pulse 2.6s ease-in-out infinite;
+  animation: status-pulse 1.4s steps(2) infinite;
 }
 
 @keyframes status-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: .45; }
+  50% { opacity: .3; }
 }
 
 .engine-selector {
@@ -200,9 +251,9 @@ body {
   max-width: 90vw;
   text-align: center;
   border: 2px solid var(--box-border-color);
-  border-radius: 2px;
-  background: rgba(255, 255, 255, .02);
-  transition: all 0.4s ease;
+  border-radius: 0;
+  background: rgba(0, 0, 0, .25);
+  transition: all .15s steps(2);
   position: relative;
   user-select: none;
 }
@@ -211,7 +262,7 @@ body {
   content: ' \25be';
   opacity: .6;
   display: inline-block;
-  transition: transform .3s ease;
+  transition: transform .2s steps(2);
 }
 
 .engine-selector.active .engine-current::after {
@@ -222,55 +273,54 @@ body {
 .engine-selector.active .engine-current {
   color: var(--color-white);
   border-color: var(--color-purple);
-  box-shadow: 0 0 20px rgba(245, 158, 11, .25);
-  transform: translateY(-2px);
+  box-shadow: 0 0 14px rgba(245, 158, 11, .3);
+  transform: none;
 }
 
 .engine-current:active {
-  transform: translateY(0) scale(.97);
+  transform: scale(.97);
 }
 
 .engine-current.bang-override {
   color: var(--color-white);
   border-color: var(--color-light-purple);
-  box-shadow: 0 0 16px rgba(251, 191, 36, .35);
+  box-shadow: 0 0 12px rgba(255, 207, 107, .4);
 }
 
 .engine-list {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 2px;
   margin-top: 10px;
   opacity: 0;
   max-height: 0;
   overflow-y: auto;
   pointer-events: none;
-  transition: opacity .3s ease, max-height .3s ease, transform .3s ease;
-  transform: translateY(-8px);
+  transition: opacity .15s steps(3), max-height .15s steps(3);
+  transform: none;
   position: absolute;
   left: 0;
   right: 0;
   z-index: 2;
   background: var(--color-dark-mode);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--color-purple) var(--box-first-color);
 }
 
 .engine-list::-webkit-scrollbar { width: 7px; }
-.engine-list::-webkit-scrollbar-track { background: var(--box-first-color); border-radius: 6px; }
-.engine-list::-webkit-scrollbar-thumb { background-color: var(--color-purple); border-radius: 6px; }
+.engine-list::-webkit-scrollbar-track { background: var(--box-first-color); }
+.engine-list::-webkit-scrollbar-thumb { background-color: var(--color-purple); }
 .engine-list::-webkit-scrollbar-thumb:hover { background-color: var(--color-light-purple); }
 
 .engine-selector.active .engine-list {
   opacity: 1;
   max-height: 300px;
   pointer-events: auto;
-  transform: translateY(0);
   padding: 4px;
-  border: 1px solid var(--box-border-color);
+  border: 2px solid var(--box-border-color);
 }
 
 .engine-list button {
@@ -279,9 +329,9 @@ body {
   letter-spacing: .5px;
   cursor: pointer;
   opacity: 0;
-  transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+  transition: none;
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: 0;
   border: 1px solid transparent;
   background: var(--box-first-color);
   color: var(--color-white);
@@ -293,12 +343,12 @@ body {
 }
 
 .engine-selector.active .engine-list button {
-  animation: engineItemIn .3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: engineItemIn .1s steps(2) forwards;
 }
 
 @keyframes engineItemIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: .8; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: .85; }
 }
 
 .engine-list button .bang {
@@ -312,11 +362,11 @@ body {
   opacity: 1;
   border-color: var(--color-purple);
   background: rgba(245, 158, 11, .15);
-  transform: translateX(4px);
+  transform: none;
 }
 
 .engine-list button:active {
-  transform: translateX(4px) scale(.98);
+  transform: scale(.98);
 }
 
 .engine-list button.selected {
@@ -334,25 +384,25 @@ body {
   align-items: center;
   gap: 10px;
   border: 2px solid var(--box-border-color);
-  background: rgba(255, 255, 255, .02);
-  border-radius: 2px;
+  background: rgba(0, 0, 0, .3);
+  border-radius: 0;
   padding: 14px 26px;
   width: 560px;
   max-width: 88vw;
   margin: 0 auto;
-  transition: border-color .4s ease, box-shadow .4s ease;
-  animation: searchboxPulse 5.5s ease-in-out infinite;
-  box-shadow: inset 0 0 24px rgba(0,0,0,.4);
+  transition: border-color .15s steps(2), box-shadow .15s steps(2);
+  animation: searchboxPulse 3.6s steps(6) infinite;
+  box-shadow: inset 0 0 26px rgba(0, 0, 0, .5);
 }
 
 @keyframes searchboxPulse {
-  0%, 100% { box-shadow: inset 0 0 24px rgba(0,0,0,.4), 0 0 0 rgba(245, 158, 11, 0); }
-  50% { box-shadow: inset 0 0 24px rgba(0,0,0,.4), 0 0 20px rgba(245, 158, 11, .18); }
+  0%, 100% { box-shadow: inset 0 0 26px rgba(0, 0, 0, .5), 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: inset 0 0 26px rgba(0, 0, 0, .5), 0 0 16px rgba(245, 158, 11, .16); }
 }
 
 .search-box:focus-within {
   border-color: var(--color-purple);
-  box-shadow: inset 0 0 24px rgba(0,0,0,.4), 0 0 30px rgba(245, 158, 11, .28);
+  box-shadow: inset 0 0 26px rgba(0, 0, 0, .5), 0 0 24px rgba(245, 158, 11, .32);
   animation: none;
 }
 
@@ -380,25 +430,18 @@ body {
 
 .search-box input::placeholder {
   color: var(--color-gray);
-  opacity: .45;
+  opacity: .5;
 }
 
 .search-box .terminal-cursor {
-  display: inline-block;
-  color: var(--color-light-purple);
-  font-size: 2.4rem;
-  animation: terminal-blink 2s step-start infinite;
-}
-
-@keyframes terminal-blink {
-  50% { opacity: 0; }
+  display: none;
 }
 
 .hint {
   margin-top: 18px;
   font-size: 1.2rem;
   color: var(--color-gray);
-  opacity: .45;
+  opacity: .5;
   letter-spacing: .5px;
 }
 
@@ -411,6 +454,11 @@ body.spotlight-mode {
   padding: 0;
   background: transparent;
   align-items: center;
+}
+
+body.spotlight-mode::before,
+body.spotlight-mode::after {
+  display: none;
 }
 
 body.spotlight-mode .home-link,
@@ -430,10 +478,10 @@ body.spotlight-mode .wrapper {
 }
 
 body.spotlight-mode .search-shell {
-  background: rgba(20, 13, 6, .92);
-  border: 1px solid var(--box-border-color);
-  border-radius: 999px;
-  box-shadow: 0 14px 38px rgba(245, 158, 11, .3), 0 0 0 1px rgba(245, 158, 11, .16);
+  background: rgba(18, 11, 2, .94);
+  border: 2px solid var(--box-border-color);
+  border-radius: 4px;
+  box-shadow: 0 14px 38px rgba(245, 158, 11, .28), 0 0 0 1px rgba(245, 158, 11, .16), inset 0 0 30px rgba(0, 0, 0, .5);
   backdrop-filter: blur(22px);
   padding: 4px;
 }
@@ -445,9 +493,10 @@ body.spotlight-mode .search-box {
   animation: none;
   border: none;
   background: transparent;
-  border-radius: 999px;
+  border-radius: 4px;
   padding: 13px 24px 13px 20px;
   gap: 14px;
+  box-shadow: none;
 }
 
 body.spotlight-mode .search-box:focus-within {

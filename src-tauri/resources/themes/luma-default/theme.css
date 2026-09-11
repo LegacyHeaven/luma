@@ -334,8 +334,36 @@ body {
   width: 560px;
   max-width: 88vw;
   margin: 0 auto;
+  position: relative;
+  overflow: hidden;
   transition: border-color .4s ease, box-shadow .4s ease;
   animation: searchboxPulse 4.5s ease-in-out infinite;
+}
+
+/* A single scan-line sweep across the box the moment it's focused - a
+   small nod to the app's spyglass icon "locking on", not a looping
+   effect, so it stays a one-shot accent rather than a distraction. */
+.search-box::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(207, 89, 230, .16), transparent);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.search-box:focus-within::after {
+  animation: scan-sweep .7s cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes scan-sweep {
+  0% { opacity: 0; left: -40%; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; left: 110%; }
 }
 
 @keyframes searchboxPulse {
@@ -377,14 +405,7 @@ body {
 }
 
 .search-box .terminal-cursor {
-  display: inline-block;
-  color: var(--color-light-purple);
-  font-size: 2.4rem;
-  animation: terminal-blink 1.3s step-start infinite;
-}
-
-@keyframes terminal-blink {
-  50% { opacity: 0; }
+  display: none;
 }
 
 .hint {

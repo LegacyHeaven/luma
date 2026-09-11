@@ -2,6 +2,22 @@
 
 All notable changes to Luma are documented here.
 
+## 2.6.0
+
+- Redesigned four of the five themes from the ground up instead of just
+  tweaking colors - Amber is now a proper retro CRT terminal (scanlines,
+  a flicker overlay, square corners, mechanical step-timed motion),
+  Emerald leans into an organic/botanical feel (soft blob shapes, downward
+  drifting particles, italic serif-ish type), Material Blue goes fully
+  flat (no glow, no particles, pure elevation shadows, nothing floats on
+  hover), and Pink got a full playful pass (pill shapes everywhere,
+  spring/bounce easing, confetti-colored particles). Default keeps its
+  original look, with just one new touch - the search box does a single
+  light sweep across itself the moment you focus it.
+- Removed the blinking `_` cursor next to the search prompt in every
+  theme - it only ever showed up in Default and Amber to begin with, and
+  it wasn't earning its keep.
+
 ## 2.5.0
 
 - Replaced the "More search engines" list's ~70-checkbox grid with a
