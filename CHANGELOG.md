@@ -2,6 +2,20 @@
 
 All notable changes to Luma are documented here.
 
+## 2.4.1
+
+- Fixed the built-in browser window losing its close, minimize, and
+  maximize buttons - and its whole title bar - on sites with a strict
+  Content-Security-Policy (Google search results included). The custom
+  title bar drew itself using inline styles the site's CSP silently
+  blocked, since v2.3.0 made that title bar the window's only chrome.
+  It now sets styles through the CSSOM property API instead, which
+  isn't subject to that restriction.
+- Fixed `!mypc` opening the Documents folder instead of an actual
+  Windows Search results view - the `search-ms:` request now carries an
+  explicit search location, which Windows needs to run the query instead
+  of falling back to a default folder.
+
 ## 2.4.0
 
 - Cleaned up the codebase - removed explanatory code comments throughout

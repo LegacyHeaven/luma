@@ -349,7 +349,7 @@ fn open_in_builtin_browser_on_main_thread(app: &AppHandle, parsed: url::Url) -> 
         format!("open_in_builtin_browser: creating new window for {parsed}"),
     );
     let toolbar_js = include_str!("../resources/builtin-browser-toolbar.js")
-        .replace("__THEME_VARS__", &theme_vars_css(app));
+        .replace("__THEME_VARS_JSON__", &theme_vars_json(app));
 
     WebviewWindowBuilder::new(app, BROWSER_LABEL, WebviewUrl::External(parsed))
         .title("LUMA Browser")
@@ -363,7 +363,7 @@ fn open_in_builtin_browser_on_main_thread(app: &AppHandle, parsed: url::Url) -> 
     Ok(())
 }
 
-fn theme_vars_css(app: &AppHandle) -> String {
+fn theme_vars_json(app: &AppHandle) -> String {
     const WANTED: &[(&str, &str, &str)] = &[
         ("luma-bg", "box-first-color", "#180d29"),
         ("luma-border", "box-border-color", "#3a1f5c"),
@@ -383,12 +383,15 @@ fn theme_vars_css(app: &AppHandle) -> String {
         .unwrap_or_else(|| "luma-default".into());
     let css = crate::themes::css_for(app, &theme_id).unwrap_or_default();
 
-    let mut out = String::new();
+    let mut map = serde_json::Map::new();
     for (toolbar_name, theme_var, fallback) in WANTED {
         let value = find_css_var(&css, theme_var).unwrap_or_else(|| (*fallback).to_string());
-        out.push_str(&format!("  --{toolbar_name}: {value};\n"));
+        map.insert(
+            (*toolbar_name).to_string(),
+            serde_json::Value::String(value),
+        );
     }
-    out
+    serde_json::Value::Object(map).to_string()
 }
 
 fn find_css_var(css: &str, name: &str) -> Option<String> {

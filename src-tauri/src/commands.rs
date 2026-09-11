@@ -233,7 +233,14 @@ pub async fn search_mypc(query: String) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        let uri = format!("search-ms:query={}", percent_encode(query));
+        let uri = match std::env::var("USERPROFILE") {
+            Ok(home) if !home.trim().is_empty() => format!(
+                "search-ms:query={}&crumb=location:{}&",
+                percent_encode(query),
+                home
+            ),
+            _ => format!("search-ms:query={}", percent_encode(query)),
+        };
         std::process::Command::new("explorer.exe")
             .arg(uri)
             .spawn()
