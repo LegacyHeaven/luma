@@ -91,7 +91,6 @@ fn main() {
             logging::log_client_event,
             updater::check_for_update,
             updater::apply_update,
-            updater::take_last_update_failure,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

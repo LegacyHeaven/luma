@@ -2,6 +2,15 @@
 
 All notable changes to Luma are documented here.
 
+## 2.2.1
+
+- Fixed the auto-updater on Windows: it downloaded the new build but never
+  actually installed it, because the helper process responsible for
+  swapping the files in could be killed the moment Luma itself exited,
+  before it finished. The swap now happens directly inside Luma itself,
+  synchronously, with no separate helper process (and no PowerShell)
+  involved at all - the same approach macOS and Linux already used.
+
 ## 2.2.0
 
 - Added `!open <name>`: launches an installed app by name (Windows Start

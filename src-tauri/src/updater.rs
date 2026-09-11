@@ -25,12 +25,19 @@
 //!
 //! Installing: the new binary is downloaded next to the current one and
 //! checksum-verified against manifest.json before anything touches the
-//! running executable. macOS/Linux can rename a file over the path of
-//! their own already-running executable (the OS keeps the old inode alive
-//! for the current process), so that's a direct swap-and-relaunch.
-//! Windows can't - the running .exe is locked - so there a small detached
-//! helper script waits for this process to exit, moves the new file into
-//! place, and relaunches it; see resources/windows-update-helper.ps1.
+//! running executable, then swapped into place synchronously, in-process,
+//! on every platform - no detached helper process or external script of
+//! any kind (there used to be a PowerShell helper for Windows; it's gone,
+//! see install_and_relaunch below for why).
+//!
+//! macOS/Linux can rename a file directly over the path of their own
+//! already-running executable (the OS keeps the old inode alive for the
+//! current process), so that's a one-step swap-and-relaunch. Windows can't
+//! overwrite the running .exe directly, but the OS loader opens it with
+//! FILE_SHARE_DELETE, so *renaming it aside* works fine while the process
+//! keeps running from the already-mapped file - rename the running exe to
+//! `<name>.old`, rename the downloaded build into its place, spawn it,
+//! then clean up the `.old` file.
 
 use crate::logging;
 use serde::{Deserialize, Serialize};
@@ -151,32 +158,6 @@ fn emit_progress(app: &AppHandle, stage: &str, detail: impl Into<String>) {
     );
 }
 
-/// Where the Windows update-helper script (see install_and_relaunch below
-/// and resources/windows-update-helper.ps1) leaves a note if it ultimately
-/// fails to swap the files. Only relevant on Windows: the process that
-/// kicks off `apply_update` there has to exit unconditionally before the
-/// swap can happen (the running .exe can't replace itself), so if the
-/// swap then fails there is no live Tauri command left to report an error
-/// through - this file on disk is the only channel back to the next
-/// launch. macOS/Linux do the swap in-process before exiting, so a
-/// failure there already returns a normal `Err` from `apply_update` and
-/// never needs this.
-fn update_failure_marker_path() -> std::path::PathBuf {
-    std::env::temp_dir().join("luma-update-failed.txt")
-}
-
-/// Called once on startup by the main window (see main.js's boot()) right
-/// alongside check_for_update. Reads and clears the marker above, if one
-/// is there, so the frontend can tell the user the last automatic update
-/// didn't take instead of it just quietly having not happened.
-#[tauri::command]
-pub fn take_last_update_failure() -> Option<String> {
-    let path = update_failure_marker_path();
-    let text = fs::read_to_string(&path).ok()?;
-    let _ = fs::remove_file(&path);
-    Some(text)
-}
-
 /// Downloads, verifies, and installs the update for this platform, then
 /// relaunches - on success this process exits and never actually returns
 /// `Ok`, so the frontend's `invoke("apply_update")` promise is expected to
@@ -277,53 +258,67 @@ fn install_and_relaunch(
     std::process::exit(0);
 }
 
+/// A fresh download can sit locked for a few seconds right after landing on
+/// disk - Windows Defender/SmartScreen doing a reputation-check scan on an
+/// unsigned .exe is the usual cause - so a rename that's about to fail gets
+/// a few retries instead of giving up on the first one. Unix doesn't need
+/// this (no such lock exists there), so it's Windows-only.
+#[cfg(target_os = "windows")]
+fn rename_with_retry(from: &Path, to: &Path) -> std::io::Result<()> {
+    let mut last_err = None;
+    for attempt in 0..20 {
+        match fs::rename(from, to) {
+            Ok(()) => return Ok(()),
+            Err(err) => {
+                last_err = Some(err);
+                if attempt < 19 {
+                    std::thread::sleep(std::time::Duration::from_millis(250));
+                }
+            }
+        }
+    }
+    Err(last_err.expect("loop always sets last_err before running out of attempts"))
+}
+
+/// No PowerShell, no detached helper process - both used to be needed
+/// because the running .exe was assumed to be un-renameable while
+/// executing, but Windows actually opens the running image with
+/// FILE_SHARE_DELETE, so renaming it aside works fine from right here.
+/// That also means a failure is a normal `Err` returned straight to the
+/// frontend, same as macOS/Linux, instead of vanishing into a detached
+/// process that can be killed the moment this one exits (which is exactly
+/// what the old helper script suffered from).
 #[cfg(target_os = "windows")]
 fn install_and_relaunch(
     app: &AppHandle,
     current_exe: &Path,
     new_path: &Path,
 ) -> Result<(), String> {
-    use std::os::windows::process::CommandExt;
+    let file_name = current_exe
+        .file_name()
+        .ok_or_else(|| "current executable has no file name".to_string())?
+        .to_string_lossy()
+        .to_string();
+    let old_path = current_exe.with_file_name(format!("{file_name}.old"));
+    let _ = fs::remove_file(&old_path);
 
-    // 0x08 = DETACHED_PROCESS, 0x00000200 = CREATE_NEW_PROCESS_GROUP - the
-    // helper needs to keep running after this process exits, with no
-    // console window flashing up.
-    const DETACHED_PROCESS: u32 = 0x00000008;
-    const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
+    rename_with_retry(current_exe, &old_path)
+        .map_err(|e| format!("couldn't move the running build aside: {e}"))?;
 
-    let pid = std::process::id();
-    let script = include_str!("../resources/windows-update-helper.ps1")
-        .replace("__PID__", &pid.to_string())
-        .replace("__OLD__", &current_exe.to_string_lossy())
-        .replace("__NEW__", &new_path.to_string_lossy())
-        .replace(
-            "__MARKER__",
-            &update_failure_marker_path().to_string_lossy(),
-        )
-        .replace(
-            "__LOG__",
-            &std::env::temp_dir()
-                .join(format!("luma-update-{pid}.log"))
-                .to_string_lossy(),
-        );
+    if let Err(err) = rename_with_retry(new_path, current_exe) {
+        // Put things back the way they were rather than leaving the app
+        // with nothing at all at `current_exe`.
+        let _ = fs::rename(&old_path, current_exe);
+        return Err(format!("couldn't move the new build into place: {err}"));
+    }
 
-    let script_path = std::env::temp_dir().join(format!("luma-update-{pid}.ps1"));
-    fs::write(&script_path, script).map_err(|e| e.to_string())?;
+    logging::info(app, "apply_update: installed, relaunching");
+    if let Err(err) = std::process::Command::new(current_exe).spawn() {
+        // The new build is genuinely installed at this point - only the
+        // relaunch itself failed - so report it but don't roll back.
+        return Err(format!("update installed but relaunch failed: {err}"));
+    }
 
-    logging::info(app, "apply_update: spawning Windows update helper, exiting");
-    std::process::Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-WindowStyle",
-            "Hidden",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-        ])
-        .arg(&script_path)
-        .creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)
-        .spawn()
-        .map_err(|e| e.to_string())?;
-
+    let _ = fs::remove_file(&old_path);
     std::process::exit(0);
 }

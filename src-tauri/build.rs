@@ -93,7 +93,6 @@ fn main() {
             "log_client_event",
             "check_for_update",
             "apply_update",
-            "take_last_update_failure",
         ]),
     ))
     .expect("failed to run tauri-build");
