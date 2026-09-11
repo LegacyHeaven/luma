@@ -57,6 +57,8 @@
   var newEngineBang = document.getElementById("new-engine-bang");
   var addEngineBtn = document.getElementById("add-engine-btn");
   var engineFormStatus = document.getElementById("engine-form-status");
+  var builtinEnginesList = document.getElementById("builtin-engines-list");
+  var customAppsList = document.getElementById("custom-apps-list");
   var themeOptionsContainer = document.getElementById("theme-options");
   var customCssTextarea = document.getElementById("custom-css");
   var openThemesFolderBtn = document.getElementById("open-themes-folder");
@@ -473,6 +475,97 @@
     });
   }
 
+  // ----- more search engines (built-in catalog, off by default) -----
+  // Google/MyPC/Open are always on and not part of this list - see
+  // config::SearchConfig::enabled_builtin_engines.
+  async function loadBuiltinEngines() {
+    var allEngines = await invoke("list_all_builtin_engines");
+    renderBuiltinEngines(
+      allEngines.filter(function (e) {
+        return !e.local && e.name !== "Google";
+      })
+    );
+  }
+
+  function renderBuiltinEngines(allEngines) {
+    builtinEnginesList.innerHTML = "";
+    allEngines.forEach(function (engine) {
+      var label = document.createElement("label");
+      label.className = "checkbox-option";
+
+      var input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = currentConfig.search.enabled_builtin_engines.indexOf(engine.name) !== -1;
+      input.addEventListener("change", function () {
+        var enabled = input.checked;
+        invoke("set_builtin_engine_enabled", { name: engine.name, enabled: enabled })
+          .then(function () {
+            currentConfig.search.enabled_builtin_engines = currentConfig.search.enabled_builtin_engines.filter(
+              function (n) { return n !== engine.name; }
+            );
+            if (enabled) currentConfig.search.enabled_builtin_engines.push(engine.name);
+            dlog("info", "settings: " + engine.name + (enabled ? " enabled" : " disabled"));
+            return loadEngines();
+          })
+          .catch(function (err) {
+            dlog("error", "set_builtin_engine_enabled invoke failed: " + err);
+            input.checked = !enabled;
+          });
+      });
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(" " + engine.name + " "));
+
+      var bang = document.createElement("span");
+      bang.className = "bang";
+      bang.textContent = "!" + engine.bang;
+      label.appendChild(bang);
+
+      builtinEnginesList.appendChild(label);
+    });
+  }
+
+  // ----- custom selected apps (!open's file-picker fallback) -----
+  function renderCustomApps(customApps) {
+    customAppsList.innerHTML = "";
+    if (!customApps.length) {
+      var empty = document.createElement("span");
+      empty.className = "update-status";
+      empty.textContent = "None yet - !open saves one here the first time it can't find an app on its own.";
+      customAppsList.appendChild(empty);
+      return;
+    }
+    customApps.forEach(function (appEntry) {
+      var row = document.createElement("div");
+      row.className = "engine-row";
+
+      var label = document.createElement("span");
+      label.textContent = appEntry.name;
+      row.appendChild(label);
+
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "engine-row-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.title = "Remove " + appEntry.name;
+      removeBtn.addEventListener("click", function () {
+        invoke("remove_custom_app", { name: appEntry.name })
+          .then(function () {
+            dlog("info", "settings: removed custom app " + appEntry.name);
+            currentConfig.search.custom_apps = currentConfig.search.custom_apps.filter(function (a) {
+              return a.name !== appEntry.name;
+            });
+            renderCustomApps(currentConfig.search.custom_apps);
+          })
+          .catch(function (err) {
+            dlog("error", "remove_custom_app invoke failed: " + err);
+          });
+      });
+      row.appendChild(removeBtn);
+
+      customAppsList.appendChild(row);
+    });
+  }
+
   addEngineBtn.addEventListener("click", function () {
     if (!invoke) return;
     var engine = {
@@ -573,9 +666,11 @@
 
     try {
       await loadEngines();
+      await loadBuiltinEngines();
     } catch (err) {
       dlog("error", "settings: get_engines invoke failed: " + err);
     }
+    renderCustomApps(currentConfig.search.custom_apps || []);
 
     try {
       var themeList = await invoke("list_themes");

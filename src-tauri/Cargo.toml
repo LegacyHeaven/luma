@@ -1,6 +1,6 @@
 [package]
 name = "luma"
-version = "2.1.1"
+version = "2.2.0"
 description = "Luma - the open-source spotlight search for every desktop. BangDeck !bang search, everywhere."
 authors = ["Luma contributors"]
 license = "MIT"
@@ -32,6 +32,7 @@ ureq = "2"
 # Verifies a downloaded update's sha256 against manifest.json before it's
 # ever allowed to replace the running binary.
 sha2 = "0.10"
+tauri-plugin-dialog = "2"
 
 # Windows-only: lets window.rs call DwmSetWindowAttribute directly (see
 # disable_system_backdrop) to turn off Windows 11's automatic Mica/system-

@@ -35,6 +35,7 @@ fn main() {
             window::show_main_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -78,7 +79,12 @@ fn main() {
             commands::reset_spotlight_position,
             commands::add_custom_engine,
             commands::remove_custom_engine,
+            commands::list_all_builtin_engines,
+            commands::set_builtin_engine_enabled,
             commands::search_mypc,
+            commands::open_app,
+            commands::pick_app_for,
+            commands::remove_custom_app,
             logging::get_system_info,
             logging::get_debug_log,
             logging::clear_debug_log,

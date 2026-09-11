@@ -213,6 +213,17 @@ pub fn spotlight_window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(SPOTLIGHT_LABEL)
 }
 
+/// The spotlight window is a transparent canvas around the pill, not the
+/// pill itself - `theme.css`'s `.search-shell` glow (box-shadow) needs room
+/// on every side to render without being clipped at the window edge, since
+/// `body { overflow: hidden }` clips at the window bounds regardless of how
+/// much padding the CSS gives the pill. These margins add that room on top
+/// of the configured/visible pill size so the glow always has space to
+/// breathe; `body.spotlight-mode .wrapper`'s padding in every theme.css must
+/// stay in sync with these numbers (34/50/62 there mirrors these).
+const SPOTLIGHT_GLOW_MARGIN_SIDE: f64 = 50.0;
+const SPOTLIGHT_WINDOW_HEIGHT: f64 = 176.0;
+
 /// Creates the floating spotlight window if it doesn't exist yet. It starts
 /// hidden - `toggle_spotlight` is what actually shows it - frameless,
 /// transparent (so the theme's own rounded/blurred panel shows through),
@@ -228,7 +239,10 @@ pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<Web
         WebviewUrl::App("index.html?mode=spotlight".into()),
     )
     .title("LUMA")
-    .inner_size(width, 128.0)
+    .inner_size(
+        width + SPOTLIGHT_GLOW_MARGIN_SIDE * 2.0,
+        SPOTLIGHT_WINDOW_HEIGHT,
+    )
     .resizable(false)
     .decorations(false)
     .transparent(true)

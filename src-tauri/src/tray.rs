@@ -28,10 +28,14 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
-    let icon = app
-        .default_window_icon()
-        .cloned()
-        .expect("luma.conf.json bundle.icon must provide a default window icon");
+    // Deliberately not `app.default_window_icon()` here: on Windows that
+    // decodes only the *first* frame stored inside icons/icon.ico, which is
+    // the 16x16 entry - Windows then has to stretch that tiny bitmap up for
+    // any DPI above 100%, which is exactly why the tray/taskbar icon looked
+    // "very low res" even once it was showing the right artwork. Loading a
+    // real 128x128 PNG directly gives the OS a source big enough to scale
+    // down cleanly at any DPI instead.
+    let icon = tauri::include_image!("icons/128x128.png");
 
     TrayIconBuilder::with_id("luma-tray")
         .icon(icon)

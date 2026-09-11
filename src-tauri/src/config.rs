@@ -121,12 +121,43 @@ pub struct CustomEngine {
     pub placeholder: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+/// An app the user picked by hand (via the native file picker) after
+/// `!open <name>` couldn't find it any other way - see
+/// commands::open_app/pick_app_for. Kept indefinitely so the same `!open
+/// <name>` launches it directly next time, no picker needed.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CustomApp {
+    pub name: String,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SearchConfig {
     /// User-added engines from Settings' "Search engines" section - see
     /// commands::add_custom_engine/remove_custom_engine.
     pub custom_engines: Vec<CustomEngine>,
+    /// Apps saved through `!open`'s file-picker fallback - see CustomApp.
+    pub custom_apps: Vec<CustomApp>,
+    /// Which of engines.json's *built-in* entries show up in the engine
+    /// picker/bang list - everything else in the catalog stays dormant
+    /// until turned on in Settings, so a fresh install isn't showing ~70
+    /// engines at once. Google/MyPC/Open are the three Julian wanted on
+    /// from the start; existing installs upgrading to this pick up the
+    /// same trimmed-down default rather than staying on the old "all of
+    /// them" behavior, since a config.toml written before this field
+    /// existed has no value for it either.
+    pub enabled_builtin_engines: Vec<String>,
+}
+
+impl Default for SearchConfig {
+    fn default() -> Self {
+        Self {
+            custom_engines: Vec::new(),
+            custom_apps: Vec::new(),
+            enabled_builtin_engines: vec!["Google".into(), "MyPC".into(), "Open".into()],
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

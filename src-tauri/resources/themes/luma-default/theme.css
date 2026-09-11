@@ -31,6 +31,12 @@
 
 html {
   font-size: 62.5%;
+  /* Body always paints a full themed background (color + gradient) over
+     its own box, including the scrollable area on tall pages like
+     Settings - html should never need to show its own color once this
+     stylesheet is active, so this keeps it from peeking through as a
+     mismatched seam during scroll/overscroll. */
+  background: transparent;
 }
 
 body {
@@ -436,7 +442,7 @@ body.spotlight-mode .engine-selector {
 
 body.spotlight-mode .wrapper {
   max-width: 100%;
-  padding: 14px 16px;
+  padding: 30px 46px 58px 46px;
   animation: none;
 }
 

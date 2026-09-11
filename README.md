@@ -8,7 +8,9 @@ Luma is a spotlight-style search launcher for Linux, macOS and Windows,
 built with [Tauri](https://tauri.app). Its search box is called
 **BangDeck** - type a plain query, or a `!bang` and a query to jump
 straight to one of about 70 search engines (Google, YouTube, GitHub,
-Wikipedia, Amazon, and so on).
+Wikipedia, Amazon, and so on - only Google is shown by default, the rest
+are a toggle away in Settings), or to a file or app on your own machine
+with `!mypc` and `!open`.
 
 It runs two ways:
 

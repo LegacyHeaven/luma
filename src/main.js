@@ -263,18 +263,39 @@
       // one fixed, engine-agnostic placeholder instead.
       placeholderOverride: isSpotlight ? "search the universe" : null,
       onSearch: function (result) {
-        // !mypc (see vendor/engine/bangdeck.js's `local` engines) hands
-        // off to the OS's own search facility instead of resolving to a
-        // web address - nothing to open_result here.
+        // `local` engines (see vendor/engine/bangdeck.js) hand off to the
+        // OS instead of resolving to a web address - which command they
+        // hand off to depends on which local engine this was, so this
+        // can't just always call search_mypc now that !open exists too.
         if (result.local) {
-          dlog("info", "search submitted -> local OS search, query=" + result.query);
-          invoke("search_mypc", { query: result.query })
-            .then(function () {
-              dlog("info", "search_mypc invoke resolved OK");
-            })
-            .catch(function (err) {
-              dlog("error", "search_mypc invoke failed: " + err);
-            });
+          dlog("info", "search submitted -> local, engine=" + result.engine + " query=" + result.query);
+          if (result.engine === "Open") {
+            invoke("open_app", { query: result.query })
+              .then(function () {
+                dlog("info", "open_app invoke resolved OK");
+              })
+              .catch(function (err) {
+                // Sentinel from commands::APP_NOT_FOUND - nothing on this
+                // PC matched the name, so ask the user to point at it
+                // themselves instead of just showing an error.
+                if (err === "__LUMA_APP_NOT_FOUND__") {
+                  dlog("info", "open_app: \"" + result.query + "\" not found, opening file picker");
+                  invoke("pick_app_for", { name: result.query }).catch(function (pickErr) {
+                    dlog("error", "pick_app_for invoke failed: " + pickErr);
+                  });
+                } else {
+                  dlog("error", "open_app invoke failed: " + err);
+                }
+              });
+          } else {
+            invoke("search_mypc", { query: result.query })
+              .then(function () {
+                dlog("info", "search_mypc invoke resolved OK");
+              })
+              .catch(function (err) {
+                dlog("error", "search_mypc invoke failed: " + err);
+              });
+          }
           if (isSpotlight) invoke("hide_spotlight");
           return;
         }

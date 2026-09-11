@@ -97,7 +97,9 @@ fn builtin_bangs() -> Vec<String> {
 
 /// The frontend fetches the engine catalog through this command rather than
 /// a `<script src>`, so the same code path runs in `cargo tauri dev` and in
-/// a release build. Merges in the user's own engines from Settings' "Search
+/// a release build. Trims the ~70-entry built-in catalog down to whichever
+/// ones are in `search.enabled_builtin_engines` (see config::SearchConfig)
+/// before merging in the user's own engines from Settings' "Search
 /// engines" section (see config::CustomEngine) - marked `template: true` so
 /// bangdeck.js knows to substitute `%s` rather than treat `action` as a
 /// fixed base URL, and `user_added: true` so Settings can tell them apart
@@ -106,10 +108,17 @@ fn builtin_bangs() -> Vec<String> {
 pub fn get_engines(state: State<AppState>) -> Result<serde_json::Value, String> {
     let mut value: serde_json::Value =
         serde_json::from_str(ENGINES_JSON).map_err(|e| e.to_string())?;
-    let custom = state.config.lock().unwrap().search.custom_engines.clone();
+    let cfg = state.config.lock().unwrap().clone();
 
     if let Some(arr) = value.get_mut("engines").and_then(|v| v.as_array_mut()) {
-        for engine in custom {
+        arr.retain(|e| {
+            e["name"]
+                .as_str()
+                .map(|name| cfg.search.enabled_builtin_engines.iter().any(|e| e == name))
+                .unwrap_or(false)
+        });
+
+        for engine in cfg.search.custom_engines {
             let placeholder = if engine.placeholder.trim().is_empty() {
                 format!("search {}", engine.name)
             } else {
@@ -127,6 +136,15 @@ pub fn get_engines(state: State<AppState>) -> Result<serde_json::Value, String> 
     }
 
     Ok(value)
+}
+
+/// The full built-in catalog, unfiltered - only for Settings' "more search
+/// engines" checklist, which needs to show (and toggle) the ones
+/// `get_engines` is currently hiding.
+#[tauri::command]
+pub fn list_all_builtin_engines() -> Result<serde_json::Value, String> {
+    let value: serde_json::Value = serde_json::from_str(ENGINES_JSON).map_err(|e| e.to_string())?;
+    Ok(value.get("engines").cloned().unwrap_or_default())
 }
 
 /// Settings' "Add engine" form. Deliberately picky about validation here
@@ -187,6 +205,45 @@ pub fn remove_custom_engine(
 ) -> Result<(), String> {
     let mut cfg = state.config.lock().unwrap();
     cfg.search.custom_engines.retain(|e| e.name != name);
+    crate::config::save(&app, &cfg)?;
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
+}
+
+/// Settings' toggle for one of the built-in engines get_engines is
+/// otherwise hiding (see config::SearchConfig::enabled_builtin_engines).
+#[tauri::command]
+pub fn set_builtin_engine_enabled(
+    app: AppHandle,
+    state: State<AppState>,
+    name: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    let already = cfg
+        .search
+        .enabled_builtin_engines
+        .iter()
+        .any(|e| e == &name);
+    if enabled && !already {
+        cfg.search.enabled_builtin_engines.push(name);
+    } else if !enabled && already {
+        cfg.search.enabled_builtin_engines.retain(|e| e != &name);
+    }
+    crate::config::save(&app, &cfg)?;
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
+}
+
+/// Settings' "remove" button next to a saved custom app (see CustomApp).
+#[tauri::command]
+pub fn remove_custom_app(
+    app: AppHandle,
+    state: State<AppState>,
+    name: String,
+) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    cfg.search.custom_apps.retain(|a| a.name != name);
     crate::config::save(&app, &cfg)?;
     let _ = app.emit("luma://config-changed", ());
     Ok(())
@@ -315,6 +372,254 @@ fn percent_encode(input: &str) -> String {
         }
     }
     out
+}
+
+/// Sentinel error `open_app` returns when it genuinely couldn't find the
+/// app anywhere - main.js checks for this exact string (not just "any
+/// error") to know when to fall back to the native file picker instead of
+/// just showing the error as-is.
+pub const APP_NOT_FOUND: &str = "__LUMA_APP_NOT_FOUND__";
+
+/// `!open <name>` - Julian's requested native-app launcher. Checks apps the
+/// user already picked by hand first (see CustomApp/pick_app_for), then
+/// falls back to each platform's own way of resolving an installed app by
+/// name. Never Luma's own list of what's installed - every branch hands
+/// off to a tool/API the OS already provides.
+#[tauri::command]
+pub fn open_app(state: State<AppState>, query: String) -> Result<(), String> {
+    let query = query.trim();
+    if query.is_empty() {
+        return Err("nothing to open".into());
+    }
+
+    let saved = state
+        .config
+        .lock()
+        .unwrap()
+        .search
+        .custom_apps
+        .iter()
+        .find(|a| a.name.eq_ignore_ascii_case(query))
+        .cloned();
+
+    if let Some(app) = saved {
+        return launch_app_path(&app.path);
+    }
+
+    find_and_launch_app(query).map_err(|_| APP_NOT_FOUND.to_string())
+}
+
+/// Settings' "custom selected apps" list is populated entirely by this -
+/// the picker `open_app` falls back to once it can't resolve `name` any
+/// other way. Saves the pick under `name` so the exact same `!open <name>`
+/// launches it directly next time, then launches it immediately so picking
+/// the file *is* the search result.
+#[tauri::command]
+pub fn pick_app_for(app: AppHandle, state: State<AppState>, name: String) -> Result<(), String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let name = name.trim().to_string();
+    if name.is_empty() {
+        return Err("nothing to open".into());
+    }
+
+    let picker = app
+        .dialog()
+        .file()
+        .set_title(format!("Select the app for \"{name}\""));
+    #[cfg(target_os = "windows")]
+    let picker = picker.add_filter("Applications", &["exe"]);
+    #[cfg(target_os = "macos")]
+    let picker = picker.add_filter("Applications", &["app"]);
+
+    let picked = picker
+        .blocking_pick_file()
+        .ok_or_else(|| "no file selected".to_string())?;
+    let path = picked
+        .into_path()
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.search
+            .custom_apps
+            .retain(|a| !a.name.eq_ignore_ascii_case(&name));
+        cfg.search.custom_apps.push(crate::config::CustomApp {
+            name: name.clone(),
+            path: path.clone(),
+        });
+        crate::config::save(&app, &cfg)?;
+    }
+    let _ = app.emit("luma://config-changed", ());
+
+    launch_app_path(&path)
+}
+
+/// Launches a path already known to point at an app (a saved CustomApp, or
+/// one just picked by hand) - platform-appropriate handoff, same "never
+/// read the file ourselves" rule as search_mypc.
+fn launch_app_path(path: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", path])
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        if path.ends_with(".app") {
+            std::process::Command::new("open").arg(path).spawn()
+        } else {
+            std::process::Command::new(path).spawn()
+        }
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new(path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    {
+        let _ = path;
+        Err("opening apps isn't supported on this platform yet".into())
+    }
+}
+
+/// Resolves an installed app by name without any saved mapping - each
+/// platform's own way of doing that, mirroring search_mypc's per-platform
+/// split.
+#[cfg(target_os = "windows")]
+fn find_and_launch_app(query: &str) -> Result<(), String> {
+    let query_lower = query.to_lowercase();
+    let roots = [
+        std::env::var("ProgramData")
+            .ok()
+            .map(|p| format!("{p}\\Microsoft\\Windows\\Start Menu\\Programs")),
+        std::env::var("AppData")
+            .ok()
+            .map(|p| format!("{p}\\Microsoft\\Windows\\Start Menu\\Programs")),
+    ];
+
+    for root in roots.into_iter().flatten() {
+        if let Some(hit) = find_shortcut(std::path::Path::new(&root), &query_lower) {
+            return std::process::Command::new("cmd")
+                .args(["/C", "start", "", &hit.to_string_lossy()])
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| e.to_string());
+        }
+    }
+    Err("not found".into())
+}
+
+/// Recursively scans a Start Menu folder for a `.lnk` whose filename
+/// contains `query_lower` - launching the shortcut itself (rather than
+/// resolving its target) sidesteps needing a `.lnk`-parsing dependency
+/// just for this.
+#[cfg(target_os = "windows")]
+fn find_shortcut(dir: &std::path::Path, query_lower: &str) -> Option<std::path::PathBuf> {
+    let entries = std::fs::read_dir(dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(hit) = find_shortcut(&path, query_lower) {
+                return Some(hit);
+            }
+            continue;
+        }
+        let is_lnk = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| e.eq_ignore_ascii_case("lnk"));
+        if !is_lnk {
+            continue;
+        }
+        let matches = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .is_some_and(|stem| stem.to_lowercase().contains(query_lower));
+        if matches {
+            return Some(path);
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn find_and_launch_app(query: &str) -> Result<(), String> {
+    // macOS already resolves an installed app by (partial) name for us.
+    let status = std::process::Command::new("open")
+        .args(["-a", query])
+        .status()
+        .map_err(|e| e.to_string())?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err("not found".into())
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn find_and_launch_app(query: &str) -> Result<(), String> {
+    let query_lower = query.to_lowercase();
+    let mut dirs = vec![
+        "/usr/share/applications".to_string(),
+        "/usr/local/share/applications".to_string(),
+    ];
+    if let Ok(home) = std::env::var("HOME") {
+        dirs.push(format!("{home}/.local/share/applications"));
+    }
+
+    for dir in dirs {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("desktop") {
+                continue;
+            }
+            let Ok(contents) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let name = contents.lines().find_map(|l| l.strip_prefix("Name="));
+            let Some(name) = name else { continue };
+            if !name.to_lowercase().contains(&query_lower) {
+                continue;
+            }
+            let exec_line = contents.lines().find_map(|l| l.strip_prefix("Exec="));
+            let Some(exec_line) = exec_line else { continue };
+            let exec = exec_line
+                .split_whitespace()
+                .next()
+                .unwrap_or("")
+                .split('%')
+                .next()
+                .unwrap_or("")
+                .trim();
+            if exec.is_empty() {
+                continue;
+            }
+            return std::process::Command::new(exec)
+                .spawn()
+                .map(|_| ())
+                .map_err(|e| e.to_string());
+        }
+    }
+    Err("not found".into())
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn find_and_launch_app(_query: &str) -> Result<(), String> {
+    Err("opening apps isn't supported on this platform yet".into())
 }
 
 #[tauri::command]
