@@ -25,7 +25,7 @@
 
     /* Spotlight fade in/out (main.js drives these off the
        luma://spotlight-shown / luma://spotlight-hiding events - see
-       window::schedule_spotlight_hide's 220ms grace period, which this is
+       window::schedule_spotlight_hide's 260ms grace period, which this is
        timed to fit inside) plus the global "turn all of that off" escape
        hatch from Settings → Animations. Lives here rather than in each
        theme.css since it's chrome behavior, not themable look - same
@@ -62,16 +62,16 @@
        CSS itself GPU-cheap, which is why every animation in this file and
        in the themes sticks to transform/opacity rather than animating
        width/height/position. */
-    body.spotlight-fade-in { animation: luma-spotlight-fade-in .16s ease-out; will-change: opacity, transform; }
-    body.spotlight-fade-out { animation: luma-spotlight-fade-out .2s ease-in forwards; will-change: opacity, transform; }
+    body.spotlight-fade-in { animation: luma-spotlight-fade-in .22s cubic-bezier(.16, 1, .3, 1); will-change: opacity, transform; }
+    body.spotlight-fade-out { animation: luma-spotlight-fade-out .24s cubic-bezier(.4, 0, .68, .06) forwards; will-change: opacity, transform; }
 
     @keyframes luma-spotlight-fade-in {
-      from { opacity: 0; transform: scale(.97); }
-      to { opacity: 1; transform: scale(1); }
+      from { opacity: 0; transform: scale(.96) translateY(6px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
     }
     @keyframes luma-spotlight-fade-out {
-      from { opacity: 1; transform: scale(1); }
-      to { opacity: 0; transform: scale(.97); }
+      from { opacity: 1; transform: scale(1) translateY(0); }
+      to { opacity: 0; transform: scale(.96) translateY(6px); }
     }
 
     .spotlight-brand { display: none; }

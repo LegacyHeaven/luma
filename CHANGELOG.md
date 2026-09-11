@@ -2,6 +2,22 @@
 
 All notable changes to Luma are documented here.
 
+## 2.5.0
+
+- Replaced the "More search engines" list's ~70-checkbox grid with a
+  dropdown - pick one to turn it on, remove it later with the &#10005; on
+  its chip, same pattern the custom search engines list already used.
+  The old grid stayed printed in full no matter how few of those engines
+  were actually turned on; now only the ones you've added show up at
+  all, and adding one is a single click on the dropdown instead of
+  hunting for its checkbox in a wall of ~70.
+- Smoothed the spotlight's fade in/out - longer, gentler easing curves
+  instead of the plain `ease-in`/`ease-out` browser defaults, plus a
+  subtle rise/settle (a few pixels of vertical motion alongside the
+  existing scale and opacity) instead of a flat scale-and-fade. The
+  window-hide grace period was bumped to match the slightly longer fade
+  so the window never disappears mid-animation.
+
 ## 2.4.4
 
 - `!mypc` on Windows no longer goes through the `search-ms:` protocol at

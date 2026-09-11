@@ -252,7 +252,7 @@ fn schedule_spotlight_hide(window: &WebviewWindow) {
     let _ = window.emit("luma://spotlight-hiding", ());
     let target = window.clone();
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(220));
+        std::thread::sleep(std::time::Duration::from_millis(260));
         if SPOTLIGHT_GENERATION.load(Ordering::SeqCst) == gen {
             let _ = target.hide();
         }
