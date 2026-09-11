@@ -237,7 +237,7 @@ pub async fn search_mypc(query: String) -> Result<(), String> {
             Ok(home) if !home.trim().is_empty() => format!(
                 "search-ms:query={}&crumb=location:{}&",
                 percent_encode(query),
-                home
+                percent_encode(&home)
             ),
             _ => format!("search-ms:query={}", percent_encode(query)),
         };

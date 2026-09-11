@@ -2,6 +2,18 @@
 
 All notable changes to Luma are documented here.
 
+## 2.4.2
+
+- Fixed `!mypc` throwing a "download an app to open this" dialog instead
+  of searching. The 2.4.1 fix for the Documents-folder fallback added a
+  location to the `search-ms:` request but sent it unencoded - Windows
+  requires that value URL-encoded (`C:\Users\name` as
+  `C%3A%5CUsers%5Cname`), and without that it misreads the whole thing
+  as an attempt to open an unrecognized `location:` link instead of a
+  search request. Confirmed correct against Microsoft's own
+  documentation for the `crumb=location:` parameter this time, not just
+  code review.
+
 ## 2.4.1
 
 - Fixed the built-in browser window losing its close, minimize, and
