@@ -2,6 +2,18 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.4
+
+- Fixed a bug where saving Settings always logged (and on Windows, always
+  attempted) an OS-level autostart registration change, even when "Launch
+  automatically when I sign in" hadn't actually been touched. On Windows
+  specifically this made *every* settings save log a spurious
+  `could not update start-at-login: ... (os error 2)` warning, because the
+  underlying autostart crate's `disable()` deletes a registry value that
+  was never written in the first place whenever autostart is already off.
+  `save_config` now only calls into the OS autostart API when the setting
+  actually changed.
+
 ## 2.9.3
 
 - Removed the search box's idle animations entirely (Default's focus

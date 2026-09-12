@@ -34,17 +34,29 @@ pub fn save_config(
         );
     }
 
+    let old_start_at_login = state.config.lock().unwrap().general.start_at_login;
+
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     {
-        use tauri_plugin_autostart::ManagerExt;
-        let autostart = app.autolaunch();
-        let result = if new_config.general.start_at_login {
-            autostart.enable()
-        } else {
-            autostart.disable()
-        };
-        if let Err(err) = result {
-            crate::logging::warn(&app, format!("could not update start-at-login: {err}"));
+        // Only touch the OS-level autostart registration when the setting
+        // actually changed. Calling enable()/disable() unconditionally on
+        // every save (the previous behavior) meant disable() ran even when
+        // autostart had never been enabled in the first place - on Windows
+        // that's a registry delete-value call with nothing to delete, which
+        // the underlying `auto-launch` crate surfaces as a hard error
+        // ("could not update start-at-login: ... os error 2") on every
+        // single settings save, not just when the user actually toggled it.
+        if new_config.general.start_at_login != old_start_at_login {
+            use tauri_plugin_autostart::ManagerExt;
+            let autostart = app.autolaunch();
+            let result = if new_config.general.start_at_login {
+                autostart.enable()
+            } else {
+                autostart.disable()
+            };
+            if let Err(err) = result {
+                crate::logging::warn(&app, format!("could not update start-at-login: {err}"));
+            }
         }
     }
 
