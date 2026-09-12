@@ -337,51 +337,11 @@ body {
   position: relative;
   overflow: hidden;
   transition: border-color .4s ease, box-shadow .4s ease;
-  animation: searchboxPulse 4.5s ease-in-out infinite;
-  will-change: box-shadow;
-}
-
-/* A single scan-line sweep across the box the moment it's focused - a
-   small nod to the app's spyglass icon "locking on", not a looping
-   effect, so it stays a one-shot accent rather than a distraction. */
-.search-box::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -40%;
-  width: 30%;
-  height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(207, 89, 230, .16), transparent);
-  pointer-events: none;
-  opacity: 0;
-  will-change: transform, opacity;
-}
-
-.search-box:focus-within::after {
-  animation: scan-sweep .7s cubic-bezier(.4, 0, .2, 1);
-}
-
-/* Moves via `transform: translateX()` rather than animating `left` - the
-   sweep travels 150% of the search box's width (from -40% to 110%), which
-   is 500% of this element's own 30%-of-parent width, so translateX(500%)
-   covers the same distance while staying on the compositor instead of
-   triggering layout every frame. */
-@keyframes scan-sweep {
-  0% { opacity: 0; transform: translateX(0); }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
-  100% { opacity: 0; transform: translateX(500%); }
-}
-
-@keyframes searchboxPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(128, 0, 255, 0); }
-  50% { box-shadow: 0 0 18px rgba(128, 0, 255, .15); }
 }
 
 .search-box:focus-within {
   border-color: var(--color-purple);
   box-shadow: 0 0 30px rgba(128, 0, 255, .25);
-  animation: none;
 }
 
 .search-box .terminal-prompt {

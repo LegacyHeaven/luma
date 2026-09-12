@@ -360,13 +360,6 @@ body {
   max-width: 88vw;
   margin: 0 auto;
   transition: border-color .8s ease, box-shadow .8s ease, border-radius .8s ease;
-  animation: searchboxSway 9s ease-in-out infinite;
-  will-change: box-shadow, border-radius;
-}
-
-@keyframes searchboxSway {
-  0%, 100% { border-radius: 32% 68% 62% 38% / 52% 42% 58% 48%; box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
-  50% { border-radius: 42% 58% 45% 55% / 46% 54% 42% 58%; box-shadow: 0 6px 22px rgba(16, 185, 129, .14); }
 }
 
 .search-box:focus-within {

@@ -2,6 +2,16 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.3
+
+- Removed the search box's idle animations entirely (Default's focus
+  scan-sweep, and the continuous glow/sway/bounce pulse on Default,
+  Amber, Emerald, and Pink) instead of just optimizing them, per direct
+  feedback that they weren't wanted at all - not just that they felt
+  heavy. The search box now just sits still until you interact with it;
+  its static focus glow (the border/box-shadow on `:focus-within`) is
+  unchanged.
+
 ## 2.9.2
 
 - Fixed a Windows-only build error in 2.9.1's WebView2 background fix
