@@ -134,6 +134,81 @@ fn disable_webview_background(app: &AppHandle, window: &WebviewWindow) {
 #[cfg(not(windows))]
 fn disable_webview_background(_app: &AppHandle, _window: &WebviewWindow) {}
 
+// Plain `window.set_focus()` (a thin wrapper over `SetForegroundWindow`)
+// routinely lost the race for the position-picker overlay: confirmed live,
+// repeatedly, that pressing Escape right after "Pick position..." did
+// nothing, even after retrying the same `set_focus()` call from a
+// background thread a few hundred milliseconds later to give the window
+// more time to finish showing. That pointed at a timing problem, but it
+// isn't one - Windows enforces a "foreground lock": a process generally
+// can't call `SetForegroundWindow` to steal focus away from whatever the
+// user was last interacting with (here, Settings) unless it's already the
+// foreground process itself, no matter how long it waits first. Retrying
+// later just retries the same call under the same restriction, so it can
+// keep failing indefinitely - which is exactly what live testing kept
+// showing.
+//
+// The standard Win32 workaround is `AttachThreadInput`: temporarily
+// sharing input state with whatever thread currently owns the foreground
+// window makes Windows treat this thread as if it were that one for the
+// purposes of the lock, so `SetForegroundWindow` actually succeeds instead
+// of silently no-opping. This is the real fix, not another timing tweak -
+// it removes the restriction that was defeating every previous attempt
+// rather than trying to out-wait it.
+#[cfg(windows)]
+fn force_foreground_focus(app: &AppHandle, window: &WebviewWindow) {
+    use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
+    };
+
+    let hwnd = match window.hwnd() {
+        Ok(h) => h,
+        Err(err) => {
+            crate::logging::warn(
+                app,
+                format!(
+                    "force_foreground_focus: couldn't get hwnd for {}: {err}",
+                    window.label()
+                ),
+            );
+            return;
+        }
+    };
+
+    unsafe {
+        let foreground = GetForegroundWindow();
+        let foreground_thread = GetWindowThreadProcessId(foreground, None);
+        let current_thread = GetCurrentThreadId();
+
+        // Only worth attaching if some other thread genuinely owns the
+        // foreground right now - attaching a thread to itself is a no-op at
+        // best and GetWindowThreadProcessId returns 0 if there's no
+        // foreground window at all (e.g. the desktop itself has it).
+        let attached = foreground_thread != 0
+            && foreground_thread != current_thread
+            && AttachThreadInput(current_thread, foreground_thread, true).as_bool();
+
+        let _ = SetForegroundWindow(hwnd);
+        let _ = BringWindowToTop(hwnd);
+        // Also ask Tauri/winit's own wrapper to focus the webview control
+        // inside the window - SetForegroundWindow alone moves OS-level
+        // foreground/keyboard focus to the top-level window, but the
+        // webview's own input focus is a separate, nested concern that
+        // set_focus() is what actually drives.
+        let _ = window.set_focus();
+
+        if attached {
+            let _ = AttachThreadInput(current_thread, foreground_thread, false);
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn force_foreground_focus(_app: &AppHandle, window: &WebviewWindow) {
+    let _ = window.set_focus();
+}
+
 pub const MAIN_LABEL: &str = "main";
 pub const SPOTLIGHT_LABEL: &str = "spotlight";
 pub const BROWSER_LABEL: &str = "browser";
@@ -365,24 +440,19 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
 
     disable_system_backdrop(app, &window);
     disable_webview_background(app, &window);
-    let _ = window.set_focus();
+    force_foreground_focus(app, &window);
 
-    // The one `set_focus()` right above frequently loses a race on Windows:
-    // this window isn't necessarily fully realized at the OS level the
-    // instant `build()` returns, and whatever previously had focus (Settings,
-    // on the common "open the picker from Settings" path) can end up keeping
-    // it instead - confirmed live, repeatedly: clicking to place a spot
-    // always worked (that's routed by screen position, not focus), but a
-    // plain Escape press right after opening the picker sometimes did
-    // nothing at all, because the in-page keydown handler that's supposed to
-    // catch it never received it - keyboard input was still going to
-    // whatever window was focused a moment earlier. Re-asserting focus a
-    // little later, once the window has actually had time to finish
-    // showing, wins the race the immediate call sometimes loses. Done twice
-    // at increasing delays for the same reason retrying a flaky network
-    // call twice beats trying once: cheap, harmless if the first retry
-    // already won, and each extra attempt is one more chance to land after
-    // whatever briefly held focus is done with it.
+    // A previous version of this fix retried a plain `set_focus()` from a
+    // background thread a few hundred milliseconds later, on the theory
+    // that the window just hadn't finished showing yet at the moment of the
+    // first call. Confirmed live, repeatedly, that this did NOT actually
+    // fix it: the real blocker is Windows' foreground-lock restriction (see
+    // `force_foreground_focus`), which no amount of waiting and retrying
+    // the same restricted call ever gets past - so this now retries with
+    // the forceful version instead, purely as a defense-in-depth safety net
+    // for the (separate, genuinely timing-related) case where the webview
+    // control itself hasn't finished attaching yet when the window is first
+    // built.
     for delay_ms in [150, 500] {
         let for_focus = app.clone();
         std::thread::spawn(move || {
@@ -390,7 +460,7 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
             let inner = for_focus.clone();
             let _ = for_focus.run_on_main_thread(move || {
                 if let Some(w) = inner.get_webview_window(POSITION_PICKER_LABEL) {
-                    let _ = w.set_focus();
+                    force_foreground_focus(&inner, &w);
                 }
             });
         });

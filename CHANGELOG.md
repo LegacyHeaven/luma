@@ -2,6 +2,23 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.11
+
+- Pressing Esc to cancel the position-picker overlay (Settings → Spotlight
+  window → "Pick position...") now actually works reliably. 2.9.9 and
+  2.9.10 both believed this was fixed by re-asserting window focus shortly
+  after the picker opened (once immediately, then retried twice from a
+  background thread), and live testing at the time seemed to confirm it -
+  but further testing after 2.9.10 shipped found Esc still doing nothing,
+  no matter how long you waited before pressing it. Waiting longer never
+  had a chance of helping: Windows enforces a "foreground lock" that
+  generally blocks a process from stealing keyboard focus away from
+  whatever the user was last interacting with, and retrying the exact same
+  restricted call later just hits the same wall again. The picker now uses
+  the standard workaround for this (`AttachThreadInput`, which briefly
+  shares input state with whatever currently holds focus so the OS allows
+  the handoff) instead of hoping a delay would eventually get lucky.
+
 ## 2.9.10
 
 - `!mypc` actually opens Windows Search now. 2.9.9's rewrite got the right
