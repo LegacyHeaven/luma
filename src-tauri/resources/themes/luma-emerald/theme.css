@@ -361,6 +361,7 @@ body {
   margin: 0 auto;
   transition: border-color .8s ease, box-shadow .8s ease, border-radius .8s ease;
   animation: searchboxSway 9s ease-in-out infinite;
+  will-change: box-shadow, border-radius;
 }
 
 @keyframes searchboxSway {

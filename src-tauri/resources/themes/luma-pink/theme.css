@@ -360,6 +360,7 @@ body {
   margin: 0 auto;
   transition: border-color .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, transform .3s cubic-bezier(.34,1.56,.64,1);
   animation: searchboxBounce 2.6s cubic-bezier(.45,0,.55,1) infinite;
+  will-change: box-shadow, transform;
 }
 
 @keyframes searchboxBounce {

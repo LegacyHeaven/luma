@@ -2,7 +2,24 @@
 
 All notable changes to Luma are documented here.
 
-## 2.9.1
+## 2.9.2
+
+- Fixed a Windows-only build error in 2.9.1's WebView2 background fix
+  below (an unwrapped call into an `unsafe` COM method) - 2.9.1 never
+  actually published because of it, so this is the first release that
+  carries these changes.
+- A few animations were tightened up for smoother, cheaper compositing:
+  the focus scan-sweep on the Default theme's search box now moves via
+  `transform` instead of animating `left` (same visual sweep, no layout
+  recalculation every frame), and the four themes with a continuous
+  search-box glow pulse (Default, Amber, Emerald, Pink) now hint the
+  browser to optimize those layers ahead of time (`will-change`). Looked
+  into a fuller rework (moving each glow onto its own composited layer
+  instead of animating `box-shadow`/`border-radius` directly) - a real
+  option if these still feel heavy on lower-end hardware, but a bigger,
+  more visually risky change than this pass.
+
+## 2.9.1 (source only - see 2.9.2)
 
 - Fixed the repo README (and the icon-regeneration script) pointing at a
   stale, unused placeholder image instead of the real app icon - the

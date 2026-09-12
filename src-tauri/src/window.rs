@@ -105,12 +105,15 @@ fn disable_webview_background(app: &AppHandle, window: &WebviewWindow) {
             }
         };
 
-        if let Err(err) = controller2.SetDefaultBackgroundColor(COREWEBVIEW2_COLOR {
-            A: 0,
-            R: 0,
-            G: 0,
-            B: 0,
-        }) {
+        let set_result = unsafe {
+            controller2.SetDefaultBackgroundColor(COREWEBVIEW2_COLOR {
+                A: 0,
+                R: 0,
+                G: 0,
+                B: 0,
+            })
+        };
+        if let Err(err) = set_result {
             crate::logging::warn(
                 &app_handle,
                 format!(

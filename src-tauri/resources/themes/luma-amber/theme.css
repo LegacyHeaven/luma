@@ -392,6 +392,7 @@ body::after {
   margin: 0 auto;
   transition: border-color .15s steps(2), box-shadow .15s steps(2);
   animation: searchboxPulse 3.6s steps(6) infinite;
+  will-change: box-shadow;
   box-shadow: inset 0 0 26px rgba(0, 0, 0, .5);
 }
 
