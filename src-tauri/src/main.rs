@@ -2,6 +2,7 @@
 
 mod commands;
 mod config;
+mod install;
 mod logging;
 mod marketplace;
 mod shortcuts;
@@ -16,6 +17,9 @@ use tauri::{Manager, WindowEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, ShortcutState};
 
 fn main() {
+    // Must run before the Tauri app is built at all - see install.rs for why.
+    install::maybe_relocate_and_relaunch();
+
     tauri::Builder::default()
         .manage(logging::AppLog::new())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {

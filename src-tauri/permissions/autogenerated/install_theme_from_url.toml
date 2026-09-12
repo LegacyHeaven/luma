@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-install-theme-from-url"
+description = "Enables the install_theme_from_url command without any pre-configured scope."
+commands.allow = ["install_theme_from_url"]
+
+[[permission]]
+identifier = "deny-install-theme-from-url"
+description = "Denies the install_theme_from_url command without any pre-configured scope."
+commands.deny = ["install_theme_from_url"]

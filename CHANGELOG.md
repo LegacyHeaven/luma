@@ -2,6 +2,24 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.0
+
+- Luma ships as a single portable executable with no installer - great for
+  portability, but it meant a fresh download sitting in Downloads had no
+  Start Menu entry, no desktop icon, and self-updated wherever it happened
+  to be left. On Windows and Linux, the first run from anywhere other than
+  its own install folder now copies itself into a stable per-user app
+  folder (`%LOCALAPPDATA%\Luma` on Windows, `~/.local/share/Luma` on
+  Linux), creates a desktop shortcut (and Start Menu entry on Windows),
+  and relaunches from there - the same first-run handoff apps like Discord
+  give you, without needing an actual installer or admin rights. Every
+  step is best-effort: if anything about it fails, Luma just keeps running
+  from wherever it was launched instead of refusing to start. Not changed
+  on macOS yet - a raw executable doesn't get the same treatment as a real
+  `.app` bundle, and that's a bigger job for another release. Once
+  installed, the existing in-app updater continues working in place as
+  before.
+
 ## 2.8.0
 
 - `!open` finds a lot more now. On Windows it falls back to the same app
