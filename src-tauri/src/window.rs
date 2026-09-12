@@ -74,6 +74,63 @@ fn disable_system_backdrop(app: &AppHandle, window: &WebviewWindow) {
 #[cfg(not(windows))]
 fn disable_system_backdrop(_app: &AppHandle, _window: &WebviewWindow) {}
 
+// Tauri's own `.transparent(true)`/`.background_color(...)` only control
+// the window's compositing - the embedded WebView2 control keeps its own
+// separate default background color (opaque white unless told otherwise),
+// which can still paint through as a solid box around the spotlight pill
+// on some Windows/WebView2 Runtime combinations even with the DWM system
+// backdrop already disabled above. This reaches past Tauri into the raw
+// WebView2 controller and turns that off too.
+#[cfg(windows)]
+fn disable_webview_background(app: &AppHandle, window: &WebviewWindow) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2Controller2, COREWEBVIEW2_COLOR,
+    };
+    use windows::core::Interface;
+
+    let label = window.label().to_string();
+    let app_handle = app.clone();
+    let result = window.with_webview(move |platform_webview| {
+        let controller2 = match platform_webview.controller().cast::<ICoreWebView2Controller2>()
+        {
+            Ok(c) => c,
+            Err(err) => {
+                crate::logging::warn(
+                    &app_handle,
+                    format!(
+                        "disable_webview_background: couldn't get ICoreWebView2Controller2 for {label}: {err}"
+                    ),
+                );
+                return;
+            }
+        };
+
+        if let Err(err) = controller2.SetDefaultBackgroundColor(COREWEBVIEW2_COLOR {
+            A: 0,
+            R: 0,
+            G: 0,
+            B: 0,
+        }) {
+            crate::logging::warn(
+                &app_handle,
+                format!(
+                    "disable_webview_background: SetDefaultBackgroundColor failed for {label}: {err}"
+                ),
+            );
+        }
+    });
+
+    if let Err(err) = result {
+        crate::logging::warn(
+            app,
+            format!("disable_webview_background: with_webview failed: {err}"),
+        );
+    }
+}
+
+#[cfg(not(windows))]
+fn disable_webview_background(_app: &AppHandle, _window: &WebviewWindow) {}
+
 pub const MAIN_LABEL: &str = "main";
 pub const SPOTLIGHT_LABEL: &str = "spotlight";
 pub const BROWSER_LABEL: &str = "browser";
@@ -169,6 +226,7 @@ pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<Web
     .build()?;
 
     disable_system_backdrop(app, &window);
+    disable_webview_background(app, &window);
     position_spotlight(&window, "center", None, None);
 
     Ok(window)
@@ -303,6 +361,7 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
 
     disable_system_backdrop(app, &window);
+    disable_webview_background(app, &window);
     let _ = window.set_focus();
     Ok(())
 }

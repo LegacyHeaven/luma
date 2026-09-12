@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/app-icon-source.png" width="120" alt="Luma logo">
+  <img src="assets/app-icon.png" width="120" alt="Luma logo">
 </p>
 
 # Luma

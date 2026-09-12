@@ -2,6 +2,22 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.1
+
+- Fixed the repo README (and the icon-regeneration script) pointing at a
+  stale, unused placeholder image instead of the real app icon - the
+  purple spyglass that's actually built into Luma. That stale file has
+  been removed; the README and `npm run icons` both now use the same
+  real icon everywhere.
+- On Windows, the spotlight window's transparency is now also enforced
+  at the WebView2 level, not just Tauri's own window compositing -
+  turns off WebView2's own default background color (opaque white)
+  directly on the underlying controller. Tauri's `.transparent(true)`
+  and the DWM system-backdrop fix (2.2.0-era) already handle the window
+  itself; this closes a separate place a solid box could still show
+  through around the pill on some Windows/WebView2 Runtime
+  combinations. Same fix applied to the position-picker window.
+
 ## 2.9.0
 
 - Luma ships as a single portable executable with no installer - great for
