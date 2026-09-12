@@ -263,21 +263,36 @@ pub async fn search_mypc(app: AppHandle, query: String) -> Result<(), String> {
         if home.trim().is_empty() {
             return Err("could not find your home folder".into());
         }
+
+        // Hand this off to Windows' own indexed search - the exact same
+        // index behind the Start Menu's and Explorer's own search boxes -
+        // via the `search-ms:` URI scheme, instead of walking the
+        // filesystem by hand ourselves. A manual walk (what this used to
+        // do) can only ever match on filenames, never file *content* the
+        // real index already covers, is slow doing synchronous disk I/O on
+        // Luma's own main thread, and - critically, this is why it kept
+        // not working - had to give up after a fixed 3-second/40,000-entry
+        // budget, which a dev machine's home folder (node_modules, git
+        // clones, build output, ...) can blow through long before ever
+        // reaching whatever the user actually typed. `explorer.exe` opens
+        // a normal, live-updating Explorer search-results window against
+        // the real index instead, scoped to the user's own home folder via
+        // the `crumb=location:` parameter (matching what this always
+        // searched before - just done properly this time).
+        let uri = format!(
+            "search-ms:query={}&crumb=location:{}",
+            percent_encode_for_uri(query),
+            percent_encode_for_uri(&home),
+        );
         crate::logging::info(
             &app,
-            format!("search_mypc: scanning {home:?} for {query:?}"),
+            format!("search_mypc: opening OS search for {query:?}"),
         );
-        match windows_find_match(&home, query) {
-            Some(path) => {
-                crate::logging::info(&app, format!("search_mypc: revealing {path:?}"));
-                std::process::Command::new("explorer.exe")
-                    .arg(format!("/select,{path}"))
-                    .spawn()
-                    .map_err(|e| format!("couldn't open Explorer: {e}"))?;
-                Ok(())
-            }
-            None => Err(format!("nothing on your PC matched \"{query}\"")),
-        }
+        std::process::Command::new("explorer.exe")
+            .arg(uri)
+            .spawn()
+            .map_err(|e| format!("couldn't open Windows Search: {e}"))?;
+        Ok(())
     }
 
     #[cfg(target_os = "macos")]
@@ -341,54 +356,26 @@ fn reveal_best_match(
     }
 }
 
+// Minimal percent-encoding for building the `search-ms:` URI above - not
+// pulling in the `percent-encoding` crate for one call site. Encodes every
+// byte outside the small unreserved-characters set (RFC 3986), which is
+// always safe even though `search-ms:` is Explorer's own URI scheme rather
+// than a standard http(s) one; iterating by UTF-8 byte rather than by char
+// means multi-byte characters (accented names, non-Latin scripts, etc. -
+// all valid in a Windows path or search query) come out correctly as a run
+// of individually-percent-encoded bytes.
 #[cfg(target_os = "windows")]
-fn windows_find_match(root: &str, query: &str) -> Option<String> {
-    use std::collections::VecDeque;
-    use std::time::{Duration, Instant};
-
-    const SKIP_DIRS: &[&str] = &[
-        "appdata",
-        "node_modules",
-        ".git",
-        "$recycle.bin",
-        "windows",
-        "programdata",
-        "program files",
-        "program files (x86)",
-    ];
-    const MAX_VISITED: usize = 40_000;
-    let budget = Duration::from_secs(3);
-
-    let query_lower = query.to_lowercase();
-    let start = Instant::now();
-    let mut queue: VecDeque<std::path::PathBuf> = VecDeque::new();
-    queue.push_back(std::path::PathBuf::from(root));
-    let mut visited = 0usize;
-
-    while let Some(dir) = queue.pop_front() {
-        if start.elapsed() > budget || visited > MAX_VISITED {
-            break;
-        }
-        let entries = match std::fs::read_dir(&dir) {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
-        for entry in entries.flatten() {
-            visited += 1;
-            let path = entry.path();
-            let name_lossy = entry.file_name().to_string_lossy().to_lowercase();
-            if name_lossy.contains(&query_lower) {
-                return Some(path.to_string_lossy().to_string());
+fn percent_encode_for_uri(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for byte in input.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(byte as char)
             }
-            if path.is_dir() && !SKIP_DIRS.contains(&name_lossy.as_str()) {
-                queue.push_back(path);
-            }
-            if visited > MAX_VISITED {
-                break;
-            }
+            _ => out.push_str(&format!("%{byte:02X}")),
         }
     }
-    None
+    out
 }
 
 pub const APP_NOT_FOUND: &str = "__LUMA_APP_NOT_FOUND__";

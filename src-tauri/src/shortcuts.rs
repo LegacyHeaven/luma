@@ -23,26 +23,22 @@ pub fn reregister(app: &AppHandle, shortcut_str: &str) -> Result<(), String> {
 }
 
 // The position-picker overlay (see window::open_position_picker) relies on
-// this as a fallback for Escape-to-cancel. Its own in-page `keydown`
-// listener only fires while the picker's webview actually holds OS
-// keyboard focus - and on Windows that turned out not to be reliable for
-// every open of the picker (a `WebviewWindow::set_focus()` called right
-// after creating an always-on-top, decorationless, transparent window can
-// silently lose the race to the window that was focused a moment earlier,
-// especially on the second or later time the picker is opened in the same
-// session - confirmed live: clicking to place a spot always worked since
-// that's routed by screen position rather than focus, but a plain Escape
-// keypress sometimes reached the *previous* focused window instead of the
-// picker and did nothing, leaving the exact "stuck overlay with no way
-// out" trap this picker already had one bug for).
-//
-// A global shortcut sidesteps the whole problem: `global-hotkey` registers
-// it directly with the OS (RegisterHotKey on Windows), so it fires no
-// matter which window currently has focus. It's registered only while the
-// picker is open and unregistered the moment it closes (by any means -
-// placing a spot, Escape, or losing focus), so it never shadows a plain
-// Escape press anywhere else in the app or on the desktop the rest of the
-// time.
+// this as a *secondary* fallback for Escape-to-cancel - the real fix for
+// the bug that motivated it (see the long comment in window.rs next to
+// where the picker window is built) is re-asserting window focus shortly
+// after the window opens. This exists on top of that because a global
+// hotkey fires no matter which window currently has focus, at least when
+// registering it succeeds - and it doesn't always: confirmed live, some
+// other already-running app can already hold a bare Escape as *its own*
+// global hotkey, which makes this registration fail outright (global
+// hotkeys are exclusive system-wide, one owner at a time, so this can
+// never be assumed to succeed). When that happens this quietly does
+// nothing and the picker falls back to the focus fix plus its own in-page
+// keydown handler, same as if this didn't exist at all. It's registered
+// only while the picker is open and unregistered the moment it closes (by
+// any means - placing a spot, Escape, or losing focus), so on the machines
+// where it *can* register, it never shadows a plain Escape press anywhere
+// else in the app or on the desktop the rest of the time.
 pub fn position_picker_cancel_shortcut() -> Shortcut {
     Shortcut::new(None, Code::Escape)
 }

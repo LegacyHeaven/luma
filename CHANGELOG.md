@@ -2,6 +2,44 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.9
+
+- Actually fixed Escape-to-cancel on the position-picker overlay (2.9.8's
+  global-hotkey fallback wasn't the real fix - live re-testing after
+  shipping it found the hotkey registration itself silently failing,
+  because another already-running app on the test machine had already
+  claimed a bare Escape as *its own* global hotkey, and global hotkeys are
+  exclusive system-wide, one owner at a time). The actual root cause was
+  the picker window's `set_focus()` call, made right after it's built,
+  losing a race it doesn't always win - the window isn't necessarily fully
+  realized at the OS level the instant `build()` returns, so whatever had
+  focus a moment earlier (typically Settings, on the "open the picker from
+  Settings" path) can end up keeping it, leaving the picker's own in-page
+  Escape handler never receiving the keypress. Focus is now re-asserted
+  twice more, shortly after opening, which reliably wins the race the
+  first call sometimes loses; the global-hotkey fallback from 2.9.8 stays
+  in place as a bonus for machines where it's free to register, it just
+  isn't relied on as the only fix anymore.
+- Fixed the main window (and Settings) not being draggable at all, and
+  double-clicking the titlebar not maximizing it either. Both go through
+  Tauri's own permission system just like every other command Luma calls -
+  and both permissions (`core:window:allow-start-dragging` and
+  `allow-internal-toggle-maximize`) were simply missing from the app's
+  capabilities file, so every drag attempt and every double-click on the
+  custom titlebar was silently rejected with no error anywhere. Both are
+  granted now.
+- Reworked `!mypc` to actually search using Windows' own indexed search -
+  the same index behind the Start Menu's and Explorer's own search boxes -
+  instead of walking the filesystem by hand. The old approach could only
+  ever match filenames (never file content, which the real index already
+  covers), ran synchronously on Luma's own main thread, and had to give up
+  after a fixed 3-second/40,000-entries budget - which a dev machine's home
+  folder (git clones, `node_modules`, build output, ...) blows through long
+  before ever reaching whatever was actually typed, which is exactly why it
+  kept coming back empty. `!mypc` now opens a normal, live-updating
+  Explorer search-results window against the real index, scoped to your
+  home folder - instant, and finds everything Windows' own search would.
+
 ## 2.9.8
 
 - Fixed Escape-to-cancel on the "Pick position" spotlight-placement overlay

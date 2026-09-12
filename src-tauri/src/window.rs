@@ -367,12 +367,45 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
     disable_webview_background(app, &window);
     let _ = window.set_focus();
 
+    // The one `set_focus()` right above frequently loses a race on Windows:
+    // this window isn't necessarily fully realized at the OS level the
+    // instant `build()` returns, and whatever previously had focus (Settings,
+    // on the common "open the picker from Settings" path) can end up keeping
+    // it instead - confirmed live, repeatedly: clicking to place a spot
+    // always worked (that's routed by screen position, not focus), but a
+    // plain Escape press right after opening the picker sometimes did
+    // nothing at all, because the in-page keydown handler that's supposed to
+    // catch it never received it - keyboard input was still going to
+    // whatever window was focused a moment earlier. Re-asserting focus a
+    // little later, once the window has actually had time to finish
+    // showing, wins the race the immediate call sometimes loses. Done twice
+    // at increasing delays for the same reason retrying a flaky network
+    // call twice beats trying once: cheap, harmless if the first retry
+    // already won, and each extra attempt is one more chance to land after
+    // whatever briefly held focus is done with it.
+    for delay_ms in [150, 500] {
+        let for_focus = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(delay_ms));
+            let inner = for_focus.clone();
+            let _ = for_focus.run_on_main_thread(move || {
+                if let Some(w) = inner.get_webview_window(POSITION_PICKER_LABEL) {
+                    let _ = w.set_focus();
+                }
+            });
+        });
+    }
+
     // Best-effort, and deliberately not folded into an `Err` return: a
-    // failure here (some other app already holding the same hotkey,
-    // however unlikely for a bare Escape) should not stop the picker from
-    // opening - it just falls back to relying solely on the in-page
-    // keydown handler, same as before this existed. See the long comment
-    // on `position_picker_cancel_shortcut` for why this is here at all.
+    // failure here (found live, on this exact machine: some other running
+    // app had already claimed a bare Escape as *its own* global hotkey,
+    // which silently loses this registration - global hotkeys are exclusive
+    // system-wide, so this can never be assumed to succeed) should not stop
+    // the picker from opening. It's a bonus layer on top of the focus fix
+    // above, not the thing actually holding this bug closed - it just falls
+    // back to relying solely on that when it can't be registered. See the
+    // long comment on `position_picker_cancel_shortcut` for why it exists at
+    // all.
     if let Err(err) = crate::shortcuts::register_position_picker_escape(app) {
         crate::logging::warn(
             app,
