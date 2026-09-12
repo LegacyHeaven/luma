@@ -2,6 +2,19 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.15
+
+- No user-facing change. 2.9.14's fix for the position-picker's stray focus
+  border (build hidden, apply the DWM fix, then show - matching the
+  spotlight window's own working pattern) still didn't hold up in live
+  re-testing, despite that pattern being sound in theory. Rather than ship
+  a third blind guess, this adds temporary diagnostic logging that reads
+  the actual `DWMWA_BORDER_COLOR` value straight back from Windows at
+  several points (right after setting it, right before/after showing the
+  window, right after focusing it, and again 400ms later) so the debug
+  console can show what Windows is really doing with it instead of what
+  the docs say it should do.
+
 ## 2.9.14
 
 - Actually fixed the stray focus-border on the position-picker overlay.

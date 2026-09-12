@@ -117,7 +117,7 @@ fn disable_window_border(app: &AppHandle, window: &WebviewWindow) {
             std::mem::size_of_val(&no_border) as u32,
         )
     };
-    if let Err(err) = result {
+    if let Err(err) = &result {
         crate::logging::warn(
             app,
             format!(
@@ -126,10 +126,65 @@ fn disable_window_border(app: &AppHandle, window: &WebviewWindow) {
             ),
         );
     }
+
+    // DIAGNOSTIC (temporary, see log_border_color below): 2.9.14 reordered
+    // this call to run before the window is ever shown, matching the
+    // spotlight window's already-working pattern exactly - and the border
+    // is still visible live. Reading the attribute straight back tells us
+    // whether our own write actually landed (as opposed to the whole API
+    // being a silent no-op for a window built this way), and calling it
+    // again later (see the delayed check in
+    // open_position_picker_on_main_thread) tells us whether something
+    // resets it afterwards - e.g. right when the window first receives
+    // real OS focus, which is the one thing the picker does that the
+    // reused, already-focused-before spotlight window doesn't do fresh
+    // every time.
+    log_border_color(
+        app,
+        window,
+        &format!("set_result={result:?}, right after set"),
+    );
 }
 
 #[cfg(not(windows))]
 fn disable_window_border(_app: &AppHandle, _window: &WebviewWindow) {}
+
+#[cfg(windows)]
+fn log_border_color(app: &AppHandle, window: &WebviewWindow, when: &str) {
+    use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_BORDER_COLOR};
+
+    let Ok(hwnd) = window.hwnd() else {
+        return;
+    };
+    let mut value: u32 = 0;
+    let result = unsafe {
+        DwmGetWindowAttribute(
+            hwnd,
+            DWMWA_BORDER_COLOR,
+            &mut value as *mut _ as *mut std::ffi::c_void,
+            std::mem::size_of::<u32>() as u32,
+        )
+    };
+    match result {
+        Ok(()) => crate::logging::info(
+            app,
+            format!(
+                "log_border_color({}) [{when}]: current DWMWA_BORDER_COLOR=0x{value:08X}",
+                window.label()
+            ),
+        ),
+        Err(err) => crate::logging::warn(
+            app,
+            format!(
+                "log_border_color({}) [{when}]: DwmGetWindowAttribute failed: {err}",
+                window.label()
+            ),
+        ),
+    }
+}
+
+#[cfg(not(windows))]
+fn log_border_color(_app: &AppHandle, _window: &WebviewWindow, _when: &str) {}
 
 // Tauri's own `.transparent(true)`/`.background_color(...)` only control
 // the window's compositing - the embedded WebView2 control keeps its own
@@ -436,7 +491,9 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
     disable_system_backdrop(app, &window);
     disable_window_border(app, &window);
     disable_webview_background(app, &window);
+    log_border_color(app, &window, "right before show()");
     let _ = window.show();
+    log_border_color(app, &window, "right after show(), before set_focus()");
     // No more Esc-to-cancel here (see position-picker.html) - so, unlike
     // several previous versions of this function, there's no need to fight
     // Windows for OS-level keyboard focus at all anymore. Placing a spot is
@@ -446,6 +503,20 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
     // just the ordinary "this is the window that just opened" courtesy call
     // every other window in this app already gets.
     let _ = window.set_focus();
+    log_border_color(app, &window, "right after set_focus()");
+
+    // DIAGNOSTIC (temporary): if something resets the attribute once the
+    // window has genuinely been on screen and focused for a moment - as
+    // opposed to at the exact instant of the show()/set_focus() calls
+    // above - a delayed check catches that too.
+    {
+        let for_delayed = window.clone();
+        let app_for_delayed = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(400));
+            log_border_color(&app_for_delayed, &for_delayed, "400ms after opening");
+        });
+    }
 
     Ok(())
 }
