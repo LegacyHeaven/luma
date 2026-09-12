@@ -418,12 +418,25 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
     .background_color(FULLY_TRANSPARENT)
     .always_on_top(true)
     .skip_taskbar(true)
+    // Built hidden, same as the spotlight window (see
+    // ensure_spotlight_window) and for the same reason: this window was
+    // previously left to its builder default of visible-immediately, so it
+    // was already shown - and DWM had already started drawing its
+    // accent-colored focus border for it - before disable_window_border
+    // below ever ran. DWM doesn't retroactively erase a border it's
+    // already painted onto a window that's never hidden again, so the
+    // fix silently never took for this window even though the exact same
+    // DwmSetWindowAttribute call worked for the spotlight, which sets it
+    // while still hidden. Building hidden and calling `.show()` ourselves
+    // only after the fix is applied closes that gap.
+    .visible(false)
     .build()
     .map_err(|e| e.to_string())?;
 
     disable_system_backdrop(app, &window);
     disable_window_border(app, &window);
     disable_webview_background(app, &window);
+    let _ = window.show();
     // No more Esc-to-cancel here (see position-picker.html) - so, unlike
     // several previous versions of this function, there's no need to fight
     // Windows for OS-level keyboard focus at all anymore. Placing a spot is

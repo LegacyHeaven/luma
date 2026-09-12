@@ -2,6 +2,20 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.14
+
+- Actually fixed the stray focus-border on the position-picker overlay.
+  2.9.13 turned it off with the right API (`DWMWA_BORDER_COLOR` /
+  `DWMWA_COLOR_NONE`) but called it too late for that particular window:
+  unlike the spotlight pill, the picker was left visible immediately on
+  creation, so by the time the fix ran, Windows had already started
+  drawing the border and never retroactively erased it. The picker window
+  is now built hidden, has the border (and backdrop/webview-background)
+  fixes applied while still hidden, and is only shown afterwards - the
+  same order the spotlight window already used successfully. The
+  spotlight pill itself was never affected by this - its border fix really
+  did land in 2.9.13.
+
 ## 2.9.13
 
 - Replaced Esc-to-cancel on the position-picker overlay ("Pick
