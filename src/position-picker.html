@@ -80,40 +80,69 @@
         crosshairH.style.top = e.clientY + "px";
       });
 
-      function init(attempt) {
+      // The click/Escape handlers below used to be attached only after a
+      // one-time poll (up to 20 tries, 100ms apart - 2s total) found
+      // window.__TAURI__ ready, inside init(). If the bridge wasn't ready
+      // within that 2s window - plausible for this particular window,
+      // which is a fullscreen always-on-top transparent overlay doing
+      // extra Windows-specific backdrop/WebView2 setup on creation - init()
+      // gave up silently and *never tried again*, permanently leaving this
+      // window with no click or Escape handling at all (mousemove kept
+      // working since that listener is attached unconditionally above,
+      // which is exactly why the crosshair still tracked the cursor on a
+      // window that was otherwise completely stuck). That matched a real,
+      // reproduced bug: the picker would occasionally become unresponsive
+      // to both click and Escape, recoverable only by force-closing the
+      // window (Alt+F4).
+      //
+      // Fixed by not gating handler *attachment* on the bridge being ready
+      // at all: click/keydown listeners go on immediately, and each one
+      // resolves the bridge fresh at the moment it actually fires. By the
+      // time a user can click on or focus this window it's already visible
+      // and receiving input, so the bridge is certainly ready by then -
+      // whether that took 50ms or 5s no longer matters.
+      document.addEventListener("click", function (e) {
+        var tauri = getTauriBridge();
+        if (!tauri) return;
+        var xFrac = e.clientX / window.innerWidth;
+        var yFrac = e.clientY / window.innerHeight;
+        tauri.core
+          .invoke("report_spotlight_position", { xFrac: xFrac, yFrac: yFrac })
+          .catch(function () {});
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        var tauri = getTauriBridge();
+        if (!tauri) return;
+        tauri.core.invoke("cancel_position_pick").catch(function () {});
+      });
+
+      // The focus-changed auto-cancel (alt-tabbing away, or anything else
+      // stealing focus, cancels too - a fullscreen always-on-top overlay
+      // left dangling in the background would otherwise block clicks on
+      // whatever's under it) still needs the bridge's window API, which
+      // isn't safe to call before it exists. Keep polling for it, but
+      // don't give up after a couple of seconds - retry indefinitely
+      // (capped, generously, at two minutes) since there's nothing else
+      // this listener can fall back to.
+      function registerFocusCancel(attempt) {
         attempt = attempt || 1;
         var tauri = getTauriBridge();
         if (!tauri) {
-          if (attempt < 20) {
-            setTimeout(function () { init(attempt + 1); }, 100);
+          if (attempt < 1200) {
+            setTimeout(function () { registerFocusCancel(attempt + 1); }, 100);
           }
           return;
         }
-        var invoke = tauri.core.invoke;
-
-        document.addEventListener("click", function (e) {
-          var xFrac = e.clientX / window.innerWidth;
-          var yFrac = e.clientY / window.innerHeight;
-          invoke("report_spotlight_position", { xFrac: xFrac, yFrac: yFrac }).catch(function () {});
-        });
-
-        document.addEventListener("keydown", function (e) {
-          if (e.key === "Escape") {
-            invoke("cancel_position_pick").catch(function () {});
-          }
-        });
-
-        // Alt-tabbing away (or anything else stealing focus) cancels too -
-        // a fullscreen always-on-top overlay left dangling in the
-        // background would otherwise block clicks on whatever's under it.
         tauri.window.getCurrentWindow().onFocusChanged(function (event) {
           if (!event.payload) {
-            invoke("cancel_position_pick").catch(function () {});
+            tauri.core.invoke("cancel_position_pick").catch(function () {});
           }
         });
       }
 
-      init();
+      registerFocusCancel();
     })();
   </script>
 </body>

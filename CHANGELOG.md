@@ -2,6 +2,23 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.5
+
+- Fixed the "Pick position" spotlight-placement overlay (Settings ->
+  Spotlight window -> "Choose position on screen") occasionally becoming
+  completely stuck: clicking to place it and pressing Esc to cancel would
+  both silently do nothing, trapping you behind a fullscreen overlay with
+  no way out short of force-closing the app. Root cause: its click/Escape
+  handlers only got wired up after a one-time, 2-second poll for the
+  in-app bridge to be ready gave up - and it gave up for good, not just
+  that one time, so if the bridge (plausibly delayed by this window's
+  extra Windows-specific backdrop/transparency setup on creation) wasn't
+  ready inside that 2-second window, the picker was left permanently
+  unresponsive to input no matter how much longer you then waited or
+  clicked. It now wires up its handlers immediately and resolves the
+  bridge fresh at the moment you actually click or press a key, so timing
+  no longer matters.
+
 ## 2.9.4
 
 - Fixed a bug where saving Settings always logged (and on Windows, always
