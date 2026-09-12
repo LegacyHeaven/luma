@@ -2,6 +2,36 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.10
+
+- `!mypc` actually opens Windows Search now. 2.9.9's rewrite got the right
+  idea (hand off to the real indexed search via the `search-ms:` URI) but
+  the wrong mechanism: it spawned `explorer.exe <uri>` as a plain child
+  process, and live testing that after shipping it found this popped
+  Windows' "Open With" chooser instead of a search-results window. A bare
+  `CreateProcess` (all `std::process::Command` ever does) never goes
+  through the shell's own protocol-handler resolution - only
+  `ShellExecute` does that, by looking `search-ms:` up in the registry the
+  same way a Run dialog or a shell link would. `!mypc` now calls
+  `ShellExecuteW` directly instead of hoping `explorer.exe`'s own argv
+  parsing would special-case the string, which is what actually opens the
+  real Windows Search index against the query.
+- On Windows, Luma's config (config.toml, custom themes, everything else)
+  now lives right beside the installed `luma.exe` instead of tucked away
+  in `%AppData%\Roaming` - so it's there to find just by browsing to
+  wherever Luma is installed, no digging through a hidden folder required.
+  Falls back to the old per-user location if that folder ever turns out
+  not to be writable (e.g. Luma installed somewhere needing admin rights).
+  Anyone upgrading from an older version has their existing config.toml
+  and themes folder copied over automatically the first time this version
+  runs, so nothing already configured is lost.
+- The main window's Settings entry point is now a gear icon sitting flush
+  in the top-left corner, in the same 44px titlebar band as the
+  minimize/maximize/close buttons - mirroring their position and hover
+  behavior instead of the bordered "</LUMA>" text pill it used to be,
+  which didn't read as a settings control at a glance (its only hint was a
+  hover tooltip). Settings' own back-to-search link is unchanged.
+
 ## 2.9.9
 
 - Actually fixed Escape-to-cancel on the position-picker overlay (2.9.8's

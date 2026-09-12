@@ -69,6 +69,50 @@ body {
   transform: translateY(0) scale(.96);
 }
 
+/* The main window's entry point into Settings. Deliberately NOT styled like
+   .home-link (the bordered "</LUMA>" pill settings.html's own back-link
+   uses) - a gear icon sitting right in the same 44px titlebar band as the
+   minimize/maximize/close buttons (see vendor/titlebar.js), mirrored to the
+   opposite corner, reads immediately as "this is a window-chrome control"
+   the way the text pill never quite did. Same geometry (46x44, flush
+   top-left instead of top-right) and the same transparent/hover-highlight
+   look as those buttons, specifically so it reads as one continuous
+   titlebar row rather than a separate floating element. z-index matches
+   titlebar.js's own #luma-titlebar-controls (7) so it sits above the full-
+   width #luma-titlebar-drag region (5) in that corner exactly the way the
+   window-control buttons already do on the right. */
+.settings-btn {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 46px;
+  height: 44px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray);
+  background: transparent;
+  border: none;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .12s ease, color .12s ease;
+}
+
+.settings-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-btn:hover {
+  background: rgba(255, 255, 255, .08);
+  color: var(--color-white);
+}
+
+.settings-btn:active {
+  background: rgba(255, 255, 255, .14);
+}
+
 .settings-link {
   position: fixed;
   top: 24px;
@@ -395,6 +439,7 @@ body.spotlight-mode {
 }
 
 body.spotlight-mode .home-link,
+body.spotlight-mode .settings-btn,
 body.spotlight-mode .settings-link,
 body.spotlight-mode .particles,
 body.spotlight-mode .brand,

@@ -288,10 +288,48 @@ pub async fn search_mypc(app: AppHandle, query: String) -> Result<(), String> {
             &app,
             format!("search_mypc: opening OS search for {query:?}"),
         );
-        std::process::Command::new("explorer.exe")
-            .arg(uri)
-            .spawn()
-            .map_err(|e| format!("couldn't open Windows Search: {e}"))?;
+
+        // This used to just spawn `explorer.exe <uri>` as a plain child
+        // process. Confirmed live that this does NOT reliably resolve the
+        // search-ms: protocol at all: it popped Windows' "Open With"
+        // chooser instead of a Search Results window. The reason is that
+        // std::process::Command is a bare CreateProcess - it starts a new
+        // explorer.exe, but never goes through the shell's own
+        // protocol-handler resolution, which is what actually knows
+        // search-ms: is owned by Explorer's search host (that mapping
+        // lives in the registry under HKEY_CLASSES_ROOT\search-ms).
+        // ShellExecuteW is the real API a Run dialog or a shell link uses
+        // to open a URI like this: it looks the scheme up itself and hands
+        // the URI to whatever's registered for it, which is the same
+        // mechanism that makes `search-ms:` links work from anywhere else
+        // in Windows. Calling it directly here instead of hoping
+        // explorer.exe's own argv parsing special-cases the string is the
+        // actual fix - not just another way of asking for the same thing.
+        use windows::core::{HSTRING, PCWSTR};
+        use windows::Win32::UI::Shell::ShellExecuteW;
+        use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+        let uri_h = HSTRING::from(uri.as_str());
+        let verb_h = HSTRING::from("open");
+        let result = unsafe {
+            ShellExecuteW(
+                None,
+                &verb_h,
+                &uri_h,
+                PCWSTR::null(),
+                PCWSTR::null(),
+                SW_SHOWNORMAL,
+            )
+        };
+        // ShellExecute's return value is an HINSTANCE-shaped legacy status
+        // code, not a real handle: per Microsoft's own docs, anything
+        // greater than 32 means success and everything else is an error
+        // code - there's no richer error to extract out of this ancient
+        // API than that.
+        let code = result.0 as isize;
+        if code <= 32 {
+            return Err(format!("couldn't open Windows Search (error code {code})"));
+        }
         Ok(())
     }
 

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
+#[cfg(target_os = "windows")]
+use std::path::Path;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
@@ -128,7 +130,102 @@ pub struct LumaConfig {
     pub search: SearchConfig,
 }
 
+// Windows: keep config.toml / themes / everything else beside the installed
+// luma.exe itself instead of tucked away in %AppData%\Roaming - so anyone
+// who goes looking for it by browsing to wherever Luma is installed finds
+// it right there, no knowledge of (or need to un-hide) AppData required.
+// Only falls back to the normal per-user app-config location if the exe's
+// own folder can't be resolved or turns out not to be writable (e.g. Luma
+// ends up installed somewhere that needs admin rights, like Program Files)
+// - a "portable" config dir Luma can't actually write to would be worse
+// than not being portable at all. Checked once per run and cached: nothing
+// about an already-running process's own exe path or that folder's
+// writability is going to change out from under it mid-session, and
+// config_dir() is called often enough (every load/save) that redoing a
+// filesystem probe each time would be wasteful.
+#[cfg(target_os = "windows")]
+fn portable_config_dir() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?.to_path_buf();
+    fs::create_dir_all(&dir).ok()?;
+    let probe = dir.join(".luma-write-test");
+    fs::write(&probe, b"").ok()?;
+    let _ = fs::remove_file(&probe);
+    Some(dir)
+}
+
+// One-time migration for anyone who already has a config from before this
+// moved beside the exe: if the new location doesn't have a config.toml yet
+// but the old %AppData%\Roaming one does, copy config.toml and the themes
+// folder over rather than silently falling back to defaults and losing
+// every setting (custom engines/apps, spotlight position and width,
+// disabled-animations, custom CSS, ...) the first time this version runs.
+// Cheap to call repeatedly - the `new_config.exists()` check up front makes
+// every call after the first (successful or not) a single stat call.
+// Best-effort and never fatal: if anything here fails or there's nothing to
+// migrate, load() falling back to defaults afterwards is the exact same
+// behavior a missing/unreadable config has always had.
+#[cfg(target_os = "windows")]
+fn migrate_from_old_location(app: &AppHandle, new_dir: &Path) {
+    let new_config = new_dir.join("config.toml");
+    if new_config.exists() {
+        return;
+    }
+    let Ok(old_dir) = app.path().app_config_dir() else {
+        return;
+    };
+    if old_dir == new_dir {
+        return;
+    }
+    let old_config = old_dir.join("config.toml");
+    if !old_config.exists() {
+        return;
+    }
+
+    crate::logging::info(
+        app,
+        format!("config: migrating from {old_dir:?} to {new_dir:?}"),
+    );
+    if let Err(err) = fs::copy(&old_config, &new_config) {
+        crate::logging::error(app, format!("config: migration copy failed: {err}"));
+        return;
+    }
+
+    let old_themes = old_dir.join("themes");
+    let new_themes = new_dir.join("themes");
+    if old_themes.is_dir() && !new_themes.exists() {
+        if let Err(err) = copy_dir_all(&old_themes, &new_themes) {
+            crate::logging::error(app, format!("config: theme migration failed: {err}"));
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let dest_path = dst.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_all(&entry.path(), &dest_path)?;
+        } else {
+            fs::copy(entry.path(), &dest_path)?;
+        }
+    }
+    Ok(())
+}
+
 pub fn config_dir(app: &AppHandle) -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        use std::sync::OnceLock;
+        static PORTABLE_DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
+        if let Some(dir) = PORTABLE_DIR.get_or_init(portable_config_dir) {
+            migrate_from_old_location(app, dir);
+            return dir.clone();
+        }
+    }
+
     app.path()
         .app_config_dir()
         .expect("could not resolve app config dir")
