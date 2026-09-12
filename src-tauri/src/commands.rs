@@ -823,9 +823,7 @@ pub async fn report_spotlight_position(
 
 #[tauri::command]
 pub async fn cancel_position_pick(app: AppHandle) -> Result<(), String> {
-    window::close_position_picker(&app)?;
-    let _ = app.emit("luma://config-changed", ());
-    Ok(())
+    window::cancel_position_pick(&app)
 }
 
 #[tauri::command]

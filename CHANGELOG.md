@@ -2,6 +2,26 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.8
+
+- Fixed Escape-to-cancel on the "Pick position" spotlight-placement overlay
+  sometimes silently doing nothing, found while re-testing 2.9.6's fix for
+  the same overlay live: clicking to place a spot always worked, but
+  pressing Escape occasionally didn't, especially the second or later time
+  the picker was opened in the same session. Root cause: cancelling on
+  Escape depends on that window actually holding OS keyboard focus, and on
+  Windows a newly-created always-on-top, decorationless, transparent window
+  asking for focus right after it's built doesn't always win it - so the
+  keypress could go to whichever window was focused a moment earlier
+  instead, leaving the picker open with no visible way out (short of
+  clicking somewhere, which places a spot instead of cancelling, or
+  Alt-Tabbing away, which happens to cancel it too since losing focus
+  already cancels the picker). Escape now also works as a real OS-level
+  hotkey - registered only while the picker is open, unregistered the
+  instant it closes - so it fires no matter which window currently has
+  focus, on top of (not instead of) the picker's own in-page Escape
+  handling.
+
 ## 2.9.7
 
 - On Windows, `!open` (and the very first Discord-style relaunch that

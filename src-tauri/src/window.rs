@@ -366,10 +366,30 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
     disable_system_backdrop(app, &window);
     disable_webview_background(app, &window);
     let _ = window.set_focus();
+
+    // Best-effort, and deliberately not folded into an `Err` return: a
+    // failure here (some other app already holding the same hotkey,
+    // however unlikely for a bare Escape) should not stop the picker from
+    // opening - it just falls back to relying solely on the in-page
+    // keydown handler, same as before this existed. See the long comment
+    // on `position_picker_cancel_shortcut` for why this is here at all.
+    if let Err(err) = crate::shortcuts::register_position_picker_escape(app) {
+        crate::logging::warn(
+            app,
+            format!("position-picker: could not register the Escape fallback shortcut: {err}"),
+        );
+    }
+
     Ok(())
 }
 
 pub fn close_position_picker(app: &AppHandle) -> Result<(), String> {
+    // Unregistered unconditionally (not gated on the window existing) so a
+    // stray registration can never survive a picker that already closed by
+    // some other path - `unregister` on an already-unregistered shortcut is
+    // a harmless no-op error, not something worth surfacing.
+    let _ = crate::shortcuts::unregister_position_picker_escape(app);
+
     if app.get_webview_window(POSITION_PICKER_LABEL).is_none() {
         return Ok(());
     }
@@ -379,6 +399,18 @@ pub fn close_position_picker(app: &AppHandle) -> Result<(), String> {
             let _ = w.close();
         }
     })
+}
+
+/// Cancels the position picker exactly like the `cancel_position_pick`
+/// Tauri command does (close the window, notify listeners a config change
+/// may have happened) - pulled out as a plain sync fn so the global-shortcut
+/// handler in main.rs can call it directly without going through the async
+/// command/invoke plumbing, which only makes sense for a real webview
+/// `invoke()` call.
+pub fn cancel_position_pick(app: &AppHandle) -> Result<(), String> {
+    close_position_picker(app)?;
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
 }
 
 pub fn open_in_builtin_browser(app: &AppHandle, url_str: &str) -> Result<(), String> {
