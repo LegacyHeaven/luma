@@ -401,6 +401,18 @@ pub fn pick_app_for(app: AppHandle, state: State<AppState>, name: String) -> Res
         return Err("nothing to open".into());
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        // Pop open the same "every installed app" view Windows' own search
+        // uses (Store/UWP apps included) so whatever open_app's automatic
+        // detection couldn't find is easy to spot before falling back to a
+        // plain file browse below. Best-effort - if explorer.exe isn't on
+        // PATH for some reason, the file dialog below still works.
+        let _ = std::process::Command::new("explorer.exe")
+            .arg("shell:appsfolder")
+            .spawn();
+    }
+
     let picker = app
         .dialog()
         .file()
@@ -489,7 +501,47 @@ fn find_and_launch_app(query: &str) -> Result<(), String> {
                 .map_err(|e| e.to_string());
         }
     }
+
+    // The .lnk scan above misses anything that isn't a classic desktop
+    // shortcut - Store/UWP apps (Calculator, Settings, Photos, Spotify's
+    // UWP build, ...) don't have one anywhere on disk. Get-StartApps reads
+    // the exact same catalog Windows' own Start menu search and the
+    // shell:appsfolder view use, so this is the same "search everything
+    // installed" behavior without reimplementing the shell namespace.
+    if let Some(app_id) = windows_find_start_app(&query_lower) {
+        return std::process::Command::new("explorer.exe")
+            .arg(format!("shell:appsfolder\\{app_id}"))
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string());
+    }
+
     Err("not found".into())
+}
+
+#[cfg(target_os = "windows")]
+fn windows_find_start_app(query_lower: &str) -> Option<String> {
+    let output = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-StartApps | ForEach-Object { \"$($_.Name)|$($_.AppID)\" }",
+        ])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .find_map(|line| {
+            let (name, app_id) = line.split_once('|')?;
+            name.trim()
+                .to_lowercase()
+                .contains(query_lower)
+                .then(|| app_id.trim().to_string())
+        })
 }
 
 #[cfg(target_os = "windows")]
@@ -540,9 +592,18 @@ fn find_and_launch_app(query: &str) -> Result<(), String> {
     let mut dirs = vec![
         "/usr/share/applications".to_string(),
         "/usr/local/share/applications".to_string(),
+        // Snap and Flatpak both publish their own .desktop files instead of
+        // registering with the traditional dirs above - without these, any
+        // app installed either way is invisible to !open even though it
+        // shows up in every desktop environment's app launcher.
+        "/var/lib/snapd/desktop/applications".to_string(),
+        "/var/lib/flatpak/exports/share/applications".to_string(),
     ];
     if let Ok(home) = std::env::var("HOME") {
         dirs.push(format!("{home}/.local/share/applications"));
+        dirs.push(format!(
+            "{home}/.local/share/flatpak/exports/share/applications"
+        ));
     }
 
     for dir in dirs {
@@ -564,24 +625,54 @@ fn find_and_launch_app(query: &str) -> Result<(), String> {
             }
             let exec_line = contents.lines().find_map(|l| l.strip_prefix("Exec="));
             let Some(exec_line) = exec_line else { continue };
-            let exec = exec_line
-                .split_whitespace()
-                .next()
-                .unwrap_or("")
-                .split('%')
-                .next()
-                .unwrap_or("")
-                .trim();
-            if exec.is_empty() {
+            let Some((program, args)) = desktop_exec_command(exec_line) else {
                 continue;
-            }
-            return std::process::Command::new(exec)
+            };
+            return std::process::Command::new(program)
+                .args(args)
                 .spawn()
                 .map(|_| ())
                 .map_err(|e| e.to_string());
         }
     }
     Err("not found".into())
+}
+
+// Parses a .desktop file's `Exec=` line into a program + argument list,
+// dropping the freedesktop field codes (%f, %U, etc.) a launcher is
+// supposed to fill in. Earlier this only kept the first whitespace-separated
+// token, which happened to work for plain `Exec=firefox %u` entries but
+// silently launched a no-op for anything wrapped in a runner - `Exec=flatpak
+// run --branch=stable com.spotify.Client @@u %U@@` would spawn bare
+// `flatpak` with no arguments and go nowhere.
+#[cfg(target_os = "linux")]
+fn desktop_exec_command(exec_line: &str) -> Option<(String, Vec<String>)> {
+    let is_field_code = |tok: &str| {
+        matches!(
+            tok,
+            "%f" | "%F"
+                | "%u"
+                | "%U"
+                | "%d"
+                | "%D"
+                | "%n"
+                | "%N"
+                | "%i"
+                | "%c"
+                | "%k"
+                | "%v"
+                | "%m"
+        )
+    };
+    let mut tokens = exec_line
+        .split_whitespace()
+        .filter(|t| !is_field_code(t) && *t != "@@u" && *t != "@@U" && *t != "@@")
+        .map(|t| t.replace("%%", "%"));
+    let program = tokens.next()?;
+    if program.is_empty() {
+        return None;
+    }
+    Some((program, tokens.collect()))
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]

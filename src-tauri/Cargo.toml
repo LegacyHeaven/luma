@@ -1,6 +1,6 @@
 [package]
 name = "luma"
-version = "2.7.0"
+version = "2.8.0"
 description = "Luma - the open-source spotlight search for every desktop. BangDeck !bang search, everywhere."
 authors = ["Luma contributors"]
 license = "MIT"

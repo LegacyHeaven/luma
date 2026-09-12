@@ -2,6 +2,25 @@
 
 All notable changes to Luma are documented here.
 
+## 2.8.0
+
+- `!open` finds a lot more now. On Windows it falls back to the same app
+  catalog Windows' own Start menu search and the shell:appsfolder view
+  use, so Store/UWP apps (Calculator, Settings, Photos, the UWP build of
+  some apps) launch even though they never had a `.lnk` shortcut for the
+  old scan to find. The manual app picker (when `!open` still can't find
+  something) now also pops open that same shell:appsfolder view first, so
+  it's easy to see everything installed before falling back to a plain
+  file browse.
+- `!open` on Linux now also checks the Snap and Flatpak desktop-file
+  locations, not just the traditional `/usr/share/applications` spots -
+  either kind of install was invisible to it before even though it showed
+  up fine in the system's own app launcher. Also fixed `.desktop` entries
+  whose `Exec=` line runs through a wrapper (Flatpak's `Exec=flatpak run
+  ...`, for example) - previously only the first word of that line was
+  kept, so a Flatpak app would "launch" a bare `flatpak` with no
+  arguments and go nowhere.
+
 ## 2.7.0
 
 - Reworked Settings into six tabs (General, Search & apps, Appearance,
