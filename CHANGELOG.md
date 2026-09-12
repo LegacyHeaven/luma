@@ -2,6 +2,16 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.12
+
+- No user-facing change. 2.9.11's `AttachThreadInput`-based fix for the
+  position-picker's Esc-to-cancel still didn't work in live re-testing,
+  despite matching the standard Win32 pattern for this exact problem - so
+  rather than shipping a third blind guess, this adds temporary diagnostic
+  logging around the actual `SetForegroundWindow` call and its result,
+  visible in the debug console, to find out what's really happening on
+  this machine instead of guessing from what should happen in theory.
+
 ## 2.9.11
 
 - Pressing Esc to cancel the position-picker overlay (Settings → Spotlight

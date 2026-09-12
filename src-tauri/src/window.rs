@@ -189,7 +189,7 @@ fn force_foreground_focus(app: &AppHandle, window: &WebviewWindow) {
             && foreground_thread != current_thread
             && AttachThreadInput(current_thread, foreground_thread, true).as_bool();
 
-        let _ = SetForegroundWindow(hwnd);
+        let set_result = SetForegroundWindow(hwnd);
         let _ = BringWindowToTop(hwnd);
         // Also ask Tauri/winit's own wrapper to focus the webview control
         // inside the window - SetForegroundWindow alone moves OS-level
@@ -201,6 +201,30 @@ fn force_foreground_focus(app: &AppHandle, window: &WebviewWindow) {
         if attached {
             let _ = AttachThreadInput(current_thread, foreground_thread, false);
         }
+
+        // Temporary, deliberately verbose diagnostic logging: the last two
+        // shipped attempts at this fix (a plain delayed `set_focus()` retry,
+        // then this `AttachThreadInput` version) both looked correct by
+        // every normal read of the Win32 docs and still failed live, twice
+        // each. Rather than shipping a third blind guess, log exactly what
+        // each of these calls actually reported so the next attempt is
+        // aimed at what's really happening on this machine instead of at
+        // what *should* be happening in theory.
+        let now_foreground = GetForegroundWindow();
+        crate::logging::info(
+            app,
+            format!(
+                "force_foreground_focus({}): prior_foreground={:?} prior_thread={foreground_thread} \
+                 current_thread={current_thread} attached={attached} \
+                 SetForegroundWindow_result={} target_hwnd={:?} now_foreground={:?} now_foreground_is_target={}",
+                window.label(),
+                foreground.0,
+                set_result.as_bool(),
+                hwnd.0,
+                now_foreground.0,
+                now_foreground.0 == hwnd.0,
+            ),
+        );
     }
 }
 
