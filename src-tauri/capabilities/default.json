@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default permissions granted to all of Luma's windows (main browser-style window, the floating spotlight, and the built-in browser window). Every app-defined command Luma has needs an explicit allow-* entry here (or in another capability covering its window) - see build.rs's long comment on why: defining an app manifest at all makes Tauri start enforcing ACL on every app command everywhere, not just the ones the manifest was written for.",
-  "windows": ["main", "spotlight", "browser"],
+  "description": "Default permissions granted to all of Luma's windows (main browser-style window, the floating spotlight, the built-in browser window, and the spotlight-position-picker overlay). Every app-defined command Luma has needs an explicit allow-* entry here (or in another capability covering its window) - see build.rs's long comment on why: defining an app manifest at all makes Tauri start enforcing ACL on every app command everywhere, not just the ones the manifest was written for.",
+  "windows": ["main", "spotlight", "browser", "position-picker"],
   "permissions": [
     "core:default",
     "core:window:allow-close",

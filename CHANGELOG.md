@@ -2,6 +2,23 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.6
+
+- Actually fixed the "Pick position" overlay being permanently stuck
+  (2.9.5 changed something real but not the actual cause - clicking and
+  Esc still did nothing after upgrading, confirmed by testing it live).
+  The real root cause: the position-picker window was simply never
+  listed in `src-tauri/capabilities/default.json`'s `windows` array, so
+  Tauri's own permission system silently rejected every single command
+  call this window ever made - `report_spotlight_position` on click,
+  `cancel_position_pick` on Esc, all of it, every time, with no error
+  surfaced anywhere (a plain JS promise rejection swallowed by an empty
+  `.catch()`). Mouse tracking (the crosshair) kept working throughout
+  because that's pure DOM/CSS with no backend call involved, which is
+  exactly what made this look like a timing race instead of a permissions
+  gap. Added `"position-picker"` to that window list; the picker now
+  places and cancels correctly.
+
 ## 2.9.5
 
 - Fixed the "Pick position" spotlight-placement overlay (Settings ->
