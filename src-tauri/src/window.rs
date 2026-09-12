@@ -74,6 +74,63 @@ fn disable_system_backdrop(app: &AppHandle, window: &WebviewWindow) {
 #[cfg(not(windows))]
 fn disable_system_backdrop(_app: &AppHandle, _window: &WebviewWindow) {}
 
+// Windows 11 draws its own thin accent-colored focus border around whatever
+// top-level window currently has keyboard focus - independent of, and drawn
+// on top of, anything the app itself paints. For a normal decorated window
+// that's a barely-noticeable outline right at its frame, but this app's
+// chromeless, fullscreen, fully-transparent windows (the spotlight pill and
+// the position-picker overlay) have no frame of their own for it to hug, so
+// it shows up instead as a stray colored line running along the actual
+// edges of the screen - confirmed live, visible the whole time the position
+// picker is open (it already holds OS-level focus as soon as it's created;
+// this border is direct visual proof of that, not a separate bug).
+// `DWMWA_BORDER_COLOR` is the documented way to turn it off for a specific
+// window; `DWMWA_COLOR_NONE` is the sentinel value that means "no border"
+// rather than a real color.
+#[cfg(windows)]
+fn disable_window_border(app: &AppHandle, window: &WebviewWindow) {
+    use windows::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
+    };
+
+    let hwnd = match window.hwnd() {
+        Ok(h) => h,
+        Err(err) => {
+            crate::logging::warn(
+                app,
+                format!(
+                    "disable_window_border: couldn't get hwnd for {}: {err}",
+                    window.label()
+                ),
+            );
+            return;
+        }
+    };
+
+    let no_border = DWMWA_COLOR_NONE;
+
+    let result = unsafe {
+        DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_BORDER_COLOR,
+            &no_border as *const _ as *const std::ffi::c_void,
+            std::mem::size_of_val(&no_border) as u32,
+        )
+    };
+    if let Err(err) = result {
+        crate::logging::warn(
+            app,
+            format!(
+                "disable_window_border: DwmSetWindowAttribute failed for {}: {err}",
+                window.label()
+            ),
+        );
+    }
+}
+
+#[cfg(not(windows))]
+fn disable_window_border(_app: &AppHandle, _window: &WebviewWindow) {}
+
 // Tauri's own `.transparent(true)`/`.background_color(...)` only control
 // the window's compositing - the embedded WebView2 control keeps its own
 // separate default background color (opaque white unless told otherwise),
@@ -133,105 +190,6 @@ fn disable_webview_background(app: &AppHandle, window: &WebviewWindow) {
 
 #[cfg(not(windows))]
 fn disable_webview_background(_app: &AppHandle, _window: &WebviewWindow) {}
-
-// Plain `window.set_focus()` (a thin wrapper over `SetForegroundWindow`)
-// routinely lost the race for the position-picker overlay: confirmed live,
-// repeatedly, that pressing Escape right after "Pick position..." did
-// nothing, even after retrying the same `set_focus()` call from a
-// background thread a few hundred milliseconds later to give the window
-// more time to finish showing. That pointed at a timing problem, but it
-// isn't one - Windows enforces a "foreground lock": a process generally
-// can't call `SetForegroundWindow` to steal focus away from whatever the
-// user was last interacting with (here, Settings) unless it's already the
-// foreground process itself, no matter how long it waits first. Retrying
-// later just retries the same call under the same restriction, so it can
-// keep failing indefinitely - which is exactly what live testing kept
-// showing.
-//
-// The standard Win32 workaround is `AttachThreadInput`: temporarily
-// sharing input state with whatever thread currently owns the foreground
-// window makes Windows treat this thread as if it were that one for the
-// purposes of the lock, so `SetForegroundWindow` actually succeeds instead
-// of silently no-opping. This is the real fix, not another timing tweak -
-// it removes the restriction that was defeating every previous attempt
-// rather than trying to out-wait it.
-#[cfg(windows)]
-fn force_foreground_focus(app: &AppHandle, window: &WebviewWindow) {
-    use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
-    use windows::Win32::UI::WindowsAndMessaging::{
-        BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
-    };
-
-    let hwnd = match window.hwnd() {
-        Ok(h) => h,
-        Err(err) => {
-            crate::logging::warn(
-                app,
-                format!(
-                    "force_foreground_focus: couldn't get hwnd for {}: {err}",
-                    window.label()
-                ),
-            );
-            return;
-        }
-    };
-
-    unsafe {
-        let foreground = GetForegroundWindow();
-        let foreground_thread = GetWindowThreadProcessId(foreground, None);
-        let current_thread = GetCurrentThreadId();
-
-        // Only worth attaching if some other thread genuinely owns the
-        // foreground right now - attaching a thread to itself is a no-op at
-        // best and GetWindowThreadProcessId returns 0 if there's no
-        // foreground window at all (e.g. the desktop itself has it).
-        let attached = foreground_thread != 0
-            && foreground_thread != current_thread
-            && AttachThreadInput(current_thread, foreground_thread, true).as_bool();
-
-        let set_result = SetForegroundWindow(hwnd);
-        let _ = BringWindowToTop(hwnd);
-        // Also ask Tauri/winit's own wrapper to focus the webview control
-        // inside the window - SetForegroundWindow alone moves OS-level
-        // foreground/keyboard focus to the top-level window, but the
-        // webview's own input focus is a separate, nested concern that
-        // set_focus() is what actually drives.
-        let _ = window.set_focus();
-
-        if attached {
-            let _ = AttachThreadInput(current_thread, foreground_thread, false);
-        }
-
-        // Temporary, deliberately verbose diagnostic logging: the last two
-        // shipped attempts at this fix (a plain delayed `set_focus()` retry,
-        // then this `AttachThreadInput` version) both looked correct by
-        // every normal read of the Win32 docs and still failed live, twice
-        // each. Rather than shipping a third blind guess, log exactly what
-        // each of these calls actually reported so the next attempt is
-        // aimed at what's really happening on this machine instead of at
-        // what *should* be happening in theory.
-        let now_foreground = GetForegroundWindow();
-        crate::logging::info(
-            app,
-            format!(
-                "force_foreground_focus({}): prior_foreground={:?} prior_thread={foreground_thread} \
-                 current_thread={current_thread} attached={attached} \
-                 SetForegroundWindow_result={} target_hwnd={:?} now_foreground={:?} now_foreground_is_target={}",
-                window.label(),
-                foreground.0,
-                set_result.as_bool(),
-                hwnd.0,
-                now_foreground.0,
-                now_foreground.0 == hwnd.0,
-            ),
-        );
-    }
-}
-
-#[cfg(not(windows))]
-fn force_foreground_focus(_app: &AppHandle, window: &WebviewWindow) {
-    let _ = window.set_focus();
-}
 
 pub const MAIN_LABEL: &str = "main";
 pub const SPOTLIGHT_LABEL: &str = "spotlight";
@@ -328,6 +286,7 @@ pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<Web
     .build()?;
 
     disable_system_backdrop(app, &window);
+    disable_window_border(app, &window);
     disable_webview_background(app, &window);
     position_spotlight(&window, "center", None, None);
 
@@ -463,60 +422,22 @@ fn open_position_picker_on_main_thread(app: &AppHandle) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
 
     disable_system_backdrop(app, &window);
+    disable_window_border(app, &window);
     disable_webview_background(app, &window);
-    force_foreground_focus(app, &window);
-
-    // A previous version of this fix retried a plain `set_focus()` from a
-    // background thread a few hundred milliseconds later, on the theory
-    // that the window just hadn't finished showing yet at the moment of the
-    // first call. Confirmed live, repeatedly, that this did NOT actually
-    // fix it: the real blocker is Windows' foreground-lock restriction (see
-    // `force_foreground_focus`), which no amount of waiting and retrying
-    // the same restricted call ever gets past - so this now retries with
-    // the forceful version instead, purely as a defense-in-depth safety net
-    // for the (separate, genuinely timing-related) case where the webview
-    // control itself hasn't finished attaching yet when the window is first
-    // built.
-    for delay_ms in [150, 500] {
-        let for_focus = app.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(Duration::from_millis(delay_ms));
-            let inner = for_focus.clone();
-            let _ = for_focus.run_on_main_thread(move || {
-                if let Some(w) = inner.get_webview_window(POSITION_PICKER_LABEL) {
-                    force_foreground_focus(&inner, &w);
-                }
-            });
-        });
-    }
-
-    // Best-effort, and deliberately not folded into an `Err` return: a
-    // failure here (found live, on this exact machine: some other running
-    // app had already claimed a bare Escape as *its own* global hotkey,
-    // which silently loses this registration - global hotkeys are exclusive
-    // system-wide, so this can never be assumed to succeed) should not stop
-    // the picker from opening. It's a bonus layer on top of the focus fix
-    // above, not the thing actually holding this bug closed - it just falls
-    // back to relying solely on that when it can't be registered. See the
-    // long comment on `position_picker_cancel_shortcut` for why it exists at
-    // all.
-    if let Err(err) = crate::shortcuts::register_position_picker_escape(app) {
-        crate::logging::warn(
-            app,
-            format!("position-picker: could not register the Escape fallback shortcut: {err}"),
-        );
-    }
+    // No more Esc-to-cancel here (see position-picker.html) - so, unlike
+    // several previous versions of this function, there's no need to fight
+    // Windows for OS-level keyboard focus at all anymore. Placing a spot is
+    // routed by screen position (a plain mouse click), and cancelling is
+    // either that click or the picker's own countdown timing itself out -
+    // neither one cares what has keyboard focus. A plain `set_focus()` is
+    // just the ordinary "this is the window that just opened" courtesy call
+    // every other window in this app already gets.
+    let _ = window.set_focus();
 
     Ok(())
 }
 
 pub fn close_position_picker(app: &AppHandle) -> Result<(), String> {
-    // Unregistered unconditionally (not gated on the window existing) so a
-    // stray registration can never survive a picker that already closed by
-    // some other path - `unregister` on an already-unregistered shortcut is
-    // a harmless no-op error, not something worth surfacing.
-    let _ = crate::shortcuts::unregister_position_picker_escape(app);
-
     if app.get_webview_window(POSITION_PICKER_LABEL).is_none() {
         return Ok(());
     }
@@ -530,9 +451,9 @@ pub fn close_position_picker(app: &AppHandle) -> Result<(), String> {
 
 /// Cancels the position picker exactly like the `cancel_position_pick`
 /// Tauri command does (close the window, notify listeners a config change
-/// may have happened) - pulled out as a plain sync fn so the global-shortcut
-/// handler in main.rs can call it directly without going through the async
-/// command/invoke plumbing, which only makes sense for a real webview
+/// may have happened) - kept as a plain sync fn separate from that command
+/// so it stays a normal, directly-callable Rust function rather than the
+/// async command/invoke shape, which only makes sense for a real webview
 /// `invoke()` call.
 pub fn cancel_position_pick(app: &AppHandle) -> Result<(), String> {
     close_position_picker(app)?;

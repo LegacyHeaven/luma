@@ -2,6 +2,31 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.13
+
+- Replaced Esc-to-cancel on the position-picker overlay ("Pick
+  position...") with a plain 10-second auto-cancel countdown, shown live
+  right in its own hint text. Esc depended on this fullscreen overlay
+  actually holding OS keyboard focus at the moment it was pressed, and
+  that proved flaky enough on Windows across several attempts at fixing it
+  outright (most recently root-caused via diagnostic logging: the window
+  already held OS *foreground* the whole time - also visible as Windows
+  11's own accent-colored focus border tracking it, see the next item -
+  it was specifically the separate, never-actually-called `SetFocus` API
+  for *keyboard* focus that was missing) that it wasn't worth keeping
+  around at all. A countdown needs no keyboard focus whatsoever, so it
+  can't be defeated by whatever's going on with focus on any given
+  machine - cancelling the picker now only ever depends on a timer and a
+  click, neither of which cares about focus.
+- Fixed a stray colored line running along the very edges of the screen
+  while the position picker (and, less noticeably, the spotlight pill) is
+  open. That was Windows 11's own accent-colored focus border, which it
+  draws around whatever window currently has keyboard focus - normally a
+  subtle outline right at a window's own frame, but these windows are
+  fullscreen, chromeless and fully transparent, so it showed up instead as
+  a rectangle traced right along the screen's actual edges. Turned off for
+  both windows.
+
 ## 2.9.12
 
 - No user-facing change. 2.9.11's `AttachThreadInput`-based fix for the

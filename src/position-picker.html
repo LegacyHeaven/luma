@@ -60,7 +60,7 @@
   </style>
 </head>
 <body>
-  <div class="hint">Click anywhere to place the spotlight there &mdash; press <code>Esc</code> to cancel</div>
+  <div class="hint">Click anywhere to place the spotlight there &mdash; or it cancels itself in <code id="countdown">10</code>s</div>
   <div class="crosshair" id="crosshair-v"></div>
   <div class="crosshair h" id="crosshair-h"></div>
 
@@ -74,48 +74,75 @@
 
       var crosshairV = document.getElementById("crosshair-v");
       var crosshairH = document.getElementById("crosshair-h");
+      var countdownEl = document.getElementById("countdown");
 
       document.addEventListener("mousemove", function (e) {
         crosshairV.style.left = e.clientX + "px";
         crosshairH.style.top = e.clientY + "px";
       });
 
-      // The click/Escape handlers below used to be attached only after a
-      // one-time poll (up to 20 tries, 100ms apart - 2s total) found
-      // window.__TAURI__ ready, inside init(). If the bridge wasn't ready
-      // within that 2s window - plausible for this particular window,
-      // which is a fullscreen always-on-top transparent overlay doing
-      // extra Windows-specific backdrop/WebView2 setup on creation - init()
-      // gave up silently and *never tried again*, permanently leaving this
-      // window with no click or Escape handling at all (mousemove kept
-      // working since that listener is attached unconditionally above,
-      // which is exactly why the crosshair still tracked the cursor on a
-      // window that was otherwise completely stuck). That matched a real,
-      // reproduced bug: the picker would occasionally become unresponsive
-      // to both click and Escape, recoverable only by force-closing the
-      // window (Alt+F4).
+      // This is the only way to cancel the picker without placing a spot -
+      // there used to also be an Esc handler, but that depended on this
+      // fullscreen, chromeless, always-on-top window actually holding OS
+      // keyboard focus the moment Esc was pressed, and that proved flaky
+      // enough on Windows across several attempts at fixing it outright
+      // that it wasn't worth keeping around at all: a user whose Esc press
+      // didn't land for whatever reason would be stuck behind a fullscreen
+      // overlay with only a click (which places a spot, not cancels) as a
+      // way out. A plain countdown needs no keyboard focus at all - just a
+      // timer and the same `cancel_position_pick` call Esc used to make -
+      // so it can't be defeated by whatever's going on with focus on any
+      // given machine. `settled` just stops this from firing a redundant
+      // extra invoke after the user has already placed a spot or the window
+      // lost focus some other way.
+      var settled = false;
+      var secondsLeft = 10;
+      var countdownTimer = setInterval(function () {
+        if (settled) {
+          clearInterval(countdownTimer);
+          return;
+        }
+        secondsLeft -= 1;
+        if (secondsLeft <= 0) {
+          settled = true;
+          clearInterval(countdownTimer);
+          var tauri = getTauriBridge();
+          if (tauri) tauri.core.invoke("cancel_position_pick").catch(function () {});
+          return;
+        }
+        if (countdownEl) countdownEl.textContent = String(secondsLeft);
+      }, 1000);
+
+      // The click handler below used to be attached only after a one-time
+      // poll (up to 20 tries, 100ms apart - 2s total) found window.__TAURI__
+      // ready, inside init(). If the bridge wasn't ready within that 2s
+      // window - plausible for this particular window, which is a
+      // fullscreen always-on-top transparent overlay doing extra Windows-
+      // specific backdrop/WebView2 setup on creation - init() gave up
+      // silently and *never tried again*, permanently leaving this window
+      // with no click handling at all (mousemove kept working since that
+      // listener is attached unconditionally above, which is exactly why
+      // the crosshair still tracked the cursor on a window that was
+      // otherwise completely stuck). That matched a real, reproduced bug:
+      // the picker would occasionally become unresponsive to clicks,
+      // recoverable only by force-closing the window (Alt+F4) or waiting
+      // out the countdown above.
       //
       // Fixed by not gating handler *attachment* on the bridge being ready
-      // at all: click/keydown listeners go on immediately, and each one
-      // resolves the bridge fresh at the moment it actually fires. By the
-      // time a user can click on or focus this window it's already visible
-      // and receiving input, so the bridge is certainly ready by then -
-      // whether that took 50ms or 5s no longer matters.
+      // at all: the click listener goes on immediately, and resolves the
+      // bridge fresh at the moment it actually fires. By the time a user
+      // can click this window it's already visible and receiving input, so
+      // the bridge is certainly ready by then - whether that took 50ms or
+      // 5s no longer matters.
       document.addEventListener("click", function (e) {
         var tauri = getTauriBridge();
         if (!tauri) return;
+        settled = true;
         var xFrac = e.clientX / window.innerWidth;
         var yFrac = e.clientY / window.innerHeight;
         tauri.core
           .invoke("report_spotlight_position", { xFrac: xFrac, yFrac: yFrac })
           .catch(function () {});
-      });
-
-      document.addEventListener("keydown", function (e) {
-        if (e.key !== "Escape") return;
-        var tauri = getTauriBridge();
-        if (!tauri) return;
-        tauri.core.invoke("cancel_position_pick").catch(function () {});
       });
 
       // The focus-changed auto-cancel (alt-tabbing away, or anything else
@@ -137,6 +164,7 @@
         }
         tauri.window.getCurrentWindow().onFocusChanged(function (event) {
           if (!event.payload) {
+            settled = true;
             tauri.core.invoke("cancel_position_pick").catch(function () {});
           }
         });

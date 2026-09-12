@@ -35,25 +35,9 @@ fn main() {
         ))
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, shortcut, event| {
+                .with_handler(|app, _shortcut, event| {
 
                     if event.state() == ShortcutState::Pressed {
-                        // Registered only while the position-picker overlay is
-                        // open (see window::open_position_picker /
-                        // close_position_picker) as a fallback for Escape-to-
-                        // cancel that works even when that window doesn't
-                        // hold OS keyboard focus - see the comment on
-                        // shortcuts::position_picker_cancel_shortcut for why
-                        // that fallback exists at all. Compared by value, not
-                        // just by key code, so a user who somehow configured
-                        // their own toggle shortcut as a bare Escape isn't
-                        // silently redirected into cancelling a picker that
-                        // isn't even open.
-                        if *shortcut == shortcuts::position_picker_cancel_shortcut() {
-                            let _ = window::cancel_position_pick(app);
-                            return;
-                        }
-
                         let state = app.state::<AppState>();
                         let cfg = state.config.lock().unwrap().clone();
                         window::toggle_spotlight(
