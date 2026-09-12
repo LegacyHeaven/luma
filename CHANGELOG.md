@@ -2,6 +2,18 @@
 
 All notable changes to Luma are documented here.
 
+## 2.9.7
+
+- On Windows, `!open` (and the very first Discord-style relaunch that
+  creates your desktop/Start Menu shortcut) could flash a plain console
+  window on screen for a split second. Luma itself has no console of its
+  own, so whenever it had to hand off through `cmd.exe`, `powershell.exe`
+  (part of `!open`'s Store/UWP-app fallback), or `cscript.exe` (the
+  one-time shortcut-creation step), Windows allocated a brand new one for
+  that helper process - visible for exactly as long as the helper took to
+  do its job and exit. Every one of those spawns now runs with
+  `CREATE_NO_WINDOW`, so no window ever appears at all.
+
 ## 2.9.6
 
 - Actually fixed the "Pick position" overlay being permanently stuck

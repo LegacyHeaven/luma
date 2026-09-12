@@ -173,8 +173,15 @@ fn make_windows_shortcut(link_path: &Path, target_str: &str) -> Result<(), Strin
     let tmp_vbs = std::env::temp_dir().join(format!("luma-shortcut-{}.vbs", std::process::id()));
     std::fs::write(&tmp_vbs, vbs).map_err(|e| e.to_string())?;
 
+    // `//nologo` only suppresses cscript's printed banner text - without
+    // CREATE_NO_WINDOW, Windows still pops a brand new console window for
+    // it (this whole process has none of its own to inherit), which flashes
+    // on screen for the split second cscript takes to run the script.
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
     let status = std::process::Command::new("cscript")
         .args(["//nologo", &tmp_vbs.to_string_lossy()])
+        .creation_flags(CREATE_NO_WINDOW)
         .status();
 
     let _ = std::fs::remove_file(&tmp_vbs);

@@ -2,6 +2,19 @@ use crate::{config::LumaConfig, shortcuts, themes, window};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State};
 
+// Windows only: every `!open`/app-launch path below that has to go through a
+// console-subsystem helper (`cmd.exe`, `powershell.exe`) rather than
+// launching the target GUI app directly needs this, or Windows allocates a
+// brand new console window for that child process - since Luma itself is a
+// GUI app with no console of its own to inherit - and it flashes on screen
+// for a moment even though the helper only lives long enough to hand off to
+// the real target and exit. explorer.exe elsewhere in this file doesn't need
+// it: it's a GUI-subsystem executable and never allocates a console at all.
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 pub struct AppState {
     pub config: Mutex<LumaConfig>,
 }
@@ -464,6 +477,7 @@ fn launch_app_path(path: &str) -> Result<(), String> {
     {
         std::process::Command::new("cmd")
             .args(["/C", "start", "", path])
+            .creation_flags(CREATE_NO_WINDOW)
             .spawn()
             .map(|_| ())
             .map_err(|e| e.to_string())
@@ -508,6 +522,7 @@ fn find_and_launch_app(query: &str) -> Result<(), String> {
         if let Some(hit) = find_shortcut(std::path::Path::new(&root), &query_lower) {
             return std::process::Command::new("cmd")
                 .args(["/C", "start", "", &hit.to_string_lossy()])
+                .creation_flags(CREATE_NO_WINDOW)
                 .spawn()
                 .map(|_| ())
                 .map_err(|e| e.to_string());
@@ -540,6 +555,7 @@ fn windows_find_start_app(query_lower: &str) -> Option<String> {
             "-Command",
             "Get-StartApps | ForEach-Object { \"$($_.Name)|$($_.AppID)\" }",
         ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output()
         .ok()?;
     if !output.status.success() {
