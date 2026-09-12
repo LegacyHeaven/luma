@@ -19,146 +19,171 @@
     <p class="motto"><span class="status-dot"></span>Configure LUMA.</p>
 
     <form id="settings-form">
-      <section class="settings-section">
-        <h2>Spotlight shortcut</h2>
-        <p class="help">Click the box, then press your desired key combination.</p>
-        <input type="text" id="shortcut-input" class="settings-input" readonly placeholder="Click and press keys…">
-      </section>
+      <div class="settings-layout">
+        <nav class="settings-nav" id="settings-nav" aria-label="Settings categories">
+          <button type="button" class="settings-nav-btn" data-category="general">General</button>
+          <button type="button" class="settings-nav-btn" data-category="search">Search &amp; apps</button>
+          <button type="button" class="settings-nav-btn" data-category="appearance">Appearance</button>
+          <button type="button" class="settings-nav-btn" data-category="spotlight">Spotlight window</button>
+          <button type="button" class="settings-nav-btn" data-category="updates">Updates</button>
+          <button type="button" class="settings-nav-btn" data-category="advanced" id="advanced-nav-btn" hidden>Advanced</button>
+        </nav>
 
-      <section class="settings-section">
-        <h2>Search results open in</h2>
-        <div class="settings-row">
-          <label class="radio-option"><input type="radio" name="browser_mode" value="system"> Your default browser</label>
-          <label class="radio-option"><input type="radio" name="browser_mode" value="builtin"> LUMA's built-in browser window</label>
+        <div class="settings-content">
+          <section class="settings-section" data-category="general">
+            <h2>Spotlight shortcut</h2>
+            <p class="help">Click the box, then press your desired key combination.</p>
+            <input type="text" id="shortcut-input" class="settings-input" readonly placeholder="Click and press keys…">
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2>Search results open in</h2>
+            <div class="settings-row">
+              <label class="radio-option"><input type="radio" name="browser_mode" value="system"> Your default browser</label>
+              <label class="radio-option"><input type="radio" name="browser_mode" value="builtin"> LUMA's built-in browser window</label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2>Default search engine</h2>
+            <select id="default-engine" class="settings-input"></select>
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2>Main window size</h2>
+            <p class="help">How big the main LUMA window opens. Takes effect immediately on Save.</p>
+            <div class="settings-row">
+              <label class="radio-option"><input type="radio" name="main_window_size" value="compact"> Compact</label>
+              <label class="radio-option"><input type="radio" name="main_window_size" value="default"> Default</label>
+              <label class="radio-option"><input type="radio" name="main_window_size" value="roomy"> Roomy</label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="general">
+            <h2>Start LUMA at login</h2>
+            <label class="checkbox-option"><input type="checkbox" id="start-at-login"> Launch automatically when I sign in</label>
+          </section>
+
+          <section class="settings-section" data-category="search">
+            <h2>Search engines</h2>
+            <p class="help">Add your own - any site with a search URL works. Use <code>%s</code> in the URL for where your search text should go, e.g. <code>https://example.com/search?q=%s</code>.</p>
+            <div class="settings-row" id="custom-engines-list"></div>
+            <div class="settings-row">
+              <input type="text" id="new-engine-name" class="settings-input" placeholder="Name" style="max-width:160px;">
+              <input type="text" id="new-engine-url" class="settings-input" placeholder="https://example.com/search?q=%s" style="flex:2;min-width:220px;">
+              <input type="text" id="new-engine-bang" class="settings-input settings-input-sm" placeholder="bang" style="max-width:90px;">
+              <button type="button" class="btn" id="add-engine-btn">Add engine</button>
+            </div>
+            <span id="engine-form-status" class="update-status"></span>
+          </section>
+
+          <section class="settings-section" data-category="search">
+            <h2>More search engines</h2>
+            <p class="help">Google, MyPC and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its &#10005;.</p>
+            <div class="settings-row" id="builtin-engines-list"></div>
+            <div class="settings-row">
+              <select id="add-builtin-engine" class="settings-input">
+                <option value="">+ Add a search engine…</option>
+              </select>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="search">
+            <h2>Custom selected apps</h2>
+            <p class="help">Apps you've pointed <code>!open</code> at by hand after it couldn't find them on its own - it'll launch straight from here next time.</p>
+            <div class="settings-row" id="custom-apps-list"></div>
+          </section>
+
+          <section class="settings-section" data-category="spotlight">
+            <h2>Spotlight window</h2>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="close-on-blur"> Hide when it loses focus</label>
+            </div>
+            <div class="settings-row">
+              <label>Width
+                <input type="number" id="spotlight-width" class="settings-input settings-input-sm" min="360" max="1200" step="10">
+              </label>
+            </div>
+            <p class="help">Where the spotlight appears - screen center by default, or click anywhere to pick a spot.</p>
+            <div class="settings-row">
+              <span id="spotlight-position-status" class="update-status"></span>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn" id="pick-position-btn">Pick position&hellip;</button>
+              <button type="button" class="btn" id="reset-position-btn">Reset to default (center)</button>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="spotlight">
+            <h2>Animations</h2>
+            <p class="help">The spotlight's fade in/out and the main window's entrance motion. Turn this off for a snappier, fully static feel.</p>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="disable-animations"> Disable animations</label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="spotlight">
+            <h2>Spotlight branding</h2>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="show-spotlight-branding"> Show "LUMA." above the spotlight bar</label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="updates">
+            <h2>Updates</h2>
+            <p class="help">LUMA can check GitHub for a newer build and install it itself - no separate download needed.</p>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="check-updates-enabled"> Automatically check for updates on launch</label>
+            </div>
+            <div class="settings-row update-row">
+              <button type="button" class="btn" id="check-updates-btn">Check for updates</button>
+              <span id="update-status" class="update-status"></span>
+            </div>
+            <button type="button" class="btn primary" id="install-update-btn" hidden>Download &amp; install update</button>
+          </section>
+
+          <section class="settings-section" data-category="appearance">
+            <h2>Theme</h2>
+            <p class="help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see the wiki's Theming page.</p>
+            <div class="settings-row" id="theme-options"></div>
+            <button type="button" class="btn" id="open-themes-folder">Open themes folder</button>
+          </section>
+
+          <section class="settings-section" data-category="appearance">
+            <h2>Marketplace</h2>
+            <p class="help">Community themes, installed with one click - no restart needed.</p>
+            <div class="marketplace-status" id="marketplace-status">Loading the marketplace…</div>
+            <div class="marketplace-grid" id="marketplace-grid"></div>
+            <p class="help" style="margin-top:16px;">Or add one by its raw <code>theme.css</code> URL:</p>
+            <div class="settings-row">
+              <input type="text" id="marketplace-url-input" class="settings-input" placeholder="https://.../theme.css" style="flex:2;min-width:220px;">
+              <button type="button" class="btn" id="marketplace-url-install-btn">Install</button>
+            </div>
+            <span id="marketplace-url-status" class="update-status"></span>
+          </section>
+
+          <section class="settings-section" data-category="appearance">
+            <h2>Custom CSS</h2>
+            <p class="help">Injected after the theme's stylesheet, so it can override anything.</p>
+            <textarea id="custom-css" class="settings-input" placeholder="/* e.g. :root { --color-purple: #00e0a8; } */"></textarea>
+          </section>
+
+          <section class="settings-section" data-category="advanced" id="debug-section" hidden>
+            <h2>Debug log</h2>
+            <p class="help">
+              Records every notable thing LUMA does (search submitted, results
+              opened, config saved, errors) plus live RAM/process info, so a bug
+              can be diagnosed without a terminal. You found this by holding
+              <code>Shift+L</code> on this page - it'll stay revealed once
+              enabled below.
+            </p>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="debug-logging-enabled"> Enable debug logging &amp; keep this section visible</label>
+            </div>
+            <button type="button" class="btn" id="open-debug-console">Open debug console</button>
+          </section>
         </div>
-      </section>
-
-      <section class="settings-section">
-        <h2>Default search engine</h2>
-        <select id="default-engine" class="settings-input"></select>
-      </section>
-
-      <section class="settings-section">
-        <h2>Search engines</h2>
-        <p class="help">Add your own - any site with a search URL works. Use <code>%s</code> in the URL for where your search text should go, e.g. <code>https://example.com/search?q=%s</code>.</p>
-        <div class="settings-row" id="custom-engines-list"></div>
-        <div class="settings-row">
-          <input type="text" id="new-engine-name" class="settings-input" placeholder="Name" style="max-width:160px;">
-          <input type="text" id="new-engine-url" class="settings-input" placeholder="https://example.com/search?q=%s" style="flex:2;min-width:220px;">
-          <input type="text" id="new-engine-bang" class="settings-input settings-input-sm" placeholder="bang" style="max-width:90px;">
-          <button type="button" class="btn" id="add-engine-btn">Add engine</button>
-        </div>
-        <span id="engine-form-status" class="update-status"></span>
-      </section>
-
-      <section class="settings-section">
-        <h2>More search engines</h2>
-        <p class="help">Google, MyPC and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its &#10005;.</p>
-        <div class="settings-row" id="builtin-engines-list"></div>
-        <div class="settings-row">
-          <select id="add-builtin-engine" class="settings-input">
-            <option value="">+ Add a search engine…</option>
-          </select>
-        </div>
-      </section>
-
-      <section class="settings-section">
-        <h2>Custom selected apps</h2>
-        <p class="help">Apps you've pointed <code>!open</code> at by hand after it couldn't find them on its own - it'll launch straight from here next time.</p>
-        <div class="settings-row" id="custom-apps-list"></div>
-      </section>
-
-      <section class="settings-section">
-        <h2>Spotlight window</h2>
-        <div class="settings-row">
-          <label class="checkbox-option"><input type="checkbox" id="close-on-blur"> Hide when it loses focus</label>
-        </div>
-        <div class="settings-row">
-          <label>Width
-            <input type="number" id="spotlight-width" class="settings-input settings-input-sm" min="360" max="1200" step="10">
-          </label>
-        </div>
-        <p class="help">Where the spotlight appears - screen center by default, or click anywhere to pick a spot.</p>
-        <div class="settings-row">
-          <span id="spotlight-position-status" class="update-status"></span>
-        </div>
-        <div class="settings-row">
-          <button type="button" class="btn" id="pick-position-btn">Pick position&hellip;</button>
-          <button type="button" class="btn" id="reset-position-btn">Reset to default (center)</button>
-        </div>
-      </section>
-
-      <section class="settings-section">
-        <h2>Animations</h2>
-        <p class="help">The spotlight's fade in/out and the main window's entrance motion. Turn this off for a snappier, fully static feel.</p>
-        <div class="settings-row">
-          <label class="checkbox-option"><input type="checkbox" id="disable-animations"> Disable animations</label>
-        </div>
-      </section>
-
-      <section class="settings-section">
-        <h2>Spotlight branding</h2>
-        <div class="settings-row">
-          <label class="checkbox-option"><input type="checkbox" id="show-spotlight-branding"> Show "LUMA." above the spotlight bar</label>
-        </div>
-      </section>
-
-      <section class="settings-section">
-        <h2>Main window size</h2>
-        <p class="help">How big the main LUMA window opens. Takes effect immediately on Save.</p>
-        <div class="settings-row">
-          <label class="radio-option"><input type="radio" name="main_window_size" value="compact"> Compact</label>
-          <label class="radio-option"><input type="radio" name="main_window_size" value="default"> Default</label>
-          <label class="radio-option"><input type="radio" name="main_window_size" value="roomy"> Roomy</label>
-        </div>
-      </section>
-
-      <section class="settings-section">
-        <h2>Start LUMA at login</h2>
-        <label class="checkbox-option"><input type="checkbox" id="start-at-login"> Launch automatically when I sign in</label>
-      </section>
-
-      <section class="settings-section">
-        <h2>Updates</h2>
-        <p class="help">LUMA can check GitHub for a newer build and install it itself - no separate download needed.</p>
-        <div class="settings-row">
-          <label class="checkbox-option"><input type="checkbox" id="check-updates-enabled"> Automatically check for updates on launch</label>
-        </div>
-        <div class="settings-row update-row">
-          <button type="button" class="btn" id="check-updates-btn">Check for updates</button>
-          <span id="update-status" class="update-status"></span>
-        </div>
-        <button type="button" class="btn primary" id="install-update-btn" hidden>Download &amp; install update</button>
-      </section>
-
-      <section class="settings-section">
-        <h2>Theme</h2>
-        <p class="help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see the wiki's Theming page.</p>
-        <div class="settings-row" id="theme-options"></div>
-        <button type="button" class="btn" id="open-themes-folder">Open themes folder</button>
-        <p class="help" style="margin-top:12px;margin-bottom:0;">&#9733; A themes marketplace - browse and install community themes without leaving LUMA - is in the making.</p>
-      </section>
-
-      <section class="settings-section">
-        <h2>Custom CSS</h2>
-        <p class="help">Injected after the theme's stylesheet, so it can override anything.</p>
-        <textarea id="custom-css" class="settings-input" placeholder="/* e.g. :root { --color-purple: #00e0a8; } */"></textarea>
-      </section>
-
-      <section class="settings-section" id="debug-section" hidden>
-        <h2>Debug log</h2>
-        <p class="help">
-          Records every notable thing LUMA does (search submitted, results
-          opened, config saved, errors) plus live RAM/process info, so a bug
-          can be diagnosed without a terminal. You found this by holding
-          <code>Shift+L</code> on this page - it'll stay revealed once
-          enabled below.
-        </p>
-        <div class="settings-row">
-          <label class="checkbox-option"><input type="checkbox" id="debug-logging-enabled"> Enable debug logging &amp; keep this section visible</label>
-        </div>
-        <button type="button" class="btn" id="open-debug-console">Open debug console</button>
-      </section>
+      </div>
 
       <div class="settings-actions">
         <button type="submit" class="btn primary">Save</button>

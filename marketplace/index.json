@@ -1,0 +1,20 @@
+[
+  {
+    "id": "nord",
+    "name": "Nord",
+    "author": "Luma community",
+    "description": "Cool arctic blues and grays, snowy and calm.",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/nord/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/nord/theme.json",
+    "colors": ["#2e3440", "#3b4252", "#88c0d0", "#81a1c1", "#eceff4"]
+  },
+  {
+    "id": "solarized-dark",
+    "name": "Solarized Dark",
+    "author": "Luma community",
+    "description": "The classic low-contrast editor palette, plain and easy on the eyes.",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/solarized-dark/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/solarized-dark/theme.json",
+    "colors": ["#002b36", "#073642", "#b58900", "#cb4b16", "#2aa198"]
+  }
+]

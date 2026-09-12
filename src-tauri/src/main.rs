@@ -3,6 +3,7 @@
 mod commands;
 mod config;
 mod logging;
+mod marketplace;
 mod shortcuts;
 mod themes;
 mod tray;
@@ -77,6 +78,8 @@ fn main() {
             logging::log_client_event,
             updater::check_for_update,
             updater::apply_update,
+            marketplace::fetch_marketplace_index,
+            marketplace::install_theme_from_url,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

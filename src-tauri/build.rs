@@ -59,6 +59,8 @@ fn main() {
             "log_client_event",
             "check_for_update",
             "apply_update",
+            "fetch_marketplace_index",
+            "install_theme_from_url",
         ]),
     ))
     .expect("failed to run tauri-build");

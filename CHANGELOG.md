@@ -2,6 +2,19 @@
 
 All notable changes to Luma are documented here.
 
+## 2.7.0
+
+- Reworked Settings into six tabs (General, Search & apps, Appearance,
+  Spotlight window, Updates, Advanced) instead of one long scrolling page -
+  nothing moved between tabs changed behavior, it's the same fields, just
+  easier to find. Advanced only shows up once you've turned on debug
+  logging (or found it with Shift+L, same as before).
+- Added a real theme marketplace under Appearance - browse community
+  themes with live color previews and install one with a click, no
+  restart needed. There's also a plain "paste a theme.css URL" box for
+  anything not in the official list yet. Installed themes just show up
+  in the theme picker above it like any other theme.
+
 ## 2.6.0
 
 - Redesigned four of the five themes from the ground up instead of just

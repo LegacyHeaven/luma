@@ -116,11 +116,38 @@
     if (!typing && e.shiftKey && (e.key === "L" || e.key === "l" || e.code === "KeyL")) {
       if (debugSection.hidden) {
         debugSection.hidden = false;
+        if (advancedNavBtn) advancedNavBtn.hidden = false;
+        setActiveCategory("advanced");
         debugSection.scrollIntoView({ behavior: "smooth", block: "center" });
         dlog("info", "debug section revealed via Shift+L");
       }
     }
   });
+
+  // Settings nav - purely presentational grouping over the same flat list
+  // of <section>s (every field keeps its original id, so nothing above or
+  // below this block needs to know the sidebar exists).
+  var settingsNav = document.getElementById("settings-nav");
+  var advancedNavBtn = document.getElementById("advanced-nav-btn");
+  var navButtons = settingsNav ? Array.prototype.slice.call(settingsNav.querySelectorAll(".settings-nav-btn")) : [];
+  var categorySections = Array.prototype.slice.call(document.querySelectorAll(".settings-content > .settings-section[data-category]"));
+
+  function setActiveCategory(category) {
+    navButtons.forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.category === category);
+    });
+    categorySections.forEach(function (section) {
+      section.classList.toggle("cat-active", section.dataset.category === category);
+    });
+  }
+
+  navButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      setActiveCategory(btn.dataset.category);
+    });
+  });
+
+  setActiveCategory("general");
 
   function formatEntry(entry) {
     var d = new Date(entry.ts_ms);
@@ -652,6 +679,7 @@
 
     if (currentConfig.general.debug_logging) {
       debugSection.hidden = false;
+      if (advancedNavBtn) advancedNavBtn.hidden = false;
       debugLoggingEnabled.checked = true;
     }
 
@@ -664,11 +692,12 @@
     renderCustomApps(currentConfig.search.custom_apps || []);
 
     try {
-      var themeList = await invoke("list_themes");
-      renderThemeOptions(themeList);
+      await refreshThemeList();
     } catch (err) {
       dlog("error", "settings: list_themes invoke failed: " + err);
     }
+
+    loadMarketplace();
 
     try {
       var info = await invoke("get_system_info");
@@ -700,6 +729,121 @@
     invoke("reveal_themes_folder").catch(function (err) {
       dlog("error", "reveal_themes_folder invoke failed: " + err);
     });
+  });
+
+  var marketplaceStatus = document.getElementById("marketplace-status");
+  var marketplaceGrid = document.getElementById("marketplace-grid");
+  var marketplaceUrlInput = document.getElementById("marketplace-url-input");
+  var marketplaceUrlInstallBtn = document.getElementById("marketplace-url-install-btn");
+  var marketplaceUrlStatus = document.getElementById("marketplace-url-status");
+  var installedThemeIds = [];
+
+  async function refreshThemeList() {
+    var themeList = await invoke("list_themes");
+    installedThemeIds = themeList.map(function (t) { return t.id; });
+    renderThemeOptions(themeList);
+    return themeList;
+  }
+
+  function renderMarketplaceGrid(entries) {
+    marketplaceGrid.innerHTML = "";
+    entries.forEach(function (entry) {
+      var card = document.createElement("div");
+      card.className = "marketplace-card";
+
+      if (entry.colors && entry.colors.length) {
+        var swatches = document.createElement("div");
+        swatches.className = "marketplace-card-swatches";
+        entry.colors.slice(0, 5).forEach(function (hex) {
+          var sw = document.createElement("span");
+          sw.className = "marketplace-card-swatch";
+          sw.style.background = hex;
+          swatches.appendChild(sw);
+        });
+        card.appendChild(swatches);
+      }
+
+      var name = document.createElement("div");
+      name.className = "marketplace-card-name";
+      name.textContent = entry.name;
+      card.appendChild(name);
+
+      var author = document.createElement("div");
+      author.className = "marketplace-card-author";
+      author.textContent = "by " + entry.author;
+      card.appendChild(author);
+
+      if (entry.description) {
+        var desc = document.createElement("div");
+        desc.className = "marketplace-card-desc";
+        desc.textContent = entry.description;
+        card.appendChild(desc);
+      }
+
+      var installed = installedThemeIds.indexOf(entry.id) !== -1;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn";
+      btn.textContent = installed ? "Installed" : "Install";
+      btn.disabled = installed;
+      btn.addEventListener("click", function () {
+        btn.disabled = true;
+        btn.textContent = "Installing…";
+        invoke("install_theme_from_url", {
+          cssUrl: entry.css_url,
+          jsonUrl: entry.json_url || null,
+          idHint: entry.id,
+          nameHint: entry.name,
+          authorHint: entry.author,
+        })
+          .then(async function () {
+            await refreshThemeList();
+            btn.textContent = "Installed";
+            dlog("info", "settings: installed marketplace theme " + entry.id);
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = "Install";
+            dlog("error", "settings: install_theme_from_url failed for " + entry.id + ": " + err);
+            marketplaceStatus.textContent = "Couldn't install " + entry.name + ": " + err;
+          });
+      });
+      card.appendChild(btn);
+
+      marketplaceGrid.appendChild(card);
+    });
+  }
+
+  async function loadMarketplace() {
+    try {
+      var entries = await invoke("fetch_marketplace_index");
+      renderMarketplaceGrid(entries || []);
+      marketplaceStatus.textContent = entries && entries.length
+        ? entries.length + " theme" + (entries.length === 1 ? "" : "s") + " available"
+        : "Nothing here yet - check back soon.";
+    } catch (err) {
+      dlog("error", "settings: fetch_marketplace_index failed: " + err);
+      marketplaceStatus.textContent = "Couldn't reach the marketplace (" + err + "). Check your connection and reopen Settings.";
+    }
+  }
+
+  marketplaceUrlInstallBtn.addEventListener("click", function () {
+    var url = marketplaceUrlInput.value.trim();
+    if (!url) return;
+    marketplaceUrlInstallBtn.disabled = true;
+    marketplaceUrlStatus.textContent = "Installing…";
+    invoke("install_theme_from_url", { cssUrl: url, jsonUrl: null, idHint: null, nameHint: null, authorHint: null })
+      .then(async function (theme) {
+        await refreshThemeList();
+        marketplaceUrlStatus.textContent = "Installed \"" + theme.name + "\" - pick it above.";
+        marketplaceUrlInput.value = "";
+      })
+      .catch(function (err) {
+        marketplaceUrlStatus.textContent = "Couldn't install that: " + err;
+      })
+      .finally(function () {
+        marketplaceUrlInstallBtn.disabled = false;
+      });
   });
 
   form.addEventListener("submit", async function (e) {

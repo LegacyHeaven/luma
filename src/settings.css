@@ -11,12 +11,78 @@ body.settings-page .settings-wrapper {
 }
 
 .settings-wrapper {
-  max-width: 640px;
+  max-width: 920px;
   width: 100%;
   text-align: left;
   z-index: 1;
   position: relative;
   padding-bottom: 60px;
+}
+
+.settings-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 180px;
+  position: sticky;
+  top: 20px;
+}
+
+.settings-nav-btn {
+  font-family: var(--font-family, monospace);
+  font-size: 1.25rem;
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-gray, #c4c4c4);
+  cursor: pointer;
+  opacity: .75;
+}
+
+.settings-nav-btn:hover {
+  opacity: 1;
+  color: var(--color-white, #fff);
+}
+
+.settings-nav-btn.active {
+  opacity: 1;
+  color: var(--color-white, #fff);
+  border-color: var(--box-border-color, #3a1f5c);
+  background: rgba(255, 255, 255, .03);
+}
+
+.settings-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-content > .settings-section {
+  display: none;
+}
+
+.settings-content > .settings-section.cat-active {
+  display: block;
+}
+
+@media (max-width: 760px) {
+  .settings-layout {
+    flex-direction: column;
+  }
+  .settings-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    position: static;
+    flex-basis: auto;
+    width: 100%;
+  }
 }
 
 .settings-wrapper .brand,
@@ -186,6 +252,71 @@ textarea.settings-input {
 }
 
 #install-update-btn { margin-top: 12px; }
+
+.marketplace-status {
+  font-family: var(--font-family, monospace);
+  font-size: 1.1rem;
+  color: var(--color-gray, #c4c4c4);
+  opacity: .7;
+  margin-bottom: 10px;
+}
+
+.marketplace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.marketplace-card {
+  border: 1px solid var(--box-border-color, #3a1f5c);
+  border-radius: 6px;
+  padding: 14px;
+  background: rgba(255, 255, 255, .02);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.marketplace-card-swatches {
+  display: flex;
+  gap: 4px;
+  height: 18px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.marketplace-card-swatch { flex: 1; }
+
+.marketplace-card-name {
+  font-family: var(--font-family, monospace);
+  font-size: 1.3rem;
+  color: var(--color-white, #fff);
+}
+
+.marketplace-card-author {
+  font-family: var(--font-family, monospace);
+  font-size: 1rem;
+  color: var(--color-gray, #c4c4c4);
+  opacity: .6;
+}
+
+.marketplace-card-desc {
+  font-family: var(--font-family, monospace);
+  font-size: 1.1rem;
+  color: var(--color-gray, #c4c4c4);
+  opacity: .8;
+  flex: 1;
+}
+
+.marketplace-card .btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.marketplace-card .btn[disabled] {
+  opacity: .5;
+  cursor: default;
+}
 
 .debug-console:not([hidden]) {
   position: fixed;
