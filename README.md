@@ -1,10 +1,6 @@
 <p align="center">
-  <img src="assets/app-icon.png" width="120" alt="Luma logo">
+  <img src="assets/social-preview.png" width="720" alt="LUMA - One search. Every direction. The open-source spotlight for the desktop.">
 </p>
-
-<h1 align="center">LUMA</h1>
-
-<p align="center">One search. Every direction.</p>
 
 LUMA is a fast, open-source spotlight-style search launcher for Linux,
 macOS and Windows, built with [Tauri](https://tauri.app). Type a plain
