@@ -9,6 +9,8 @@ jobs:
   engine-smoke-test:
     name: Bang engine smoke test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +34,8 @@ jobs:
   build:
     name: Build and check
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: src-tauri
