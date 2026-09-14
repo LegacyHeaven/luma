@@ -1,7 +1,9 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tauri::{
-    window::Color, AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
+    window::Color, AppHandle, Emitter, Listener, Manager, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder,
 };
 
 const MAIN_THREAD_TIMEOUT: Duration = Duration::from_secs(6);
@@ -256,9 +258,12 @@ pub fn spotlight_window(app: &AppHandle) -> Option<WebviewWindow> {
 const SPOTLIGHT_GLOW_MARGIN_SIDE: f64 = 50.0;
 const SPOTLIGHT_WINDOW_HEIGHT: f64 = 176.0;
 
-pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<WebviewWindow> {
+pub fn ensure_spotlight_window(
+    app: &AppHandle,
+    width: f64,
+) -> tauri::Result<(WebviewWindow, bool)> {
     if let Some(w) = spotlight_window(app) {
-        return Ok(w);
+        return Ok((w, false));
     }
 
     let window = WebviewWindowBuilder::new(
@@ -286,7 +291,17 @@ pub fn ensure_spotlight_window(app: &AppHandle, width: f64) -> tauri::Result<Web
     disable_webview_background(app, &window);
     position_spotlight(&window, "center", None, None);
 
-    Ok(window)
+    Ok((window, true))
+}
+
+const SPOTLIGHT_READY_TIMEOUT: Duration = Duration::from_millis(1500);
+
+fn reveal_spotlight(app: &AppHandle, window: &WebviewWindow) {
+    let _ = window.show();
+    disable_window_border(app, window);
+    let _ = window.set_focus();
+    disable_window_border(app, window);
+    let _ = window.emit("luma://spotlight-shown", ());
 }
 
 pub fn position_spotlight(
@@ -333,7 +348,7 @@ pub fn toggle_spotlight(
     y_frac: Option<f64>,
 ) {
     match ensure_spotlight_window(app, width) {
-        Ok(window) => {
+        Ok((window, just_created)) => {
             let visible = window.is_visible().unwrap_or(false);
             crate::logging::info(
                 app,
@@ -344,12 +359,44 @@ pub fn toggle_spotlight(
             } else {
                 SPOTLIGHT_GENERATION.fetch_add(1, Ordering::SeqCst);
                 position_spotlight(&window, placement, x_frac, y_frac);
-                let _ = window.show();
 
-                disable_window_border(app, &window);
-                let _ = window.set_focus();
-                disable_window_border(app, &window);
-                let _ = window.emit("luma://spotlight-shown", ());
+                if just_created {
+                    let shown_once = Arc::new(AtomicBool::new(false));
+
+                    let win_for_ready = window.clone();
+                    let app_for_ready = app.clone();
+                    let shown_flag_a = shown_once.clone();
+                    window.once("luma://frontend-ready", move |_event| {
+                        if shown_flag_a.swap(true, Ordering::SeqCst) {
+                            return;
+                        }
+                        crate::logging::info(
+                            &app_for_ready,
+                            "toggle_spotlight: frontend signaled ready, revealing window"
+                                .to_string(),
+                        );
+                        reveal_spotlight(&app_for_ready, &win_for_ready);
+                    });
+
+                    let win_for_timeout = window.clone();
+                    let app_for_timeout = app.clone();
+                    let shown_flag_b = shown_once;
+                    std::thread::spawn(move || {
+                        std::thread::sleep(SPOTLIGHT_READY_TIMEOUT);
+                        if shown_flag_b.swap(true, Ordering::SeqCst) {
+                            return;
+                        }
+                        crate::logging::warn(
+                            &app_for_timeout,
+                            "toggle_spotlight: frontend never signaled ready within 1.5s, \
+                             revealing window anyway"
+                                .to_string(),
+                        );
+                        reveal_spotlight(&app_for_timeout, &win_for_timeout);
+                    });
+                } else {
+                    reveal_spotlight(app, &window);
+                }
             }
         }
         Err(err) => crate::logging::error(

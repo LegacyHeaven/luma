@@ -5,8 +5,33 @@
     if (window.LumaDebugLog) window.LumaDebugLog.record(level, message);
   }
 
+  var NAV_TRANSITION_MS = 280;
+
   function revealBody() {
     document.body.classList.add("luma-ready");
+    var overlay = document.getElementById("page-transition-overlay");
+    if (overlay) {
+      overlay.classList.add("is-hidden");
+      overlay.style.opacity = "0";
+      setTimeout(function () {
+        overlay.style.display = "none";
+      }, NAV_TRANSITION_MS);
+    }
+  }
+
+  function navigateTo(url) {
+    var overlay = document.getElementById("page-transition-overlay");
+    if (!overlay) {
+      window.location.href = url;
+      return;
+    }
+    overlay.style.display = "block";
+    overlay.classList.remove("is-hidden");
+    void overlay.offsetWidth;
+    overlay.style.opacity = "1";
+    setTimeout(function () {
+      window.location.href = url;
+    }, NAV_TRANSITION_MS);
   }
 
   function tt(key, fallback) {
@@ -153,11 +178,19 @@
     var invoke = tauri.core.invoke;
     dlog("info", (isSpotlight ? "spotlight" : "main") + " window: boot() starting");
 
+    if (isSpotlight) {
+      try {
+        tauri.event.emit("luma://frontend-ready", {});
+      } catch (e) {
+        dlog("warn", "emitting luma://frontend-ready failed: " + e);
+      }
+    }
+
     var settingsLink = document.getElementById("open-settings");
     if (settingsLink) {
       settingsLink.addEventListener("click", function (e) {
         e.preventDefault();
-        window.location.href = "settings.html";
+        navigateTo("settings.html");
       });
     }
 

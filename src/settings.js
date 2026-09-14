@@ -5,8 +5,33 @@
     if (window.LumaDebugLog) window.LumaDebugLog.record(level, message);
   }
 
+  var NAV_TRANSITION_MS = 280;
+
   function revealBody() {
     document.body.classList.add("luma-ready");
+    var overlay = document.getElementById("page-transition-overlay");
+    if (overlay) {
+      overlay.classList.add("is-hidden");
+      overlay.style.opacity = "0";
+      setTimeout(function () {
+        overlay.style.display = "none";
+      }, NAV_TRANSITION_MS);
+    }
+  }
+
+  function navigateTo(url) {
+    var overlay = document.getElementById("page-transition-overlay");
+    if (!overlay) {
+      window.location.href = url;
+      return;
+    }
+    overlay.style.display = "block";
+    overlay.classList.remove("is-hidden");
+    void overlay.offsetWidth;
+    overlay.style.opacity = "1";
+    setTimeout(function () {
+      window.location.href = url;
+    }, NAV_TRANSITION_MS);
   }
 
   function getTauriBridge() {
@@ -31,7 +56,7 @@
   if (backLink) {
     backLink.addEventListener("click", function (e) {
       e.preventDefault();
-      window.location.href = "index.html";
+      navigateTo("index.html");
     });
   }
 
