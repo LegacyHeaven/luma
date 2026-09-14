@@ -1,0 +1,72 @@
+name: 🎨 Theme submission
+description: Submit a theme for the in-app Marketplace, or request one you'd like to see made.
+title: "[Theme]: "
+labels: ["theme submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing a theme! If you already have a finished `theme.css` (and optional `theme.json`), fill this in and we'll add it to `marketplace/index.json`. If you're just requesting a theme idea for someone else to build, fill in what you can and skip the file links.
+  - type: input
+    id: theme-name
+    attributes:
+      label: Theme name
+      description: The display name shown in the Marketplace.
+      placeholder: "Neon Pink"
+    validations:
+      required: true
+  - type: input
+    id: author
+    attributes:
+      label: Author
+      description: Name or handle to credit.
+      placeholder: "Your name or GitHub handle"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: One sentence describing the theme's look and feel.
+      placeholder: "A vibrant hot-pink/magenta theme with a synthwave edge."
+    validations:
+      required: true
+  - type: input
+    id: colors
+    attributes:
+      label: Color palette (optional)
+      description: Up to 5 hex colors shown as swatches on the Marketplace card, comma-separated.
+      placeholder: "#150816, #240f22, #ff2e88, #ff8fc7, #fff"
+    validations:
+      required: false
+  - type: input
+    id: css-url
+    attributes:
+      label: theme.css URL (if already built)
+      description: Link to a raw theme.css file (e.g. a gist, or a file in your fork).
+      placeholder: "https://gist.githubusercontent.com/.../theme.css"
+    validations:
+      required: false
+  - type: input
+    id: json-url
+    attributes:
+      label: theme.json URL (optional)
+      description: Link to a raw theme.json manifest, if you made one.
+      placeholder: "https://gist.githubusercontent.com/.../theme.json"
+    validations:
+      required: false
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag and drop an image here, or paste a link.
+    validations:
+      required: false
+  - type: checkboxes
+    id: license
+    attributes:
+      label: License
+      options:
+        - label: I'm okay with this theme being included in Luma under the project's MIT license.
+          required: true
+

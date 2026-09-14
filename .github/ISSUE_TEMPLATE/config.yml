@@ -1,0 +1,6 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Questions & discussion
+    url: https://github.com/LegacyHeaven/luma/discussions
+    about: Ask a question or start a discussion instead of opening an issue.
+
