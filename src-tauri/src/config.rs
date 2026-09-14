@@ -82,7 +82,7 @@ impl Default for WindowConfig {
             spotlight_position: "center".into(),
             spotlight_custom_x: None,
             spotlight_custom_y: None,
-            main_window_size: "default".into(),
+            main_window_size: "roomy".into(),
         }
     }
 }

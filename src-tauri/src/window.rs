@@ -201,7 +201,7 @@ pub fn show_main_window(app: &AppHandle) {
             let size = app
                 .try_state::<crate::commands::AppState>()
                 .map(|s| s.config.lock().unwrap().window.main_window_size.clone())
-                .unwrap_or_else(|| "default".into());
+                .unwrap_or_else(|| "roomy".into());
             let (width, height) = main_window_dimensions(&size);
 
             let window = match WebviewWindowBuilder::new(

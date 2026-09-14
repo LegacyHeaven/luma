@@ -286,6 +286,9 @@
   navButtons.forEach(function (btn) {
     btn.addEventListener("click", function () {
       setActiveCategory(btn.dataset.category);
+      if (btn.dataset.category === "appearance") {
+        loadMarketplace({ preservePage: true });
+      }
     });
   });
 
@@ -872,7 +875,7 @@
     disableAnimationsCheckbox.checked = !!currentConfig.general.disable_animations;
     showSpotlightBrandingCheckbox.checked = !!currentConfig.general.show_spotlight_branding;
     var mainSizeInput = document.querySelector(
-      'input[name="main_window_size"][value="' + (currentConfig.window.main_window_size || "default") + '"]'
+      'input[name="main_window_size"][value="' + (currentConfig.window.main_window_size || "roomy") + '"]'
     );
     if (mainSizeInput) mainSizeInput.checked = true;
     startAtLoginCheckbox.checked = !!currentConfig.general.start_at_login;
@@ -1135,26 +1138,33 @@
     renderMarketplaceGrid(marketplaceEntries);
   }
 
+  var marketplaceLoading = false;
+
   marketplacePrevBtn.addEventListener("click", function () {
     if (marketplacePage > 0) {
       marketplacePage -= 1;
-      refreshMarketplaceGrid();
     }
+    loadMarketplace({ preservePage: true });
   });
 
   marketplaceNextBtn.addEventListener("click", function () {
     var totalPages = Math.max(1, Math.ceil(marketplaceEntries.length / MARKETPLACE_PAGE_SIZE));
     if (marketplacePage < totalPages - 1) {
       marketplacePage += 1;
-      refreshMarketplaceGrid();
     }
+    loadMarketplace({ preservePage: true });
   });
 
-  async function loadMarketplace() {
+  async function loadMarketplace(options) {
+    options = options || {};
+    if (marketplaceLoading) return;
+    marketplaceLoading = true;
+    marketplacePrevBtn.disabled = true;
+    marketplaceNextBtn.disabled = true;
     try {
       var entries = await invoke("fetch_marketplace_index");
       marketplaceEntries = entries || [];
-      marketplacePage = 0;
+      if (!options.preservePage) marketplacePage = 0;
       renderMarketplaceGrid(marketplaceEntries);
       marketplaceStatus.textContent = marketplaceEntries.length
         ? ff(
@@ -1166,6 +1176,11 @@
     } catch (err) {
       dlog("error", "settings: fetch_marketplace_index failed: " + err);
       marketplaceStatus.textContent = ff("settings.appearance.marketplace.unreachable", [err], "Couldn't reach the marketplace ({0}). Check your connection and reopen Settings.");
+      // Keep whatever was already rendered (from a previous successful fetch)
+      // rather than blanking the grid out on a transient network error.
+      renderMarketplacePagination(marketplaceEntries.length);
+    } finally {
+      marketplaceLoading = false;
     }
   }
 

@@ -41,7 +41,7 @@
   "settings.general.window_size.title": "Main window size",
   "settings.general.window_size.help": "How big the main LUMA window opens. Takes effect the next time it opens.",
   "settings.general.window_size.compact": "Compact",
-  "settings.general.window_size.default": "Default",
+  "settings.general.window_size.default": "Standard",
   "settings.general.window_size.roomy": "Roomy",
 
   "settings.general.start_at_login.title": "Start LUMA at login",
