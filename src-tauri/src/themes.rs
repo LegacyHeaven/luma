@@ -12,6 +12,7 @@ pub struct ThemeInfo {
     pub kind: String,
 
     pub css_path: String,
+    pub is_builtin: bool,
 }
 
 pub fn list_themes(app: &AppHandle) -> Vec<ThemeInfo> {
@@ -47,12 +48,15 @@ pub fn list_themes(app: &AppHandle) -> Vec<ThemeInfo> {
             .and_then(|v| v.as_str())
             .unwrap_or("theme.css");
 
+        let id = manifest
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&folder_name)
+            .to_string();
+
         themes.push(ThemeInfo {
-            id: manifest
-                .get("id")
-                .and_then(|v| v.as_str())
-                .unwrap_or(&folder_name)
-                .to_string(),
+            is_builtin: config::is_builtin_theme(&id),
+            id,
             name: manifest
                 .get("name")
                 .and_then(|v| v.as_str())

@@ -1,0 +1,12 @@
+{
+  "id": "time-date",
+  "name": "Time & Date",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "Quick @time and @date answers, no query needed.",
+  "entry": "plugin.js",
+  "bangs": [
+    { "word": "time", "name": "Time" },
+    { "word": "date", "name": "Date" }
+  ]
+}

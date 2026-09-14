@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'">
+<title>plugin sandbox</title>
+</head>
+<body>
+<script>
+(function () {
+  try { delete window.__TAURI__; } catch (e) {}
+  try { delete window.__TAURI_INTERNALS__; } catch (e) {}
+  window.__TAURI__ = undefined;
+  window.__TAURI_INTERNALS__ = undefined;
+
+  var registry = {};
+
+  window.addEventListener("message", function (ev) {
+    var data = ev.data || {};
+
+    if (data.type === "register") {
+      var ok = false;
+      var error = null;
+      try {
+        var registered = null;
+        var fn = new Function("LumaPlugin", data.source);
+        fn({ register: function (def) { registered = def; } });
+        if (registered && typeof registered.handle === "function") {
+          registry[data.id] = registered;
+          ok = true;
+        }
+      } catch (e) {
+        error = String(e);
+      }
+      parent.postMessage({ type: "registered", id: data.id, ok: ok, error: error }, "*");
+      return;
+    }
+
+    if (data.type === "handle") {
+      var handler = registry[data.pluginId];
+      var answer = null;
+      var herr = null;
+      try {
+        answer = handler ? handler.handle(data.bang, data.query) : null;
+      } catch (e) {
+        herr = String(e);
+      }
+      parent.postMessage({ type: "handled", reqId: data.reqId, answer: answer, error: herr }, "*");
+      return;
+    }
+  });
+
+  parent.postMessage({ type: "ready" }, "*");
+})();
+</script>
+</body>
+</html>

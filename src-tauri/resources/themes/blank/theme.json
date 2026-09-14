@@ -1,0 +1,9 @@
+{
+  "id": "blank",
+  "name": "Blank",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "A plain grayscale base with no glow, gradients, or animation - a clean starting point for your own theme instead of copying the colorful default.",
+  "type": "dark",
+  "css": "theme.css"
+}

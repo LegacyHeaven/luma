@@ -6,9 +6,11 @@ mod install;
 mod locales;
 mod logging;
 mod marketplace;
+mod plugins;
 mod shortcuts;
 mod themes;
 mod tray;
+mod uninstall;
 mod updater;
 mod window;
 
@@ -56,6 +58,13 @@ fn main() {
             commands::save_config,
             commands::list_themes,
             commands::reveal_themes_folder,
+            commands::list_plugins,
+            commands::get_plugin_js,
+            commands::reveal_plugins_folder,
+            commands::uninstall_plugin,
+            commands::set_plugin_enabled,
+            plugins::fetch_plugin_marketplace_index,
+            plugins::install_plugin_from_url,
             commands::uninstall_theme,
             commands::get_engines,
             commands::get_theme_css,
@@ -73,7 +82,7 @@ fn main() {
             commands::remove_custom_engine,
             commands::list_all_builtin_engines,
             commands::set_builtin_engine_enabled,
-            commands::search_mypc,
+            commands::search_local,
             commands::open_app,
             commands::pick_app_for,
             commands::remove_custom_app,
@@ -88,12 +97,16 @@ fn main() {
             updater::apply_update,
             marketplace::fetch_marketplace_index,
             marketplace::install_theme_from_url,
+            commands::reset_to_defaults,
+            commands::clear_browsing_data,
+            commands::uninstall_app,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
 
             let cfg = config::load(&handle);
             config::ensure_themes_dir(&handle);
+            config::ensure_plugins_dir(&handle);
             locales::ensure_locales_dir(&handle);
 
             handle

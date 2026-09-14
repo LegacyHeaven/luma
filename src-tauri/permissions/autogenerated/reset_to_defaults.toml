@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reset-to-defaults"
+description = "Enables the reset_to_defaults command without any pre-configured scope."
+commands.allow = ["reset_to_defaults"]
+
+[[permission]]
+identifier = "deny-reset-to-defaults"
+description = "Denies the reset_to_defaults command without any pre-configured scope."
+commands.deny = ["reset_to_defaults"]

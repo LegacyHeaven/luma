@@ -81,6 +81,9 @@ fn disable_window_border(app: &AppHandle, window: &WebviewWindow) {
     use windows::Win32::Graphics::Dwm::{
         DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
     };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SetWindowPos, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+    };
 
     let hwnd = match window.hwnd() {
         Ok(h) => h,
@@ -114,7 +117,25 @@ fn disable_window_border(app: &AppHandle, window: &WebviewWindow) {
                 window.label()
             ),
         );
+        return;
     }
+
+    // DWM otherwise only bakes the new border color into the non-client
+    // frame on the window's next natural repaint - on a brand-new window
+    // that repaint IS the first show(), so without this the very first
+    // frame still flashes the default OS border for a tick. SWP_FRAMECHANGED
+    // forces that recalculation immediately, while still hidden.
+    let _ = unsafe {
+        SetWindowPos(
+            hwnd,
+            None,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+        )
+    };
 }
 
 #[cfg(not(windows))]
@@ -181,8 +202,8 @@ pub const POSITION_PICKER_LABEL: &str = "position-picker";
 pub fn main_window_dimensions(size: &str) -> (f64, f64) {
     match size {
         "compact" => (620.0, 460.0),
-        "roomy" => (900.0, 640.0),
-        _ => (760.0, 560.0),
+        "roomy" => (1125.0, 800.0),
+        _ => (900.0, 640.0),
     }
 }
 
@@ -228,10 +249,49 @@ pub fn show_main_window(app: &AppHandle) {
             disable_system_backdrop(app, &window);
             disable_window_border(app, &window);
             disable_webview_background(app, &window);
-            let _ = window.show();
-            disable_window_border(app, &window);
-            let _ = window.set_focus();
-            disable_window_border(app, &window);
+
+            // Don't show the window until the frontend has config/theme/engines
+            // loaded and painted - showing it immediately raced the first real
+            // frame and could flash blank/white while boot() was still awaiting
+            // its invoke() calls. Same once+timeout pattern as the spotlight
+            // window's "frontend-ready" gate below.
+            let shown_once = Arc::new(AtomicBool::new(false));
+
+            let win_for_ready = window.clone();
+            let app_for_ready = app.clone();
+            let shown_flag_a = shown_once.clone();
+            window.once("luma://main-ready", move |_event| {
+                if shown_flag_a.swap(true, Ordering::SeqCst) {
+                    return;
+                }
+                crate::logging::info(
+                    &app_for_ready,
+                    "main_window: frontend signaled ready, revealing window".to_string(),
+                );
+                disable_window_border(&app_for_ready, &win_for_ready);
+                let _ = win_for_ready.show();
+                let _ = win_for_ready.set_focus();
+                disable_window_border(&app_for_ready, &win_for_ready);
+            });
+
+            let win_for_timeout = window.clone();
+            let app_for_timeout = app.clone();
+            let shown_flag_b = shown_once;
+            std::thread::spawn(move || {
+                std::thread::sleep(MAIN_READY_TIMEOUT);
+                if shown_flag_b.swap(true, Ordering::SeqCst) {
+                    return;
+                }
+                crate::logging::warn(
+                    &app_for_timeout,
+                    "main_window: frontend never signaled ready within 3s, revealing anyway"
+                        .to_string(),
+                );
+                disable_window_border(&app_for_timeout, &win_for_timeout);
+                let _ = win_for_timeout.show();
+                let _ = win_for_timeout.set_focus();
+                disable_window_border(&app_for_timeout, &win_for_timeout);
+            });
         }
     }
 }
@@ -295,6 +355,8 @@ pub fn ensure_spotlight_window(
 }
 
 const SPOTLIGHT_READY_TIMEOUT: Duration = Duration::from_millis(1500);
+
+const MAIN_READY_TIMEOUT: Duration = Duration::from_millis(3000);
 
 fn reveal_spotlight(app: &AppHandle, window: &WebviewWindow) {
     let _ = window.show();

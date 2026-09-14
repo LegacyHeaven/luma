@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases"><img src="https://img.shields.io/badge/version-2.10.2-cf59e6?style=flat-square" alt="Latest version"></a>
+  <a href="../../releases"><img src="https://img.shields.io/badge/version-2.10.3-cf59e6?style=flat-square" alt="Latest version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8000ff?style=flat-square" alt="MIT License"></a>
   <a href="../../actions/workflows/ci.yml"><img src="https://github.com/LegacyHeaven/luma/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <img src="https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-3a1f5c?style=flat-square" alt="Linux, macOS, Windows">
@@ -17,9 +17,9 @@
 
 Type a plain query, or a `!bang` and a query to jump straight to one of
 70+ search engines (Google, YouTube, GitHub, Wikipedia, Amazon, and
-more), or to a file or app on your own machine with `!mypc` and
+more), or to a file or app on your own machine with `!local` and
 `!open`. Add your own engines and apps from Settings, or turn on any of
-the built-in ones you want - only Google, MyPC and Open are on by
+the built-in ones you want - only Google, Local and Open are on by
 default, to keep the list uncluttered out of the box.
 
 ### Contents
@@ -66,13 +66,16 @@ window if you'd rather stay inside the app - your choice, in Settings.
   search URL. See the full list on the
   [Bangs and Search Engines](../../wiki/Bangs-and-Search-Engines) wiki
   page.
-- **`!mypc` and `!open`** - search your own machine's files, or launch
+- **`!local` and `!open`** - search your own machine's files, or launch
   an installed app by name, without leaving the keyboard.
 - **Themes and a one-click marketplace** - switch themes instantly from
   Settings, install community themes from the marketplace with one
   click (with paging once there are more than a handful), or drop in
   your own `theme.css` (with custom CSS on top, if you want to go
   further).
+- **Plugins** - quick-answer bangs like `@time` and `@date` that run a
+  small piece of JS instead of opening a search, installed the same
+  three ways as themes (marketplace, URL, or by hand).
 - **A real auto-updater** - LUMA checks GitHub for a newer build and
   installs it itself; no separate download, no installer to re-run.
 - **Advanced logging & a live debug console** - off by default and
@@ -81,14 +84,19 @@ window if you'd rather stay inside the app - your choice, in Settings.
   RAM/process panel) and in a rotating file on disk.
 - **Localization** - the interface is available in English and Dutch,
   with live language switching and a community-editable locale file, so
-  adding a new language is one file, not a rebuild.
-- **A custom, Discord-style titlebar and install flow** - LUMA looks and
-  installs the same, consistent way on every platform, no OS chrome.
+  adding a new language is one file.
 
 ## Download
 
 Grab a prebuilt executable from the
 [Releases page](../../releases) - one file per platform, no installer.
+
+<p align="center">
+  <a href="../../releases/latest/download/luma-linux-x64"><img src="https://img.shields.io/badge/Linux-download-3a1f5c?style=for-the-badge&logo=linux&logoColor=white" alt="Download for Linux"></a>
+  <a href="../../releases/latest/download/luma-macos-arm64"><img src="https://img.shields.io/badge/macOS%20(Apple%20Silicon)-download-3a1f5c?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS (Apple Silicon)"></a>
+  <a href="../../releases/latest/download/luma-macos-x64"><img src="https://img.shields.io/badge/macOS%20(Intel)-download-3a1f5c?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS (Intel)"></a>
+  <a href="../../releases/latest/download/luma-windows-x64.exe"><img src="https://img.shields.io/badge/Windows-download-3a1f5c?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"></a>
+</p>
 
 | Platform | File |
 |---|---|
@@ -104,9 +112,9 @@ chmod +x luma-linux-x64
 ./luma-linux-x64
 ```
 
-macOS binaries aren't notarized (that costs an Apple developer account),
-so the first time you open one, right-click it and choose "Open" to get
-past Gatekeeper, instead of double-clicking.
+On macOS, don't double-click the app the first time. Right-click it (or
+Control-click) and choose "Open" instead, then confirm in the dialog that
+pops up. After that first launch, it opens normally from then on.
 
 Full first-run and uninstall details are on the
 [Installation](../../wiki/Installation) wiki page.
@@ -121,6 +129,8 @@ The full docs live on the [wiki](../../wiki):
   explained
 - [Theming](../../wiki/Theming) - build and install your own CSS theme,
   or publish one to the marketplace
+- [Plugins](../../wiki/Plugins) - quick-answer bangs like `@time`,
+  installing them, and writing your own
 - [Bangs and Search Engines](../../wiki/Bangs-and-Search-Engines) - the
   `!bang` system, the full built-in engine table, and how to add your
   own
@@ -145,66 +155,18 @@ build running locally.
 
 ## For developers
 
-<details>
-<summary><b>Click to expand</b> - building from source and the project layout. Not needed if you just want to run LUMA.</summary>
-
-### Building from source
-
-You'll need [Rust](https://rustup.rs) and Node.js 18+ (Node is only used
-for the Tauri CLI, not the app itself). On Linux you also need the
-platform packages from Tauri's
-[prerequisites guide](https://tauri.app/start/prerequisites/) -
-`libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`,
-`librsvg2-dev`, and `build-essential`.
+Building from source, the full project layout, and a deep-dive into
+every internal system now live on the wiki's
+[Contributing / Developer Guide](../../wiki/Contributing) - not needed
+if you just want to run LUMA. Short version: you'll need
+[Rust](https://rustup.rs) and Node.js 18+ (Node only runs the Tauri CLI,
+the app itself has no JS runtime dependency), then:
 
 ```bash
 npm install
 npm run dev     # run it with hot reload
 npm run build   # produce a release binary at src-tauri/target/release/luma
 ```
-
-`npm run build` just runs `cargo build --release` under the hood (via
-the Tauri CLI) - there's no installer bundling step, so the output is a
-single binary you can run directly, same as what the Releases page
-ships.
-
-### How it's laid out
-
-```
-src-tauri/            Rust backend
-  src/
-    main.rs              entry point, plugin/tray/shortcut wiring
-    config.rs             config.toml load/save, seeds built-in themes
-    themes.rs              discovers themes in the user's themes folder
-    marketplace.rs           fetches/installs/uninstalls marketplace themes
-    locales.rs                loads locale files, English-fallback merge
-    logging.rs                  advanced logging + live RAM/process info
-    updater.rs                    checks for and installs new releases
-    install.rs                     first-run relocate + shortcut creation
-    window.rs                       spotlight / main / built-in-browser windows
-    shortcuts.rs                     registers the global hotkey
-    tray.rs                           tray icon + menu
-    commands.rs                        the frontend calls these via invoke()
-  resources/            built-in engines, default theme, and locale files -
-                          compiled directly into the binary, so a
-                          downloaded executable needs no other files
-  capabilities/          Tauri permission grants
-marketplace/           community theme catalog (index.json + theme folders)
-src/                  frontend - plain HTML/CSS/JS, no bundler
-  index.html             the search UI (used for both windows)
-  settings.html            the settings page
-  i18n.js                    loads and applies locale strings
-  debug-log.js                 the in-app debug console
-  vendor/engine/                 bangdeck.js (bang parsing) and ui.js
-                                   (search box behavior)
-```
-
-CI (`.github/workflows/ci.yml`) runs a bang-engine smoke test on every
-push and PR to `main`. Releases (`.github/workflows/release.yml`) build
-all four platform binaries and attach them to a GitHub Release, either
-from a `v*` tag or manually from the Actions tab.
-
-</details>
 
 ## License
 

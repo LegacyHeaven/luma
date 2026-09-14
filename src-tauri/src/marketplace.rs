@@ -7,7 +7,7 @@ use tauri::AppHandle;
 const MARKETPLACE_INDEX_URL: &str =
     "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/index.json";
 
-const MAX_THEME_FILE_BYTES: u64 = 512 * 1024;
+pub(crate) const MAX_MARKETPLACE_FILE_BYTES: u64 = 512 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketplaceEntry {
@@ -33,7 +33,7 @@ pub fn fetch_marketplace_index() -> Result<Vec<MarketplaceEntry>, String> {
     serde_json::from_str(&body).map_err(|e| format!("marketplace index didn't parse: {e}"))
 }
 
-fn slugify(input: &str) -> String {
+pub(crate) fn slugify(input: &str) -> String {
     let mut out = String::new();
     let mut last_dash = false;
     for c in input.to_lowercase().chars() {
@@ -53,7 +53,7 @@ fn slugify(input: &str) -> String {
     }
 }
 
-fn fetch_text(url: &str) -> Result<String, String> {
+pub(crate) fn fetch_text(url: &str) -> Result<String, String> {
     if !url.starts_with("https://") {
         return Err("only https:// URLs are allowed".to_string());
     }
@@ -62,10 +62,10 @@ fn fetch_text(url: &str) -> Result<String, String> {
         .map_err(|e| format!("request to {url} failed: {e}"))?;
     let mut body = String::new();
     resp.into_reader()
-        .take(MAX_THEME_FILE_BYTES + 1)
+        .take(MAX_MARKETPLACE_FILE_BYTES + 1)
         .read_to_string(&mut body)
         .map_err(|e| format!("reading {url} failed: {e}"))?;
-    if body.len() as u64 > MAX_THEME_FILE_BYTES {
+    if body.len() as u64 > MAX_MARKETPLACE_FILE_BYTES {
         return Err(format!("{url} is over 512KB - refusing to install"));
     }
     if body.trim().is_empty() {

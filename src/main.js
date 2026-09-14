@@ -7,6 +7,8 @@
 
   var NAV_TRANSITION_MS = 280;
 
+  var mainReadySignaled = false;
+
   function revealBody() {
     document.body.classList.add("luma-ready");
     var overlay = document.getElementById("page-transition-overlay");
@@ -16,6 +18,22 @@
       setTimeout(function () {
         overlay.style.display = "none";
       }, NAV_TRANSITION_MS);
+    }
+
+    // Tells the Rust side it's safe to show the (until-now hidden) main
+    // window - see show_main_window()'s "luma://main-ready" gate. Only the
+    // main window is created hidden this way; the spotlight has its own
+    // earlier "frontend-ready" signal above.
+    if (!isSpotlight && !mainReadySignaled) {
+      mainReadySignaled = true;
+      var tauri = getTauriBridge();
+      if (tauri) {
+        try {
+          tauri.event.emit("luma://main-ready", {});
+        } catch (e) {
+          dlog("warn", "emitting luma://main-ready failed: " + e);
+        }
+      }
     }
   }
 
@@ -39,6 +57,52 @@
   }
   function ff(key, params, fallback) {
     return window.LumaI18n ? window.LumaI18n.format(key, params, fallback) : fallback;
+  }
+
+  // Rotating tips under the search bar. Tip 0 is the original !bang/Esc
+  // hint (kept first so existing users still see it immediately); the rest
+  // are translatable one-liners in locales/*.json under "search.tips.N".
+  var TIP_COUNT = 55;
+  var tipEl = null;
+  var tipIndex = 0;
+  var tipTimer = null;
+
+  function tipKey(i) {
+    return i === 0 ? "search.hint" : "search.tips." + i;
+  }
+
+  function renderTip() {
+    if (!tipEl) return;
+    var text = tt(tipKey(tipIndex), null);
+    if (text == null) return;
+    if (window.LumaI18n && text.indexOf("{code}") !== -1) {
+      tipEl.textContent = "";
+      tipEl.appendChild(window.LumaI18n.richNodes(text));
+    } else {
+      tipEl.textContent = text;
+    }
+  }
+
+  function scheduleNextTip() {
+    var delay = 30000 + Math.random() * 60000; // 30-90s
+    tipTimer = setTimeout(function () {
+      var next = tipIndex;
+      while (next === tipIndex) next = Math.floor(Math.random() * TIP_COUNT);
+      tipIndex = next;
+      tipEl.classList.add("tip-fading");
+      setTimeout(function () {
+        renderTip();
+        tipEl.classList.remove("tip-fading");
+        scheduleNextTip();
+      }, 220);
+    }, delay);
+  }
+
+  function startTipRotator() {
+    tipEl = document.getElementById("search-tip");
+    if (!tipEl || tipTimer) return;
+    renderTip();
+    scheduleNextTip();
   }
 
   function getTauriBridge() {
@@ -67,31 +131,20 @@
 
       var el = document.createElement("div");
       el.id = "luma-update-banner";
-      el.style.cssText =
-        "position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:9998;" +
-        "display:flex;align-items:center;gap:12px;max-width:calc(100% - 40px);" +
-        "background:rgba(18,10,28,.96);color:#fff;font-family:monospace;font-size:13px;" +
-        "padding:10px 14px;border-radius:8px;border:1px solid rgba(207,89,230,.4);" +
-        "box-shadow:0 10px 30px rgba(0,0,0,.5);";
+      el.className = "luma-update-banner";
 
       var text = document.createElement("span");
       text.textContent = tt("update_banner.new_version_available", "A new version of LUMA is available.");
 
       var updateBtn = document.createElement("button");
       updateBtn.type = "button";
+      updateBtn.className = "luma-update-banner-btn";
       updateBtn.textContent = tt("update_banner.update_now", "Update now");
-      updateBtn.style.cssText =
-        "font-family:monospace;font-size:13px;padding:5px 12px;border-radius:5px;" +
-        "border:1px solid rgba(207,89,230,.6);background:rgba(255,255,255,.06);" +
-        "color:#fff;cursor:pointer;flex-shrink:0;";
 
       var laterBtn = document.createElement("button");
       laterBtn.type = "button";
+      laterBtn.className = "luma-update-banner-btn luma-update-banner-btn-later";
       laterBtn.textContent = tt("update_banner.later", "Later");
-      laterBtn.style.cssText =
-        "font-family:monospace;font-size:12px;padding:5px 10px;border-radius:5px;" +
-        "border:1px solid transparent;background:transparent;color:#c4c4c4;" +
-        "cursor:pointer;opacity:.75;flex-shrink:0;";
 
       var bridge = getTauriBridge();
       if (bridge && bridge.event) {
@@ -129,6 +182,91 @@
     }
   }
 
+  var PluginSandbox = (function () {
+    var iframe = null;
+    var readyPromise = null;
+    var reqSeq = 0;
+    var pendingHandle = {};
+    var pendingRegister = {};
+
+    function ensure() {
+      if (readyPromise) return readyPromise;
+      readyPromise = new Promise(function (resolve) {
+        iframe = document.createElement("iframe");
+        iframe.setAttribute("sandbox", "allow-scripts");
+        iframe.style.display = "none";
+        iframe.src = "plugin-sandbox.html";
+        window.addEventListener("message", function (ev) {
+          if (!iframe || ev.source !== iframe.contentWindow) return;
+          var data = ev.data || {};
+          if (data.type === "ready") {
+            resolve();
+          } else if (data.type === "registered") {
+            var p = pendingRegister[data.id];
+            if (p) {
+              delete pendingRegister[data.id];
+              p(!!data.ok);
+            }
+          } else if (data.type === "handled") {
+            var q = pendingHandle[data.reqId];
+            if (q) {
+              delete pendingHandle[data.reqId];
+              clearTimeout(q.timer);
+              q.resolve(data.error ? null : data.answer);
+            }
+          }
+        });
+        document.body.appendChild(iframe);
+      });
+      return readyPromise;
+    }
+
+    function register(id, source) {
+      return ensure().then(function () {
+        return new Promise(function (resolve) {
+          pendingRegister[id] = resolve;
+          iframe.contentWindow.postMessage({ type: "register", id: id, source: source }, "*");
+        });
+      });
+    }
+
+    function handle(pluginId, bang, query) {
+      return ensure().then(function () {
+        return new Promise(function (resolve) {
+          var reqId = ++reqSeq;
+          var timer = setTimeout(function () {
+            delete pendingHandle[reqId];
+            resolve(null);
+          }, 3000);
+          pendingHandle[reqId] = { resolve: resolve, timer: timer };
+          iframe.contentWindow.postMessage(
+            { type: "handle", reqId: reqId, pluginId: pluginId, bang: bang, query: query },
+            "*"
+          );
+        });
+      });
+    }
+
+    return { register: register, handle: handle };
+  })();
+
+  var pluginPopupTimer = null;
+  function showPluginPopup(text) {
+    var el = document.getElementById("luma-plugin-popup");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "luma-plugin-popup";
+      el.className = "luma-plugin-popup";
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    if (pluginPopupTimer) clearTimeout(pluginPopupTimer);
+    pluginPopupTimer = setTimeout(function () {
+      el.remove();
+      pluginPopupTimer = null;
+    }, 4000);
+  }
+
   var params = new URLSearchParams(window.location.search);
   var isSpotlight = params.get("mode") === "spotlight";
 
@@ -154,7 +292,16 @@
     if (el) el.hidden = !show;
   }
 
+  function sanitizeCss(css) {
+    return String(css || "")
+      .replace(/@import[^;]*;?/gi, "")
+      .replace(/expression\s*\([^)]*\)/gi, "")
+      .replace(/url\s*\(\s*['"]?\s*javascript:[^)]*\)/gi, "url()")
+      .replace(/-moz-binding\s*:[^;]*;?/gi, "");
+  }
+
   function applyThemeCss(css) {
+    css = sanitizeCss(css);
     var style = document.getElementById("luma-theme-style");
     if (!style) {
       style = document.createElement("style");
@@ -162,6 +309,17 @@
       document.head.appendChild(style);
     }
     style.textContent = css;
+
+    // Remember this theme's background so the boot/transition overlay can
+    // match it immediately next time, before this CSS has loaded - avoids
+    // a color-mismatch flash for any non-default theme.
+    var bgMatch = css.match(/--color-dark-mode:\s*(#[0-9a-fA-F]{3,8})/);
+    if (bgMatch) {
+      document.documentElement.style.setProperty("--boot-bg", bgMatch[1]);
+      try {
+        localStorage.setItem("luma-boot-bg", bgMatch[1]);
+      } catch (e) {}
+    }
   }
 
   function applyCustomCss(css) {
@@ -171,7 +329,7 @@
       style.id = "luma-custom-style";
       document.head.appendChild(style);
     }
-    style.textContent = css || "";
+    style.textContent = sanitizeCss(css);
   }
 
   async function boot(tauri) {
@@ -236,6 +394,25 @@
 
     var deck = new window.BangDeckModule.BangDeck(engineConfig);
 
+    var pluginHandlers = {};
+    var pluginIds = [];
+    (engineConfig.engines || []).forEach(function (e) {
+      if (e.plugin_id && pluginIds.indexOf(e.plugin_id) === -1) pluginIds.push(e.plugin_id);
+    });
+    await Promise.all(
+      pluginIds.map(function (id) {
+        return invoke("get_plugin_js", { pluginId: id })
+          .then(function (source) {
+            return PluginSandbox.register(id, source).then(function (ok) {
+              pluginHandlers[id] = ok;
+            });
+          })
+          .catch(function (err) {
+            dlog("error", "get_plugin_js invoke failed for '" + id + "': " + err);
+          });
+      })
+    );
+
     var ui = window.LumaUI.mount({
       deck: deck,
       particles: !isSpotlight,
@@ -246,6 +423,19 @@
 
         if (result.local) {
           dlog("info", "search submitted -> local, engine=" + result.engine + " query=" + result.query);
+          var engineCfg = deck.engines[result.engine];
+          if (engineCfg && engineCfg.plugin_id) {
+            var registered = pluginHandlers[engineCfg.plugin_id];
+            (registered ? PluginSandbox.handle(engineCfg.plugin_id, engineCfg.bang, result.query) : Promise.resolve(null))
+              .catch(function (err) {
+                dlog("error", "plugin '" + engineCfg.plugin_id + "' handle() threw: " + err);
+                return null;
+              })
+              .then(function (answer) {
+                showPluginPopup(answer && answer.text ? answer.text : tt("plugin.no_answer", "No answer for that."));
+              });
+            return;
+          }
           if (result.engine === "Open") {
             invoke("open_app", { query: result.query })
               .then(function () {
@@ -263,12 +453,12 @@
                 }
               });
           } else {
-            invoke("search_mypc", { query: result.query })
+            invoke("search_local", { query: result.query })
               .then(function () {
-                dlog("info", "search_mypc invoke resolved OK");
+                dlog("info", "search_local invoke resolved OK");
               })
               .catch(function (err) {
-                dlog("error", "search_mypc invoke failed: " + err);
+                dlog("error", "search_local invoke failed: " + err);
               });
           }
           if (isSpotlight) invoke("hide_spotlight");
@@ -287,6 +477,7 @@
 
     dlog("info", "UI mounted, ready for input");
     revealBody();
+    if (!isSpotlight) startTipRotator();
 
     tauri.event.listen("luma://config-changed", async function () {
       try {
@@ -294,6 +485,7 @@
         if (window.LumaDebugLog) window.LumaDebugLog.setEnabled(!!(freshConfig.general && freshConfig.general.debug_logging));
         if (window.LumaI18n && freshConfig.general && freshConfig.general.locale !== window.LumaI18n.getCurrentLocale()) {
           await window.LumaI18n.init(invoke, freshConfig.general.locale);
+          renderTip();
         }
         var freshThemeCss = await invoke("get_theme_css", { themeId: freshConfig.appearance.theme });
         applyThemeCss(freshThemeCss);
@@ -318,7 +510,11 @@
       }
     });
 
-    if (!isSpotlight && (!config.general || config.general.check_for_updates !== false)) {
+    if (
+      !isSpotlight &&
+      (!config.general || config.general.check_for_updates !== false) &&
+      (!window.LumaOffline || window.LumaOffline.isOnline())
+    ) {
       invoke("check_for_update")
         .then(function (status) {
           if (status.checked_ok && status.available) {

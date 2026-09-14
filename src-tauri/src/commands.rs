@@ -68,6 +68,11 @@ pub fn save_config(
         window::apply_main_window_size(&app, &new_config.window.main_window_size);
     }
 
+    let old_locale = state.config.lock().unwrap().general.locale.clone();
+    if new_config.general.locale != old_locale {
+        crate::tray::retext(&app, &new_config.general.locale);
+    }
+
     *state.config.lock().unwrap() = new_config;
 
     let _ = app.emit("luma://config-changed", ());
@@ -82,9 +87,30 @@ pub fn list_themes(app: AppHandle) -> Vec<themes::ThemeInfo> {
 }
 
 #[tauri::command]
+pub fn list_plugins(app: AppHandle) -> Vec<crate::plugins::PluginInfo> {
+    crate::plugins::list_plugins(&app)
+}
+
+#[tauri::command]
+pub fn get_plugin_js(app: AppHandle, plugin_id: String) -> Result<String, String> {
+    crate::plugins::js_for(&app, &plugin_id)
+        .ok_or_else(|| format!("plugin '{plugin_id}' not found"))
+}
+
+#[tauri::command]
 pub fn reveal_themes_folder(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
     let dir = crate::config::themes_dir(&app);
+    app.opener()
+        .open_path(dir.to_string_lossy().to_string(), None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn reveal_plugins_folder(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    crate::config::ensure_plugins_dir(&app);
+    let dir = crate::config::plugins_dir(&app);
     app.opener()
         .open_path(dir.to_string_lossy().to_string(), None::<&str>)
         .map_err(|e| e.to_string())
@@ -126,6 +152,64 @@ pub fn uninstall_theme(
             } else {
                 ""
             }
+        ),
+    );
+
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
+}
+
+#[tauri::command]
+pub fn uninstall_plugin(
+    app: AppHandle,
+    state: State<AppState>,
+    plugin_id: String,
+) -> Result<(), String> {
+    let dir = crate::config::plugins_dir(&app).join(&plugin_id);
+    if !dir.is_dir() {
+        return Err("that plugin isn't installed".into());
+    }
+    std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
+
+    {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.plugins.enabled_plugins.retain(|id| id != &plugin_id);
+        crate::config::save(&app, &cfg)?;
+    }
+
+    crate::logging::info(&app, format!("uninstalled plugin '{plugin_id}'"));
+
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_plugin_enabled(
+    app: AppHandle,
+    state: State<AppState>,
+    plugin_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    {
+        let mut cfg = state.config.lock().unwrap();
+        let has = cfg
+            .plugins
+            .enabled_plugins
+            .iter()
+            .any(|id| id == &plugin_id);
+        if enabled && !has {
+            cfg.plugins.enabled_plugins.push(plugin_id.clone());
+        } else if !enabled && has {
+            cfg.plugins.enabled_plugins.retain(|id| id != &plugin_id);
+        }
+        crate::config::save(&app, &cfg)?;
+    }
+
+    crate::logging::info(
+        &app,
+        format!(
+            "plugin '{plugin_id}' {}",
+            if enabled { "enabled" } else { "disabled" }
         ),
     );
 
@@ -198,6 +282,31 @@ pub fn get_engines(app: AppHandle, state: State<AppState>) -> Result<serde_json:
                 "template": true,
                 "user_added": true,
             }));
+        }
+
+        // One BangDeck "engine" per plugin bang (see #130) - each is a
+        // local:true entry like Local/Open, tagged with plugin_id so
+        // main.js's onSearch can route it to that plugin's handler instead
+        // of the search_local/open_app branches.
+        for plugin in crate::plugins::list_plugins(&app) {
+            if !cfg
+                .plugins
+                .enabled_plugins
+                .iter()
+                .any(|id| id == &plugin.id)
+            {
+                continue;
+            }
+            for bang in &plugin.bangs {
+                arr.push(serde_json::json!({
+                    "name": bang.name,
+                    "action": "",
+                    "bang": bang.word,
+                    "local": true,
+                    "placeholder": plugin.name,
+                    "plugin_id": plugin.id,
+                }));
+            }
         }
     }
 
@@ -320,7 +429,7 @@ pub fn remove_custom_app(
 }
 
 #[tauri::command]
-pub async fn search_mypc(app: AppHandle, query: String) -> Result<(), String> {
+pub async fn search_local(app: AppHandle, query: String) -> Result<(), String> {
     let _ = &app;
     let query = query.trim();
     if query.is_empty() {
@@ -341,7 +450,7 @@ pub async fn search_mypc(app: AppHandle, query: String) -> Result<(), String> {
         );
         crate::logging::info(
             &app,
-            format!("search_mypc: opening OS search for {query:?}"),
+            format!("search_local: opening OS search for {query:?}"),
         );
 
         use windows::core::{HSTRING, PCWSTR};
@@ -504,10 +613,15 @@ pub fn pick_app_for(app: AppHandle, state: State<AppState>, name: String) -> Res
             .spawn();
     }
 
+    let locale = state.config.lock().unwrap().general.locale.clone();
+    let title_fmt = crate::locales::strings_for(&app, &locale)
+        .get("dialog.pick_app_title")
+        .cloned()
+        .unwrap_or_else(|| "Select the app for \"{0}\"".to_string());
     let picker = app
         .dialog()
         .file()
-        .set_title(format!("Select the app for \"{name}\""));
+        .set_title(title_fmt.replace("{0}", &name));
     #[cfg(target_os = "windows")]
     let picker = picker.add_filter("Applications", &["exe"]);
     #[cfg(target_os = "macos")]
@@ -896,4 +1010,47 @@ pub fn reset_spotlight_position(app: AppHandle, state: State<AppState>) -> Resul
     crate::config::save(&app, &cfg)?;
     let _ = app.emit("luma://config-changed", ());
     Ok(())
+}
+
+/// Settings > Advanced > "Reset to defaults". Overwrites config.toml with
+/// LumaConfig::default() - themes/locales on disk are untouched, only the
+/// settings that reference them (active theme, locale, etc) go back to
+/// their defaults.
+#[tauri::command]
+pub fn reset_to_defaults(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    let defaults = LumaConfig::default();
+    crate::config::save(&app, &defaults)?;
+    *state.config.lock().unwrap() = defaults;
+    crate::logging::info(
+        &app,
+        "reset_to_defaults: config.toml reset to defaults".to_string(),
+    );
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
+}
+
+/// Settings > Advanced > "Clear browsing data". Luma's windows share one
+/// webview data store, so clearing it from any existing window clears
+/// cookies/cache/history for all of them (the main window, spotlight, and
+/// the built-in browser).
+#[tauri::command]
+pub fn clear_browsing_data(app: AppHandle) -> Result<(), String> {
+    let win = window::main_window(&app)
+        .or_else(|| window::spotlight_window(&app))
+        .ok_or("no Luma window is open to clear data from")?;
+    win.clear_all_browsing_data()
+        .map_err(|e| format!("couldn't clear browsing data: {e}"))?;
+    crate::logging::info(
+        &app,
+        "clear_browsing_data: cleared cookies/cache/history".to_string(),
+    );
+    Ok(())
+}
+
+/// Settings > Advanced > "Uninstall LUMA". Removes shortcuts and the
+/// installed copy (Windows/Linux), then exits - see uninstall.rs.
+#[tauri::command]
+pub fn uninstall_app(app: AppHandle) -> Result<(), String> {
+    crate::logging::info(&app, "uninstall_app: starting uninstall".to_string());
+    crate::uninstall::run()
 }

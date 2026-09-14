@@ -19,6 +19,13 @@
     "allow-save-config",
     "allow-list-themes",
     "allow-reveal-themes-folder",
+    "allow-list-plugins",
+    "allow-get-plugin-js",
+    "allow-reveal-plugins-folder",
+    "allow-uninstall-plugin",
+    "allow-set-plugin-enabled",
+    "allow-fetch-plugin-marketplace-index",
+    "allow-install-plugin-from-url",
     "allow-get-engines",
     "allow-get-theme-css",
     "allow-open-result",
@@ -33,7 +40,7 @@
     "allow-remove-custom-engine",
     "allow-list-all-builtin-engines",
     "allow-set-builtin-engine-enabled",
-    "allow-search-mypc",
+    "allow-search-local",
     "allow-open-app",
     "allow-pick-app-for",
     "allow-remove-custom-app",
@@ -48,6 +55,9 @@
     "allow-fetch-marketplace-index",
     "allow-install-theme-from-url",
     "allow-uninstall-theme",
-    "allow-reveal-log-file"
+    "allow-reveal-log-file",
+    "allow-reset-to-defaults",
+    "allow-clear-browsing-data",
+    "allow-uninstall-app"
   ]
 }

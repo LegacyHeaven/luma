@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-search-local"
+description = "Enables the search_local command without any pre-configured scope."
+commands.allow = ["search_local"]
+
+[[permission]]
+identifier = "deny-search-local"
+description = "Denies the search_local command without any pre-configured scope."
+commands.deny = ["search_local"]

@@ -4,15 +4,87 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LUMA Settings</title>
+  <script>
+    // Recall the last-applied theme's background before any CSS loads, so
+    // the boot/transition overlay matches it instead of flashing the
+    // default theme's near-black - see applyThemeCss() in main.js.
+    (function () {
+      try {
+        var bg = localStorage.getItem("luma-boot-bg");
+        if (bg) document.documentElement.style.setProperty("--boot-bg", bg);
+      } catch (e) {}
+    })();
+  </script>
   <style>
-    html, body { background: #0a0510; margin: 0; }
+    html, body { background: var(--boot-bg, #0a0510); margin: 0; overflow-x: hidden; }
     a { color: inherit; text-decoration: none; }
     svg { display: block; }
+
+    /* Themed scrollbars everywhere, instead of the OS default - these vars
+       are defined by every theme's :root (see theme.css), so this needs no
+       per-theme copies. */
+    * { scrollbar-width: thin; scrollbar-color: var(--box-border-color, #3a1f5c) transparent; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--box-border-color, #3a1f5c);
+      border-radius: 5px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--color-purple, #8000ff); }
+    ::-webkit-scrollbar-corner { background: transparent; }
+
+    /* Update-available banner - themed like the rest of the app instead of
+       a hardcoded purple, see showUpdateBanner() in main.js. */
+    .luma-update-banner {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      z-index: 9998;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: calc(100% - 40px);
+      background: var(--box-first-color, #120a1c);
+      color: var(--color-white, #fff);
+      font-family: var(--font-family, monospace);
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--box-border-color, #3a1f5c);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+    }
+    .luma-update-banner-btn {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 5px;
+      border: 1px solid var(--color-light-purple, #cf59e6);
+      background: rgba(255, 255, 255, .06);
+      color: var(--color-white, #fff);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .luma-update-banner-btn-later {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--color-gray, #c4c4c4);
+      opacity: .75;
+    }
+
+    body.no-animations, body.no-animations * {
+      animation: none !important;
+      transition: none !important;
+    }
 
     #page-transition-overlay {
       position: fixed;
       inset: 0;
-      background: #0a0510;
+      background: var(--boot-bg, #0a0510);
       z-index: 2147483647;
       opacity: 1;
       pointer-events: none;
@@ -22,27 +94,46 @@
     @media (prefers-reduced-motion: reduce) {
       #page-transition-overlay { transition-duration: .001ms; }
     }
+
+    #boot-spinner {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 28px;
+      height: 28px;
+      margin: -14px 0 0 -14px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, .15);
+      border-top-color: rgba(255, 255, 255, .65);
+      animation: boot-spinner-spin .8s linear infinite;
+    }
+    body:not(.luma-ready) #boot-spinner { display: block; }
+    @keyframes boot-spinner-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-spinner { animation: none; }
+    }
   </style>
   <link rel="stylesheet" href="settings.css">
 </head>
 <body class="settings-page">
-  <div id="page-transition-overlay" style="position:fixed;inset:0;background:#0a0510;z-index:2147483647;opacity:1;pointer-events:none;"></div>
+  <div id="page-transition-overlay"></div>
   <a href="#" class="settings-btn" id="back-to-search" title="Back to search" aria-label="Back to search" data-i18n-title="settings.back_to_search" data-i18n-aria-label="settings.back_to_search"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></a>
   <div class="particles" id="particles"></div>
 
   <div class="wrapper settings-wrapper">
     <p class="brand"><span data-i18n="settings.brand">Settings</span><span class="brand-dot">.</span></p>
-    <p class="motto"><span class="status-dot"></span><span data-i18n="settings.motto">Configure LUMA.</span></p>
+    <p class="motto"><span data-i18n="settings.motto">Configure LUMA.</span></p>
 
     <form id="settings-form">
       <div class="settings-layout">
         <nav class="settings-nav" id="settings-nav" aria-label="Settings categories">
           <button type="button" class="settings-nav-btn" data-category="general" data-i18n="settings.nav.general">General</button>
           <button type="button" class="settings-nav-btn" data-category="search" data-i18n="settings.nav.search">Search &amp; apps</button>
-          <button type="button" class="settings-nav-btn" data-category="appearance" data-i18n="settings.nav.appearance">Appearance</button>
+          <button type="button" class="settings-nav-btn" data-category="customize" data-i18n="settings.nav.customize">Customize</button>
           <button type="button" class="settings-nav-btn" data-category="spotlight" data-i18n="settings.nav.spotlight">Spotlight window</button>
           <button type="button" class="settings-nav-btn" data-category="updates" data-i18n="settings.nav.updates">Updates</button>
-          <button type="button" class="settings-nav-btn" data-category="advanced" id="advanced-nav-btn" hidden data-i18n="settings.nav.advanced">Advanced</button>
+          <button type="button" class="settings-nav-btn" data-category="advanced" id="advanced-nav-btn" data-i18n="settings.nav.advanced">Advanced</button>
         </nav>
 
         <div class="settings-content">
@@ -101,7 +192,7 @@
 
           <section class="settings-section" data-category="search">
             <h2 data-i18n="settings.search.more_engines.title">More search engines</h2>
-            <p class="help" data-i18n="settings.search.more_engines.help">Google, MyPC and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its &#10005;.</p>
+            <p class="help" data-i18n="settings.search.more_engines.help">Google, Local and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its &#10005;.</p>
             <div class="settings-row" id="builtin-engines-list"></div>
             <div class="settings-row">
               <select id="add-builtin-engine" class="settings-input">
@@ -164,17 +255,22 @@
             <button type="button" class="btn primary" id="install-update-btn" hidden data-i18n="settings.updates.install_button">Download &amp; install update</button>
           </section>
 
-          <section class="settings-section" data-category="appearance">
+          <div class="settings-section settings-subnav" data-category="customize" id="customize-subnav">
+            <button type="button" class="settings-nav-btn settings-subnav-btn active" data-subcategory="themes" data-i18n="settings.nav.themes">Themes</button>
+            <button type="button" class="settings-nav-btn settings-subnav-btn" data-subcategory="plugins" data-i18n="settings.nav.plugins">Plugins</button>
+          </div>
+
+          <section class="settings-section" data-category="customize" data-subcategory="themes">
             <h2 data-i18n="settings.appearance.theme.title">Theme</h2>
             <p class="help" data-i18n-rich="settings.appearance.theme.help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see the wiki's Theming page.</p>
             <div class="settings-row" id="theme-options"></div>
             <button type="button" class="btn" id="open-themes-folder" data-i18n="settings.appearance.theme.open_folder_button">Open themes folder</button>
           </section>
 
-          <section class="settings-section" data-category="appearance">
+          <section class="settings-section" data-category="customize" data-subcategory="themes">
             <h2 data-i18n="settings.appearance.marketplace.title">Marketplace</h2>
             <p class="help" data-i18n="settings.appearance.marketplace.help">Community themes, installed with one click - no restart needed.</p>
-            <div class="marketplace-status" id="marketplace-status" data-i18n="settings.appearance.marketplace.loading">Loading the marketplace…</div>
+            <div class="marketplace-status" id="marketplace-status">Loading the marketplace…</div>
             <div class="marketplace-grid" id="marketplace-grid"></div>
             <div class="marketplace-pagination" id="marketplace-pagination" hidden>
               <button type="button" class="btn" id="marketplace-prev-btn" data-i18n="settings.appearance.marketplace.prev_page">‹ Prev</button>
@@ -189,10 +285,52 @@
             <span id="marketplace-url-status" class="update-status"></span>
           </section>
 
-          <section class="settings-section" data-category="appearance">
+          <section class="settings-section" data-category="customize" data-subcategory="themes">
             <h2 data-i18n="settings.appearance.custom_css.title">Custom CSS</h2>
             <p class="help" data-i18n="settings.appearance.custom_css.help">Injected after the theme's stylesheet, so it can override anything.</p>
             <textarea id="custom-css" class="settings-input" placeholder="/* e.g. :root { --color-purple: #00e0a8; } */"></textarea>
+          </section>
+
+          <section class="settings-section" data-category="customize" data-subcategory="plugins">
+            <h2 data-i18n="settings.search.plugins.title">Plugins</h2>
+            <p class="help" data-i18n-rich="settings.search.plugins.help">Quick-answer bangs like <code>@time</code> - toggle any installed plugin on or off.</p>
+            <div class="settings-row" id="plugins-list"></div>
+            <button type="button" class="btn" id="open-plugins-folder" data-i18n="settings.search.plugins.open_folder_button">Open plugins folder</button>
+          </section>
+
+          <section class="settings-section" data-category="customize" data-subcategory="plugins">
+            <h2 data-i18n="settings.search.plugin_marketplace.title">Plugin marketplace</h2>
+            <p class="help" data-i18n="settings.search.plugin_marketplace.help">Community plugins, installed with one click - no restart needed.</p>
+            <div class="marketplace-status" id="plugin-marketplace-status">Loading the plugin marketplace…</div>
+            <div class="marketplace-grid" id="plugin-marketplace-grid"></div>
+            <div class="marketplace-pagination" id="plugin-marketplace-pagination" hidden>
+              <button type="button" class="btn" id="plugin-marketplace-prev-btn" data-i18n="settings.appearance.marketplace.prev_page">‹ Prev</button>
+              <span class="marketplace-page-counter" id="plugin-marketplace-page-counter"></span>
+              <button type="button" class="btn" id="plugin-marketplace-next-btn" data-i18n="settings.appearance.marketplace.next_page">Next ›</button>
+            </div>
+            <p class="help" style="margin-top:16px;" data-i18n-rich="settings.search.plugin_marketplace.url_help">Or add one by its raw <code>plugin.js</code> URL:</p>
+            <div class="settings-row">
+              <input type="text" id="plugin-marketplace-url-input" class="settings-input" placeholder="https://.../plugin.js" style="flex:2;min-width:220px;" data-i18n-placeholder="settings.search.plugin_marketplace.url_placeholder">
+              <button type="button" class="btn" id="plugin-marketplace-url-install-btn" data-i18n="settings.appearance.marketplace.install_button">Install</button>
+            </div>
+            <span id="plugin-marketplace-url-status" class="update-status"></span>
+          </section>
+
+          <section class="settings-section" data-category="advanced">
+            <h2 data-i18n="settings.advanced.maintenance.title">Maintenance</h2>
+            <div class="settings-row">
+              <button type="button" class="btn" id="clear-browsing-data-btn" data-i18n="settings.advanced.maintenance.clear_browsing_data">Clear browsing data</button>
+              <span class="help" data-i18n="settings.advanced.maintenance.clear_browsing_data_help">Cookies, cache, and history for LUMA and the built-in browser.</span>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn" id="reset-defaults-btn" data-i18n="settings.advanced.maintenance.reset_defaults">Reset to defaults</button>
+              <span class="help" data-i18n="settings.advanced.maintenance.reset_defaults_help">Puts every setting back the way it was on a fresh install. Themes and translations you added are kept.</span>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn btn-danger" id="uninstall-btn" data-i18n="settings.advanced.maintenance.uninstall">Uninstall LUMA</button>
+              <span class="help" data-i18n="settings.advanced.maintenance.uninstall_help">Removes LUMA and its shortcuts, then closes the app. Your settings are kept in case you reinstall.</span>
+            </div>
+            <div id="maintenance-status" class="save-status"></div>
           </section>
 
           <section class="settings-section" data-category="advanced" id="debug-section" hidden>
@@ -249,6 +387,7 @@
   <script src="vendor/titlebar.js"></script>
   <script src="debug-log.js"></script>
   <script src="i18n.js"></script>
+  <script src="offline.js"></script>
   <script src="vendor/engine/bangdeck.js"></script>
   <script src="settings.js"></script>
 </body>

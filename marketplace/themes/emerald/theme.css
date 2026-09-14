@@ -211,21 +211,7 @@ body {
   margin-bottom: 30px;
 }
 
-.motto .status-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-light-blue);
-  margin-right: 8px;
-  box-shadow: 0 0 6px var(--color-light-blue);
-  animation: status-pulse 3.4s ease-in-out infinite;
-}
 
-@keyframes status-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .5; }
-}
 
 .engine-selector {
   display: inline-block;
