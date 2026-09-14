@@ -1,6 +1,6 @@
 [
   {
-    "id": "luma-material-blue",
+    "id": "material-blue",
     "name": "Material Blue",
     "author": "Luma",
     "description": "A cool Material-Design-inspired blue, for a calmer, more corporate feel.",
@@ -9,7 +9,7 @@
     "colors": ["#131418", "#1e2126", "#8ab4f8", "#aecbfa", "#e8eaed"]
   },
   {
-    "id": "luma-pink",
+    "id": "pink",
     "name": "Neon Pink",
     "author": "Luma",
     "description": "A vibrant hot-pink/magenta theme with a synthwave edge.",
@@ -18,7 +18,7 @@
     "colors": ["#150816", "#240f22", "#ff2e88", "#ff8fc7", "#fff"]
   },
   {
-    "id": "luma-emerald",
+    "id": "emerald",
     "name": "Emerald",
     "author": "Luma",
     "description": "A calm nature-inspired emerald green theme.",
@@ -27,7 +27,7 @@
     "colors": ["#04120c", "#0b2018", "#10b981", "#6ee7b7", "#eafff4"]
   },
   {
-    "id": "luma-amber",
+    "id": "amber",
     "name": "Amber Sunset",
     "author": "Luma",
     "description": "A warm amber/orange sunset theme.",
