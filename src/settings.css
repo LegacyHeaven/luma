@@ -355,6 +355,28 @@ textarea.settings-input {
   color: #ff6b6b;
 }
 
+.marketplace-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.marketplace-pagination .btn[disabled] {
+  opacity: .4;
+  cursor: default;
+}
+
+.marketplace-page-counter {
+  font-family: var(--font-family, monospace);
+  font-size: 1.1rem;
+  color: var(--color-gray, #c4c4c4);
+  opacity: .75;
+  min-width: 90px;
+  text-align: center;
+}
+
 .debug-console:not([hidden]) {
   position: fixed;
   inset: 20px;

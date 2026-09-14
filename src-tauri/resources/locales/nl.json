@@ -126,6 +126,9 @@
   "settings.appearance.marketplace.unreachable": "Kon de marketplace niet bereiken ({0}). Controleer je verbinding en open Instellingen opnieuw.",
   "settings.appearance.marketplace.url_installed": "\"{0}\" geïnstalleerd - kies het hierboven.",
   "settings.appearance.marketplace.url_install_failed": "Kon dat niet installeren: {0}",
+  "settings.appearance.marketplace.page_counter": "Pagina {0} van {1}",
+  "settings.appearance.marketplace.prev_page": "‹ Vorige",
+  "settings.appearance.marketplace.next_page": "Volgende ›",
 
   "settings.appearance.custom_css.title": "Aangepaste CSS",
   "settings.appearance.custom_css.help": "Wordt na het stylesheet van het thema geladen, en kan dus alles overschrijven.",

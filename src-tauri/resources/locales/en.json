@@ -126,6 +126,9 @@
   "settings.appearance.marketplace.unreachable": "Couldn't reach the marketplace ({0}). Check your connection and reopen Settings.",
   "settings.appearance.marketplace.url_installed": "Installed \"{0}\" - pick it above.",
   "settings.appearance.marketplace.url_install_failed": "Couldn't install that: {0}",
+  "settings.appearance.marketplace.page_counter": "Page {0} of {1}",
+  "settings.appearance.marketplace.prev_page": "‹ Prev",
+  "settings.appearance.marketplace.next_page": "Next ›",
 
   "settings.appearance.custom_css.title": "Custom CSS",
   "settings.appearance.custom_css.help": "Injected after the theme's stylesheet, so it can override anything.",

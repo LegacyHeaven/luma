@@ -989,10 +989,16 @@
 
   var marketplaceStatus = document.getElementById("marketplace-status");
   var marketplaceGrid = document.getElementById("marketplace-grid");
+  var marketplacePagination = document.getElementById("marketplace-pagination");
+  var marketplacePrevBtn = document.getElementById("marketplace-prev-btn");
+  var marketplaceNextBtn = document.getElementById("marketplace-next-btn");
+  var marketplacePageCounter = document.getElementById("marketplace-page-counter");
   var marketplaceUrlInput = document.getElementById("marketplace-url-input");
   var marketplaceUrlInstallBtn = document.getElementById("marketplace-url-install-btn");
   var marketplaceUrlStatus = document.getElementById("marketplace-url-status");
   var installedThemeIds = [];
+  var MARKETPLACE_PAGE_SIZE = 3;
+  var marketplacePage = 0;
 
   async function refreshThemeList() {
     var themeList = await invoke("list_themes");
@@ -1001,9 +1007,30 @@
     return themeList;
   }
 
+  function renderMarketplacePagination(total) {
+    var totalPages = Math.max(1, Math.ceil(total / MARKETPLACE_PAGE_SIZE));
+    if (marketplacePage >= totalPages) marketplacePage = totalPages - 1;
+    if (marketplacePage < 0) marketplacePage = 0;
+
+    if (total <= MARKETPLACE_PAGE_SIZE) {
+      marketplacePagination.hidden = true;
+      return;
+    }
+    marketplacePagination.hidden = false;
+    marketplacePrevBtn.disabled = marketplacePage === 0;
+    marketplaceNextBtn.disabled = marketplacePage >= totalPages - 1;
+    marketplacePageCounter.textContent = ff(
+      "settings.appearance.marketplace.page_counter",
+      [marketplacePage + 1, totalPages],
+      "Page {0} of {1}"
+    );
+  }
+
   function renderMarketplaceGrid(entries) {
     marketplaceGrid.innerHTML = "";
-    entries.forEach(function (entry) {
+    var pageStart = marketplacePage * MARKETPLACE_PAGE_SIZE;
+    var pageEntries = entries.slice(pageStart, pageStart + MARKETPLACE_PAGE_SIZE);
+    pageEntries.forEach(function (entry) {
       var card = document.createElement("div");
       card.className = "marketplace-card";
 
@@ -1099,6 +1126,7 @@
 
       marketplaceGrid.appendChild(card);
     });
+    renderMarketplacePagination(entries.length);
   }
 
   var marketplaceEntries = [];
@@ -1107,10 +1135,26 @@
     renderMarketplaceGrid(marketplaceEntries);
   }
 
+  marketplacePrevBtn.addEventListener("click", function () {
+    if (marketplacePage > 0) {
+      marketplacePage -= 1;
+      refreshMarketplaceGrid();
+    }
+  });
+
+  marketplaceNextBtn.addEventListener("click", function () {
+    var totalPages = Math.max(1, Math.ceil(marketplaceEntries.length / MARKETPLACE_PAGE_SIZE));
+    if (marketplacePage < totalPages - 1) {
+      marketplacePage += 1;
+      refreshMarketplaceGrid();
+    }
+  });
+
   async function loadMarketplace() {
     try {
       var entries = await invoke("fetch_marketplace_index");
       marketplaceEntries = entries || [];
+      marketplacePage = 0;
       renderMarketplaceGrid(marketplaceEntries);
       marketplaceStatus.textContent = marketplaceEntries.length
         ? ff(
