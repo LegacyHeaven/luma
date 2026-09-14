@@ -181,7 +181,7 @@ pub const POSITION_PICKER_LABEL: &str = "position-picker";
 pub fn main_window_dimensions(size: &str) -> (f64, f64) {
     match size {
         "compact" => (620.0, 460.0),
-        "roomy" => (900.0, 640.0),
+        "roomy" => (1100.0, 760.0),
         _ => (760.0, 560.0),
     }
 }
