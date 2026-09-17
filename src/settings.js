@@ -215,6 +215,7 @@
   });
 
   disableAnimationsCheckbox.addEventListener("change", function () {
+    document.body.classList.toggle("no-animations", disableAnimationsCheckbox.checked);
     persistPatch(function (cfg) { cfg.general.disable_animations = disableAnimationsCheckbox.checked; }, "disable animations");
   });
 
@@ -931,6 +932,7 @@
     spotlightWidthInput.value = currentConfig.window.spotlight_width;
     spotlightPositionStatus.textContent = describePosition(currentConfig);
     disableAnimationsCheckbox.checked = !!currentConfig.general.disable_animations;
+    document.body.classList.toggle("no-animations", disableAnimationsCheckbox.checked);
     showSpotlightBrandingCheckbox.checked = !!currentConfig.general.show_spotlight_branding;
     var mainSizeInput = document.querySelector(
       'input[name="main_window_size"][value="' + (currentConfig.window.main_window_size || "roomy") + '"]'

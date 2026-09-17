@@ -45,6 +45,7 @@ body.settings-page .settings-wrapper {
   color: var(--color-gray, #c4c4c4);
   cursor: pointer;
   opacity: .75;
+  transition: opacity .15s ease, color .15s ease, border-color .15s ease, background .15s ease;
 }
 
 .settings-nav-btn:hover {
@@ -70,6 +71,16 @@ body.settings-page .settings-wrapper {
 
 .settings-content > .settings-section.cat-active {
   display: block;
+  animation: settings-cat-in .22s ease;
+}
+
+@keyframes settings-cat-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-content > .settings-section.cat-active { animation: none; }
 }
 
 @media (max-width: 760px) {
