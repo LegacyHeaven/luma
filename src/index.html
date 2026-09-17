@@ -44,6 +44,12 @@
       #boot-spinner { animation: none; }
     }
 
+    #search-tip { transition: opacity .2s ease; }
+    #search-tip.tip-fading { opacity: 0; }
+    @media (prefers-reduced-motion: reduce) {
+      #search-tip { transition-duration: .001ms; }
+    }
+
     html.spotlight-mode { background: transparent; }
 
     body.no-animations, body.no-animations * {
@@ -115,7 +121,7 @@
       </div>
     </div>
 
-    <p class="hint" data-i18n-rich="search.hint">type <code>!bang</code> before your search to jump straight to that engine &dash; press <code>Esc</code> to clear, or your shortcut again to hide.</p>
+    <p class="hint" id="search-tip" aria-live="polite">type <code>!bang</code> before your search to jump straight to that engine &dash; press <code>Esc</code> to clear, or your shortcut again to hide.</p>
   </div>
 
   <script src="vendor/titlebar.js"></script>

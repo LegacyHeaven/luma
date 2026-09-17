@@ -59,6 +59,52 @@
     return window.LumaI18n ? window.LumaI18n.format(key, params, fallback) : fallback;
   }
 
+  // Rotating tips under the search bar. Tip 0 is the original !bang/Esc
+  // hint (kept first so existing users still see it immediately); the rest
+  // are translatable one-liners in locales/*.json under "search.tips.N".
+  var TIP_COUNT = 55;
+  var tipEl = null;
+  var tipIndex = 0;
+  var tipTimer = null;
+
+  function tipKey(i) {
+    return i === 0 ? "search.hint" : "search.tips." + i;
+  }
+
+  function renderTip() {
+    if (!tipEl) return;
+    var text = tt(tipKey(tipIndex), null);
+    if (text == null) return;
+    if (window.LumaI18n && text.indexOf("{code}") !== -1) {
+      tipEl.textContent = "";
+      tipEl.appendChild(window.LumaI18n.richNodes(text));
+    } else {
+      tipEl.textContent = text;
+    }
+  }
+
+  function scheduleNextTip() {
+    var delay = 30000 + Math.random() * 60000; // 30-90s
+    tipTimer = setTimeout(function () {
+      var next = tipIndex;
+      while (next === tipIndex) next = Math.floor(Math.random() * TIP_COUNT);
+      tipIndex = next;
+      tipEl.classList.add("tip-fading");
+      setTimeout(function () {
+        renderTip();
+        tipEl.classList.remove("tip-fading");
+        scheduleNextTip();
+      }, 220);
+    }, delay);
+  }
+
+  function startTipRotator() {
+    tipEl = document.getElementById("search-tip");
+    if (!tipEl || tipTimer) return;
+    renderTip();
+    scheduleNextTip();
+  }
+
   function getTauriBridge() {
     return window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__ : null;
   }
@@ -305,6 +351,7 @@
 
     dlog("info", "UI mounted, ready for input");
     revealBody();
+    if (!isSpotlight) startTipRotator();
 
     tauri.event.listen("luma://config-changed", async function () {
       try {
@@ -312,6 +359,7 @@
         if (window.LumaDebugLog) window.LumaDebugLog.setEnabled(!!(freshConfig.general && freshConfig.general.debug_logging));
         if (window.LumaI18n && freshConfig.general && freshConfig.general.locale !== window.LumaI18n.getCurrentLocale()) {
           await window.LumaI18n.init(invoke, freshConfig.general.locale);
+          renderTip();
         }
         var freshThemeCss = await invoke("get_theme_css", { themeId: freshConfig.appearance.theme });
         applyThemeCss(freshThemeCss);

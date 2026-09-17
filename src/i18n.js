@@ -108,6 +108,7 @@ window.LumaI18n = (function () {
     t: t,
     format: format,
     has: has,
+    richNodes: buildRichNodes,
     getLocales: function () { return locales; },
     getCurrentLocale: function () { return currentLocale; },
   };
