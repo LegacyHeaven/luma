@@ -48,6 +48,9 @@
     "allow-fetch-marketplace-index",
     "allow-install-theme-from-url",
     "allow-uninstall-theme",
-    "allow-reveal-log-file"
+    "allow-reveal-log-file",
+    "allow-reset-to-defaults",
+    "allow-clear-browsing-data",
+    "allow-uninstall-app"
   ]
 }

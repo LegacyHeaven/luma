@@ -897,3 +897,40 @@ pub fn reset_spotlight_position(app: AppHandle, state: State<AppState>) -> Resul
     let _ = app.emit("luma://config-changed", ());
     Ok(())
 }
+
+/// Settings > Advanced > "Reset to defaults". Overwrites config.toml with
+/// LumaConfig::default() - themes/locales on disk are untouched, only the
+/// settings that reference them (active theme, locale, etc) go back to
+/// their defaults.
+#[tauri::command]
+pub fn reset_to_defaults(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    let defaults = LumaConfig::default();
+    crate::config::save(&app, &defaults)?;
+    *state.config.lock().unwrap() = defaults;
+    crate::logging::info(&app, "reset_to_defaults: config.toml reset to defaults".to_string());
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
+}
+
+/// Settings > Advanced > "Clear browsing data". Luma's windows share one
+/// webview data store, so clearing it from any existing window clears
+/// cookies/cache/history for all of them (the main window, spotlight, and
+/// the built-in browser).
+#[tauri::command]
+pub fn clear_browsing_data(app: AppHandle) -> Result<(), String> {
+    let win = window::main_window(&app)
+        .or_else(|| window::spotlight_window(&app))
+        .ok_or("no Luma window is open to clear data from")?;
+    win.clear_all_browsing_data()
+        .map_err(|e| format!("couldn't clear browsing data: {e}"))?;
+    crate::logging::info(&app, "clear_browsing_data: cleared cookies/cache/history".to_string());
+    Ok(())
+}
+
+/// Settings > Advanced > "Uninstall LUMA". Removes shortcuts and the
+/// installed copy (Windows/Linux), then exits - see uninstall.rs.
+#[tauri::command]
+pub fn uninstall_app(app: AppHandle) -> Result<(), String> {
+    crate::logging::info(&app, "uninstall_app: starting uninstall".to_string());
+    crate::uninstall::run()
+}

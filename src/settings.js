@@ -501,6 +501,64 @@
     });
   }
 
+  var maintenanceStatus = document.getElementById("maintenance-status");
+  function showMaintenanceStatus(text, isError) {
+    if (!maintenanceStatus) return;
+    maintenanceStatus.textContent = text;
+    maintenanceStatus.classList.toggle("error", !!isError);
+    maintenanceStatus.classList.add("visible");
+    clearTimeout(showMaintenanceStatus._t);
+    showMaintenanceStatus._t = setTimeout(function () { maintenanceStatus.classList.remove("visible"); }, 4000);
+  }
+
+  var clearBrowsingDataBtn = document.getElementById("clear-browsing-data-btn");
+  if (clearBrowsingDataBtn) {
+    clearBrowsingDataBtn.addEventListener("click", function () {
+      if (!invoke) return;
+      if (!window.confirm(tt("settings.advanced.maintenance.clear_browsing_data_confirm", "Clear cookies, cache, and history for LUMA and the built-in browser?"))) return;
+      invoke("clear_browsing_data")
+        .then(function () {
+          dlog("info", "settings: cleared browsing data");
+          showMaintenanceStatus(tt("settings.advanced.maintenance.clear_browsing_data_done", "Browsing data cleared."));
+        })
+        .catch(function (err) {
+          dlog("error", "clear_browsing_data invoke failed: " + err);
+          showMaintenanceStatus(ff("settings.advanced.maintenance.action_failed", [err], "Couldn't do that: {0}"), true);
+        });
+    });
+  }
+
+  var resetDefaultsBtn = document.getElementById("reset-defaults-btn");
+  if (resetDefaultsBtn) {
+    resetDefaultsBtn.addEventListener("click", function () {
+      if (!invoke) return;
+      if (!window.confirm(tt("settings.advanced.maintenance.reset_defaults_confirm", "Reset every setting to its default? Themes and translations you added are kept."))) return;
+      invoke("reset_to_defaults")
+        .then(function () {
+          dlog("info", "settings: reset config to defaults, reloading");
+          window.location.reload();
+        })
+        .catch(function (err) {
+          dlog("error", "reset_to_defaults invoke failed: " + err);
+          showMaintenanceStatus(ff("settings.advanced.maintenance.action_failed", [err], "Couldn't do that: {0}"), true);
+        });
+    });
+  }
+
+  var uninstallBtn = document.getElementById("uninstall-btn");
+  if (uninstallBtn) {
+    uninstallBtn.addEventListener("click", function () {
+      if (!invoke) return;
+      if (!window.confirm(tt("settings.advanced.maintenance.uninstall_confirm", "Uninstall LUMA? This closes the app and removes it from your computer. Your settings are kept in case you reinstall."))) return;
+      uninstallBtn.disabled = true;
+      invoke("uninstall_app").catch(function (err) {
+        dlog("error", "uninstall_app invoke failed: " + err);
+        uninstallBtn.disabled = false;
+        showMaintenanceStatus(ff("settings.advanced.maintenance.action_failed", [err], "Couldn't do that: {0}"), true);
+      });
+    });
+  }
+
   debugClearBtn.addEventListener("click", function () {
     if (window.LumaDebugLog) window.LumaDebugLog.clear();
     if (invoke) invoke("clear_debug_log").catch(function () {});

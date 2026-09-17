@@ -61,7 +61,7 @@
           <button type="button" class="settings-nav-btn" data-category="appearance" data-i18n="settings.nav.appearance">Appearance</button>
           <button type="button" class="settings-nav-btn" data-category="spotlight" data-i18n="settings.nav.spotlight">Spotlight window</button>
           <button type="button" class="settings-nav-btn" data-category="updates" data-i18n="settings.nav.updates">Updates</button>
-          <button type="button" class="settings-nav-btn" data-category="advanced" id="advanced-nav-btn" hidden data-i18n="settings.nav.advanced">Advanced</button>
+          <button type="button" class="settings-nav-btn" data-category="advanced" id="advanced-nav-btn" data-i18n="settings.nav.advanced">Advanced</button>
         </nav>
 
         <div class="settings-content">
@@ -212,6 +212,23 @@
             <h2 data-i18n="settings.appearance.custom_css.title">Custom CSS</h2>
             <p class="help" data-i18n="settings.appearance.custom_css.help">Injected after the theme's stylesheet, so it can override anything.</p>
             <textarea id="custom-css" class="settings-input" placeholder="/* e.g. :root { --color-purple: #00e0a8; } */"></textarea>
+          </section>
+
+          <section class="settings-section" data-category="advanced">
+            <h2 data-i18n="settings.advanced.maintenance.title">Maintenance</h2>
+            <div class="settings-row">
+              <button type="button" class="btn" id="clear-browsing-data-btn" data-i18n="settings.advanced.maintenance.clear_browsing_data">Clear browsing data</button>
+              <span class="help" data-i18n="settings.advanced.maintenance.clear_browsing_data_help">Cookies, cache, and history for LUMA and the built-in browser.</span>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn" id="reset-defaults-btn" data-i18n="settings.advanced.maintenance.reset_defaults">Reset to defaults</button>
+              <span class="help" data-i18n="settings.advanced.maintenance.reset_defaults_help">Puts every setting back the way it was on a fresh install. Themes and translations you added are kept.</span>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn btn-danger" id="uninstall-btn" data-i18n="settings.advanced.maintenance.uninstall">Uninstall LUMA</button>
+              <span class="help" data-i18n="settings.advanced.maintenance.uninstall_help">Removes LUMA and its shortcuts, then closes the app. Your settings are kept in case you reinstall.</span>
+            </div>
+            <div id="maintenance-status" class="save-status"></div>
           </section>
 
           <section class="settings-section" data-category="advanced" id="debug-section" hidden>

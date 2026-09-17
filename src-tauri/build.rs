@@ -65,6 +65,9 @@ fn main() {
             "fetch_marketplace_index",
             "install_theme_from_url",
             "uninstall_theme",
+            "reset_to_defaults",
+            "clear_browsing_data",
+            "uninstall_app",
         ]),
     ))
     .expect("failed to run tauri-build");

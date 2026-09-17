@@ -9,6 +9,7 @@ mod marketplace;
 mod shortcuts;
 mod themes;
 mod tray;
+mod uninstall;
 mod updater;
 mod window;
 
@@ -88,6 +89,9 @@ fn main() {
             updater::apply_update,
             marketplace::fetch_marketplace_index,
             marketplace::install_theme_from_url,
+            commands::reset_to_defaults,
+            commands::clear_browsing_data,
+            commands::uninstall_app,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

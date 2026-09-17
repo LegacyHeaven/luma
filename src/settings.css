@@ -234,6 +234,7 @@ textarea.settings-input {
 
 .btn:hover { border-color: var(--color-purple, #8000ff); }
 .btn.primary { border-color: var(--color-light-purple, #cf59e6); }
+.btn-danger:hover { border-color: #ff6b6b; color: #ff6b6b; }
 
 .settings-actions {
   display: flex;
