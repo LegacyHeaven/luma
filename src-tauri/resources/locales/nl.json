@@ -83,7 +83,9 @@
 
   "settings.nav.general": "Algemeen",
   "settings.nav.search": "Zoeken & apps",
-  "settings.nav.appearance": "Weergave",
+  "settings.nav.customize": "Aanpassen",
+  "settings.nav.themes": "Thema's",
+  "settings.nav.plugins": "Plugins",
   "settings.nav.spotlight": "Spotlight-venster",
   "settings.nav.updates": "Updates",
   "settings.nav.advanced": "Geavanceerd",

@@ -155,10 +155,6 @@ pub fn uninstall_plugin(
     state: State<AppState>,
     plugin_id: String,
 ) -> Result<(), String> {
-    if crate::config::is_builtin_plugin(&plugin_id) {
-        return Err("that plugin ships with LUMA and can't be uninstalled".into());
-    }
-
     let dir = crate::config::plugins_dir(&app).join(&plugin_id);
     if !dir.is_dir() {
         return Err("that plugin isn't installed".into());

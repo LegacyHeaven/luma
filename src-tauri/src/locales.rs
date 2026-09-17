@@ -38,9 +38,6 @@ pub fn ensure_locales_dir(app: &AppHandle) {
     }
     for (id, _name, json) in BUILTIN_LOCALES {
         let dest = dir.join(format!("{id}.json"));
-        if dest.exists() {
-            continue;
-        }
         if let Err(err) = fs::write(&dest, json) {
             crate::logging::error(app, format!("failed to seed {id}.json locale: {err}"));
         }

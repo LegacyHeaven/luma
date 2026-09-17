@@ -80,7 +80,7 @@ pub fn list_plugins(app: &AppHandle) -> Vec<PluginInfo> {
             .unwrap_or_default();
 
         plugins.push(PluginInfo {
-            is_builtin: config::is_builtin_plugin(&id),
+            is_builtin: false,
             id,
             name: manifest
                 .get("name")

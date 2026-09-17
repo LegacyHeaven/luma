@@ -276,6 +276,36 @@
   var navButtons = settingsNav ? Array.prototype.slice.call(settingsNav.querySelectorAll(".settings-nav-btn")) : [];
   var categorySections = Array.prototype.slice.call(document.querySelectorAll(".settings-content > .settings-section[data-category]"));
 
+  var customizeSubnav = document.getElementById("customize-subnav");
+  var subnavButtons = customizeSubnav ? Array.prototype.slice.call(customizeSubnav.querySelectorAll(".settings-subnav-btn")) : [];
+  var subcategorySections = Array.prototype.slice.call(document.querySelectorAll(".settings-content > .settings-section[data-subcategory]"));
+
+  function loadForSubcategory(subcategory) {
+    if (subcategory === "themes") {
+      loadMarketplace({ preservePage: true });
+    } else if (subcategory === "plugins") {
+      loadPluginMarketplace({ preservePage: true });
+    }
+  }
+
+  function setActiveSubcategory(subcategory) {
+    subnavButtons.forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.subcategory === subcategory);
+    });
+    subcategorySections.forEach(function (section) {
+      section.classList.toggle("sub-active", section.dataset.subcategory === subcategory);
+    });
+  }
+
+  subnavButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      setActiveSubcategory(btn.dataset.subcategory);
+      loadForSubcategory(btn.dataset.subcategory);
+    });
+  });
+
+  setActiveSubcategory("themes");
+
   function setActiveCategory(category) {
     navButtons.forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.category === category);
@@ -288,8 +318,9 @@
   navButtons.forEach(function (btn) {
     btn.addEventListener("click", function () {
       setActiveCategory(btn.dataset.category);
-      if (btn.dataset.category === "appearance") {
-        loadMarketplace({ preservePage: true });
+      if (btn.dataset.category === "customize") {
+        var activeSubBtn = subnavButtons.filter(function (b) { return b.classList.contains("active"); })[0];
+        loadForSubcategory(activeSubBtn ? activeSubBtn.dataset.subcategory : "themes");
       }
     });
   });

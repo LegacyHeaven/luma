@@ -130,7 +130,7 @@
         <nav class="settings-nav" id="settings-nav" aria-label="Settings categories">
           <button type="button" class="settings-nav-btn" data-category="general" data-i18n="settings.nav.general">General</button>
           <button type="button" class="settings-nav-btn" data-category="search" data-i18n="settings.nav.search">Search &amp; apps</button>
-          <button type="button" class="settings-nav-btn" data-category="appearance" data-i18n="settings.nav.appearance">Appearance</button>
+          <button type="button" class="settings-nav-btn" data-category="customize" data-i18n="settings.nav.customize">Customize</button>
           <button type="button" class="settings-nav-btn" data-category="spotlight" data-i18n="settings.nav.spotlight">Spotlight window</button>
           <button type="button" class="settings-nav-btn" data-category="updates" data-i18n="settings.nav.updates">Updates</button>
           <button type="button" class="settings-nav-btn" data-category="advanced" id="advanced-nav-btn" data-i18n="settings.nav.advanced">Advanced</button>
@@ -207,30 +207,6 @@
             <div class="settings-row" id="custom-apps-list"></div>
           </section>
 
-          <section class="settings-section" data-category="search">
-            <h2 data-i18n="settings.search.plugins.title">Plugins</h2>
-            <p class="help" data-i18n-rich="settings.search.plugins.help">Quick-answer bangs like <code>@time</code> - toggle any installed plugin on or off.</p>
-            <div class="settings-row" id="plugins-list"></div>
-          </section>
-
-          <section class="settings-section" data-category="search">
-            <h2 data-i18n="settings.search.plugin_marketplace.title">Plugin marketplace</h2>
-            <p class="help" data-i18n="settings.search.plugin_marketplace.help">Community plugins, installed with one click - no restart needed.</p>
-            <div class="marketplace-status" id="plugin-marketplace-status">Loading the plugin marketplace…</div>
-            <div class="marketplace-grid" id="plugin-marketplace-grid"></div>
-            <div class="marketplace-pagination" id="plugin-marketplace-pagination" hidden>
-              <button type="button" class="btn" id="plugin-marketplace-prev-btn" data-i18n="settings.appearance.marketplace.prev_page">‹ Prev</button>
-              <span class="marketplace-page-counter" id="plugin-marketplace-page-counter"></span>
-              <button type="button" class="btn" id="plugin-marketplace-next-btn" data-i18n="settings.appearance.marketplace.next_page">Next ›</button>
-            </div>
-            <p class="help" style="margin-top:16px;" data-i18n-rich="settings.search.plugin_marketplace.url_help">Or add one by its raw <code>plugin.js</code> URL:</p>
-            <div class="settings-row">
-              <input type="text" id="plugin-marketplace-url-input" class="settings-input" placeholder="https://.../plugin.js" style="flex:2;min-width:220px;" data-i18n-placeholder="settings.search.plugin_marketplace.url_placeholder">
-              <button type="button" class="btn" id="plugin-marketplace-url-install-btn" data-i18n="settings.appearance.marketplace.install_button">Install</button>
-            </div>
-            <span id="plugin-marketplace-url-status" class="update-status"></span>
-          </section>
-
           <section class="settings-section" data-category="spotlight">
             <h2 data-i18n="settings.spotlight.window.title">Spotlight window</h2>
             <div class="settings-row">
@@ -279,14 +255,19 @@
             <button type="button" class="btn primary" id="install-update-btn" hidden data-i18n="settings.updates.install_button">Download &amp; install update</button>
           </section>
 
-          <section class="settings-section" data-category="appearance">
+          <div class="settings-section settings-subnav" data-category="customize" id="customize-subnav">
+            <button type="button" class="settings-nav-btn settings-subnav-btn active" data-subcategory="themes" data-i18n="settings.nav.themes">Themes</button>
+            <button type="button" class="settings-nav-btn settings-subnav-btn" data-subcategory="plugins" data-i18n="settings.nav.plugins">Plugins</button>
+          </div>
+
+          <section class="settings-section" data-category="customize" data-subcategory="themes">
             <h2 data-i18n="settings.appearance.theme.title">Theme</h2>
             <p class="help" data-i18n-rich="settings.appearance.theme.help">Drop a folder with a <code>theme.json</code> + <code>theme.css</code> into your themes folder to add your own - see the wiki's Theming page.</p>
             <div class="settings-row" id="theme-options"></div>
             <button type="button" class="btn" id="open-themes-folder" data-i18n="settings.appearance.theme.open_folder_button">Open themes folder</button>
           </section>
 
-          <section class="settings-section" data-category="appearance">
+          <section class="settings-section" data-category="customize" data-subcategory="themes">
             <h2 data-i18n="settings.appearance.marketplace.title">Marketplace</h2>
             <p class="help" data-i18n="settings.appearance.marketplace.help">Community themes, installed with one click - no restart needed.</p>
             <div class="marketplace-status" id="marketplace-status">Loading the marketplace…</div>
@@ -304,10 +285,34 @@
             <span id="marketplace-url-status" class="update-status"></span>
           </section>
 
-          <section class="settings-section" data-category="appearance">
+          <section class="settings-section" data-category="customize" data-subcategory="themes">
             <h2 data-i18n="settings.appearance.custom_css.title">Custom CSS</h2>
             <p class="help" data-i18n="settings.appearance.custom_css.help">Injected after the theme's stylesheet, so it can override anything.</p>
             <textarea id="custom-css" class="settings-input" placeholder="/* e.g. :root { --color-purple: #00e0a8; } */"></textarea>
+          </section>
+
+          <section class="settings-section" data-category="customize" data-subcategory="plugins">
+            <h2 data-i18n="settings.search.plugins.title">Plugins</h2>
+            <p class="help" data-i18n-rich="settings.search.plugins.help">Quick-answer bangs like <code>@time</code> - toggle any installed plugin on or off.</p>
+            <div class="settings-row" id="plugins-list"></div>
+          </section>
+
+          <section class="settings-section" data-category="customize" data-subcategory="plugins">
+            <h2 data-i18n="settings.search.plugin_marketplace.title">Plugin marketplace</h2>
+            <p class="help" data-i18n="settings.search.plugin_marketplace.help">Community plugins, installed with one click - no restart needed.</p>
+            <div class="marketplace-status" id="plugin-marketplace-status">Loading the plugin marketplace…</div>
+            <div class="marketplace-grid" id="plugin-marketplace-grid"></div>
+            <div class="marketplace-pagination" id="plugin-marketplace-pagination" hidden>
+              <button type="button" class="btn" id="plugin-marketplace-prev-btn" data-i18n="settings.appearance.marketplace.prev_page">‹ Prev</button>
+              <span class="marketplace-page-counter" id="plugin-marketplace-page-counter"></span>
+              <button type="button" class="btn" id="plugin-marketplace-next-btn" data-i18n="settings.appearance.marketplace.next_page">Next ›</button>
+            </div>
+            <p class="help" style="margin-top:16px;" data-i18n-rich="settings.search.plugin_marketplace.url_help">Or add one by its raw <code>plugin.js</code> URL:</p>
+            <div class="settings-row">
+              <input type="text" id="plugin-marketplace-url-input" class="settings-input" placeholder="https://.../plugin.js" style="flex:2;min-width:220px;" data-i18n-placeholder="settings.search.plugin_marketplace.url_placeholder">
+              <button type="button" class="btn" id="plugin-marketplace-url-install-btn" data-i18n="settings.appearance.marketplace.install_button">Install</button>
+            </div>
+            <span id="plugin-marketplace-url-status" class="update-status"></span>
           </section>
 
           <section class="settings-section" data-category="advanced">

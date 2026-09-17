@@ -83,7 +83,9 @@
 
   "settings.nav.general": "General",
   "settings.nav.search": "Search & apps",
-  "settings.nav.appearance": "Appearance",
+  "settings.nav.customize": "Customize",
+  "settings.nav.themes": "Themes",
+  "settings.nav.plugins": "Plugins",
   "settings.nav.spotlight": "Spotlight window",
   "settings.nav.updates": "Updates",
   "settings.nav.advanced": "Advanced",
