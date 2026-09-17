@@ -150,6 +150,68 @@ pub fn uninstall_theme(
 }
 
 #[tauri::command]
+pub fn uninstall_plugin(
+    app: AppHandle,
+    state: State<AppState>,
+    plugin_id: String,
+) -> Result<(), String> {
+    if crate::config::is_builtin_plugin(&plugin_id) {
+        return Err("that plugin ships with LUMA and can't be uninstalled".into());
+    }
+
+    let dir = crate::config::plugins_dir(&app).join(&plugin_id);
+    if !dir.is_dir() {
+        return Err("that plugin isn't installed".into());
+    }
+    std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
+
+    {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.plugins.enabled_plugins.retain(|id| id != &plugin_id);
+        crate::config::save(&app, &cfg)?;
+    }
+
+    crate::logging::info(&app, format!("uninstalled plugin '{plugin_id}'"));
+
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_plugin_enabled(
+    app: AppHandle,
+    state: State<AppState>,
+    plugin_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    {
+        let mut cfg = state.config.lock().unwrap();
+        let has = cfg
+            .plugins
+            .enabled_plugins
+            .iter()
+            .any(|id| id == &plugin_id);
+        if enabled && !has {
+            cfg.plugins.enabled_plugins.push(plugin_id.clone());
+        } else if !enabled && has {
+            cfg.plugins.enabled_plugins.retain(|id| id != &plugin_id);
+        }
+        crate::config::save(&app, &cfg)?;
+    }
+
+    crate::logging::info(
+        &app,
+        format!(
+            "plugin '{plugin_id}' {}",
+            if enabled { "enabled" } else { "disabled" }
+        ),
+    );
+
+    let _ = app.emit("luma://config-changed", ());
+    Ok(())
+}
+
+#[tauri::command]
 pub fn list_locales(app: AppHandle) -> Vec<crate::locales::LocaleInfo> {
     crate::locales::list_locales(&app)
 }

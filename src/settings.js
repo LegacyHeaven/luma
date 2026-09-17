@@ -80,6 +80,7 @@
   var builtinEnginesList = document.getElementById("builtin-engines-list");
   var addBuiltinEngineSelect = document.getElementById("add-builtin-engine");
   var customAppsList = document.getElementById("custom-apps-list");
+  var pluginsList = document.getElementById("plugins-list");
   var themeOptionsContainer = document.getElementById("theme-options");
   var customCssTextarea = document.getElementById("custom-css");
   var openThemesFolderBtn = document.getElementById("open-themes-folder");
@@ -864,6 +865,256 @@
     );
   }
 
+  async function loadPlugins() {
+    var plugins = await invoke("list_plugins");
+    renderPlugins(plugins);
+  }
+
+  function renderPlugins(plugins) {
+    pluginsList.innerHTML = "";
+    if (!plugins.length) {
+      var empty = document.createElement("span");
+      empty.className = "update-status";
+      empty.textContent = tt("settings.search.plugins.empty", "No plugins installed - grab one from the marketplace below.");
+      pluginsList.appendChild(empty);
+      return;
+    }
+    plugins.forEach(function (plugin) {
+      var el = document.createElement("label");
+      el.className = "theme-option checkbox-option";
+
+      var checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = currentConfig.plugins.enabled_plugins.indexOf(plugin.id) !== -1;
+      checkbox.addEventListener("change", function () {
+        checkbox.disabled = true;
+        invoke("set_plugin_enabled", { pluginId: plugin.id, enabled: checkbox.checked })
+          .then(function () {
+            if (checkbox.checked) {
+              if (currentConfig.plugins.enabled_plugins.indexOf(plugin.id) === -1) {
+                currentConfig.plugins.enabled_plugins.push(plugin.id);
+              }
+            } else {
+              currentConfig.plugins.enabled_plugins = currentConfig.plugins.enabled_plugins.filter(function (id) { return id !== plugin.id; });
+            }
+            dlog("info", "settings: plugin " + plugin.id + (checkbox.checked ? " enabled" : " disabled"));
+          })
+          .catch(function (err) {
+            checkbox.checked = !checkbox.checked;
+            dlog("error", "set_plugin_enabled invoke failed: " + err);
+          })
+          .finally(function () {
+            checkbox.disabled = false;
+          });
+      });
+      el.appendChild(checkbox);
+
+      var label = document.createElement("span");
+      label.textContent = plugin.name + " - " + plugin.author;
+      el.appendChild(label);
+
+      if (!plugin.is_builtin) {
+        var removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "theme-option-remove";
+        removeBtn.textContent = "✕";
+        removeBtn.title = ff("settings.search.plugins.uninstall_title", [plugin.name], "Uninstall {0}");
+        removeBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          removeBtn.disabled = true;
+          invoke("uninstall_plugin", { pluginId: plugin.id })
+            .then(async function () {
+              dlog("info", "settings: uninstalled plugin " + plugin.id);
+              currentConfig = await invoke("get_config");
+              await loadPlugins();
+              refreshPluginMarketplaceGrid();
+            })
+            .catch(function (err) {
+              removeBtn.disabled = false;
+              dlog("error", "settings: uninstall_plugin failed for " + plugin.id + ": " + err);
+            });
+        });
+        el.appendChild(removeBtn);
+      }
+
+      pluginsList.appendChild(el);
+    });
+  }
+
+  var pluginMarketplaceStatus = document.getElementById("plugin-marketplace-status");
+  var pluginMarketplaceGrid = document.getElementById("plugin-marketplace-grid");
+  var pluginMarketplacePagination = document.getElementById("plugin-marketplace-pagination");
+  var pluginMarketplacePrevBtn = document.getElementById("plugin-marketplace-prev-btn");
+  var pluginMarketplaceNextBtn = document.getElementById("plugin-marketplace-next-btn");
+  var pluginMarketplacePageCounter = document.getElementById("plugin-marketplace-page-counter");
+  var pluginMarketplaceUrlInput = document.getElementById("plugin-marketplace-url-input");
+  var pluginMarketplaceUrlInstallBtn = document.getElementById("plugin-marketplace-url-install-btn");
+  var pluginMarketplaceUrlStatus = document.getElementById("plugin-marketplace-url-status");
+  var installedPluginIds = [];
+  var pluginMarketplacePage = 0;
+  var pluginMarketplaceEntries = [];
+  var pluginMarketplaceLoading = false;
+
+  function renderPluginMarketplacePagination(total) {
+    var totalPages = Math.max(1, Math.ceil(total / MARKETPLACE_PAGE_SIZE));
+    if (pluginMarketplacePage >= totalPages) pluginMarketplacePage = totalPages - 1;
+    if (pluginMarketplacePage < 0) pluginMarketplacePage = 0;
+
+    if (total <= MARKETPLACE_PAGE_SIZE) {
+      pluginMarketplacePagination.hidden = true;
+      return;
+    }
+    pluginMarketplacePagination.hidden = false;
+    pluginMarketplacePrevBtn.disabled = pluginMarketplacePage === 0;
+    pluginMarketplaceNextBtn.disabled = pluginMarketplacePage >= totalPages - 1;
+    pluginMarketplacePageCounter.textContent = ff(
+      "settings.appearance.marketplace.page_counter",
+      [pluginMarketplacePage + 1, totalPages],
+      "Page {0} of {1}"
+    );
+  }
+
+  function renderPluginMarketplaceGrid(entries) {
+    pluginMarketplaceGrid.innerHTML = "";
+    var pageStart = pluginMarketplacePage * MARKETPLACE_PAGE_SIZE;
+    var pageEntries = entries.slice(pageStart, pageStart + MARKETPLACE_PAGE_SIZE);
+    pageEntries.forEach(function (entry) {
+      var card = document.createElement("div");
+      card.className = "marketplace-card";
+
+      var name = document.createElement("div");
+      name.className = "marketplace-card-name";
+      name.textContent = entry.name;
+      card.appendChild(name);
+
+      var author = document.createElement("div");
+      author.className = "marketplace-card-author";
+      author.textContent = ff("settings.appearance.marketplace.by_author", [entry.author], "by {0}");
+      card.appendChild(author);
+
+      if (entry.description) {
+        var desc = document.createElement("div");
+        desc.className = "marketplace-card-desc";
+        desc.textContent = entry.description;
+        card.appendChild(desc);
+      }
+
+      var installed = installedPluginIds.indexOf(entry.id) !== -1;
+      var actions = document.createElement("div");
+      actions.className = "marketplace-card-actions";
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn";
+      btn.textContent = installed ? tt("settings.appearance.marketplace.installed", "Installed") : tt("settings.appearance.marketplace.install_button", "Install");
+      btn.disabled = installed;
+      btn.addEventListener("click", function () {
+        btn.disabled = true;
+        btn.textContent = tt("settings.appearance.marketplace.installing", "Installing…");
+        invoke("install_plugin_from_url", {
+          jsUrl: entry.js_url,
+          jsonUrl: entry.json_url || null,
+          idHint: entry.id,
+          nameHint: entry.name,
+          authorHint: entry.author,
+        })
+          .then(async function () {
+            await loadPlugins();
+            await refreshPluginMarketplaceGrid();
+            dlog("info", "settings: installed marketplace plugin " + entry.id);
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = tt("settings.appearance.marketplace.install_button", "Install");
+            dlog("error", "settings: install_plugin_from_url failed for " + entry.id + ": " + err);
+            pluginMarketplaceStatus.textContent = ff("settings.search.plugin_marketplace.install_failed", [entry.name, err], "Couldn't install {0}: {1}");
+          });
+      });
+      actions.appendChild(btn);
+      card.appendChild(actions);
+
+      pluginMarketplaceGrid.appendChild(card);
+    });
+    renderPluginMarketplacePagination(entries.length);
+  }
+
+  async function refreshPluginMarketplaceGrid() {
+    installedPluginIds = (await invoke("list_plugins")).map(function (p) { return p.id; });
+    renderPluginMarketplaceGrid(pluginMarketplaceEntries);
+  }
+
+  pluginMarketplacePrevBtn.addEventListener("click", function () {
+    if (pluginMarketplacePage > 0) {
+      pluginMarketplacePage -= 1;
+    }
+    loadPluginMarketplace({ preservePage: true });
+  });
+
+  pluginMarketplaceNextBtn.addEventListener("click", function () {
+    var totalPages = Math.max(1, Math.ceil(pluginMarketplaceEntries.length / MARKETPLACE_PAGE_SIZE));
+    if (pluginMarketplacePage < totalPages - 1) {
+      pluginMarketplacePage += 1;
+    }
+    loadPluginMarketplace({ preservePage: true });
+  });
+
+  async function loadPluginMarketplace(options) {
+    options = options || {};
+    if (pluginMarketplaceLoading) return;
+    if (window.LumaOffline && !window.LumaOffline.isOnline()) {
+      pluginMarketplaceStatus.textContent = tt("offline.feature_unavailable", "You're offline - can't reach that right now.");
+      return;
+    }
+    pluginMarketplaceLoading = true;
+    pluginMarketplacePrevBtn.disabled = true;
+    pluginMarketplaceNextBtn.disabled = true;
+    pluginMarketplaceStatus.textContent = tt("settings.search.plugin_marketplace.loading", "Loading the plugin marketplace…");
+    try {
+      installedPluginIds = (await invoke("list_plugins")).map(function (p) { return p.id; });
+      var entries = await invoke("fetch_plugin_marketplace_index");
+      pluginMarketplaceEntries = entries || [];
+      if (!options.preservePage) pluginMarketplacePage = 0;
+      renderPluginMarketplaceGrid(pluginMarketplaceEntries);
+      pluginMarketplaceStatus.textContent = pluginMarketplaceEntries.length
+        ? ff(
+            pluginMarketplaceEntries.length === 1 ? "settings.search.plugin_marketplace.count_singular" : "settings.search.plugin_marketplace.count_plural",
+            [pluginMarketplaceEntries.length],
+            pluginMarketplaceEntries.length === 1 ? "{0} plugin available" : "{0} plugins available"
+          )
+        : tt("settings.search.plugin_marketplace.empty", "Nothing here yet - check back soon.");
+    } catch (err) {
+      dlog("error", "settings: fetch_plugin_marketplace_index failed: " + err);
+      pluginMarketplaceStatus.textContent = ff("settings.search.plugin_marketplace.unreachable", [err], "Couldn't reach the plugin marketplace ({0}). Check your connection and reopen Settings.");
+      renderPluginMarketplacePagination(pluginMarketplaceEntries.length);
+    } finally {
+      pluginMarketplaceLoading = false;
+    }
+  }
+
+  pluginMarketplaceUrlInstallBtn.addEventListener("click", function () {
+    var url = pluginMarketplaceUrlInput.value.trim();
+    if (!url) return;
+    if (window.LumaOffline && !window.LumaOffline.isOnline()) {
+      pluginMarketplaceUrlStatus.textContent = tt("offline.feature_unavailable", "You're offline - can't reach that right now.");
+      return;
+    }
+    pluginMarketplaceUrlInstallBtn.disabled = true;
+    pluginMarketplaceUrlStatus.textContent = tt("settings.appearance.marketplace.installing", "Installing…");
+    invoke("install_plugin_from_url", { jsUrl: url, jsonUrl: null, idHint: null, nameHint: null, authorHint: null })
+      .then(async function (plugin) {
+        await loadPlugins();
+        pluginMarketplaceUrlStatus.textContent = ff("settings.search.plugin_marketplace.url_installed", [plugin.name], "Installed \"{0}\" - it's on above.");
+        pluginMarketplaceUrlInput.value = "";
+      })
+      .catch(function (err) {
+        pluginMarketplaceUrlStatus.textContent = ff("settings.search.plugin_marketplace.url_install_failed", [err], "Couldn't install that: {0}");
+      })
+      .finally(function () {
+        pluginMarketplaceUrlInstallBtn.disabled = false;
+      });
+  });
+
   addEngineBtn.addEventListener("click", function () {
     if (!invoke) return;
     var engine = {
@@ -981,6 +1232,13 @@
       dlog("error", "settings: get_engines invoke failed: " + err);
     }
     renderCustomApps(currentConfig.search.custom_apps || []);
+
+    try {
+      await loadPlugins();
+    } catch (err) {
+      dlog("error", "settings: list_plugins invoke failed: " + err);
+    }
+    loadPluginMarketplace();
 
     try {
       await refreshThemeList();
@@ -1314,9 +1572,11 @@
     window.LumaOffline.onChange(function (online) {
       checkUpdatesBtn.disabled = !online;
       marketplaceUrlInstallBtn.disabled = !online;
+      pluginMarketplaceUrlInstallBtn.disabled = !online;
     });
     checkUpdatesBtn.disabled = !window.LumaOffline.isOnline();
     marketplaceUrlInstallBtn.disabled = !window.LumaOffline.isOnline();
+    pluginMarketplaceUrlInstallBtn.disabled = !window.LumaOffline.isOnline();
   }
 
   setTimeout(revealBody, 4000);

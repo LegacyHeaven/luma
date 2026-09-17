@@ -207,6 +207,30 @@
             <div class="settings-row" id="custom-apps-list"></div>
           </section>
 
+          <section class="settings-section" data-category="search">
+            <h2 data-i18n="settings.search.plugins.title">Plugins</h2>
+            <p class="help" data-i18n-rich="settings.search.plugins.help">Quick-answer bangs like <code>@time</code> - toggle any installed plugin on or off.</p>
+            <div class="settings-row" id="plugins-list"></div>
+          </section>
+
+          <section class="settings-section" data-category="search">
+            <h2 data-i18n="settings.search.plugin_marketplace.title">Plugin marketplace</h2>
+            <p class="help" data-i18n="settings.search.plugin_marketplace.help">Community plugins, installed with one click - no restart needed.</p>
+            <div class="marketplace-status" id="plugin-marketplace-status">Loading the plugin marketplace…</div>
+            <div class="marketplace-grid" id="plugin-marketplace-grid"></div>
+            <div class="marketplace-pagination" id="plugin-marketplace-pagination" hidden>
+              <button type="button" class="btn" id="plugin-marketplace-prev-btn" data-i18n="settings.appearance.marketplace.prev_page">‹ Prev</button>
+              <span class="marketplace-page-counter" id="plugin-marketplace-page-counter"></span>
+              <button type="button" class="btn" id="plugin-marketplace-next-btn" data-i18n="settings.appearance.marketplace.next_page">Next ›</button>
+            </div>
+            <p class="help" style="margin-top:16px;" data-i18n-rich="settings.search.plugin_marketplace.url_help">Or add one by its raw <code>plugin.js</code> URL:</p>
+            <div class="settings-row">
+              <input type="text" id="plugin-marketplace-url-input" class="settings-input" placeholder="https://.../plugin.js" style="flex:2;min-width:220px;" data-i18n-placeholder="settings.search.plugin_marketplace.url_placeholder">
+              <button type="button" class="btn" id="plugin-marketplace-url-install-btn" data-i18n="settings.appearance.marketplace.install_button">Install</button>
+            </div>
+            <span id="plugin-marketplace-url-status" class="update-status"></span>
+          </section>
+
           <section class="settings-section" data-category="spotlight">
             <h2 data-i18n="settings.spotlight.window.title">Spotlight window</h2>
             <div class="settings-row">
