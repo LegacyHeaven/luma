@@ -182,6 +182,40 @@
     }
   }
 
+  // ponytail: plugins get only a `LumaPlugin.register()` capability, not the
+  // page's `window`/`document`/`invoke` - keeps a broken plugin from being
+  // handed anything by default. This isn't a real security boundary (a
+  // malicious plugin can still reach the global scope); actual vetting is
+  // the marketplace + CI scan (#133) and output sanitization (#134).
+  function loadPluginSource(source) {
+    var registered = null;
+    try {
+      var fn = new Function("LumaPlugin", source);
+      fn({ register: function (def) { registered = def; } });
+    } catch (e) {
+      dlog("error", "plugin failed to load: " + e);
+      return null;
+    }
+    return registered;
+  }
+
+  var pluginPopupTimer = null;
+  function showPluginPopup(text) {
+    var el = document.getElementById("luma-plugin-popup");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "luma-plugin-popup";
+      el.className = "luma-update-banner";
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    if (pluginPopupTimer) clearTimeout(pluginPopupTimer);
+    pluginPopupTimer = setTimeout(function () {
+      el.remove();
+      pluginPopupTimer = null;
+    }, 4000);
+  }
+
   var params = new URLSearchParams(window.location.search);
   var isSpotlight = params.get("mode") === "spotlight";
 
@@ -300,6 +334,23 @@
 
     var deck = new window.BangDeckModule.BangDeck(engineConfig);
 
+    var pluginHandlers = {};
+    var pluginIds = [];
+    (engineConfig.engines || []).forEach(function (e) {
+      if (e.plugin_id && pluginIds.indexOf(e.plugin_id) === -1) pluginIds.push(e.plugin_id);
+    });
+    await Promise.all(
+      pluginIds.map(function (id) {
+        return invoke("get_plugin_js", { pluginId: id })
+          .then(function (source) {
+            pluginHandlers[id] = loadPluginSource(source);
+          })
+          .catch(function (err) {
+            dlog("error", "get_plugin_js invoke failed for '" + id + "': " + err);
+          });
+      })
+    );
+
     var ui = window.LumaUI.mount({
       deck: deck,
       particles: !isSpotlight,
@@ -310,6 +361,18 @@
 
         if (result.local) {
           dlog("info", "search submitted -> local, engine=" + result.engine + " query=" + result.query);
+          var engineCfg = deck.engines[result.engine];
+          if (engineCfg && engineCfg.plugin_id) {
+            var handler = pluginHandlers[engineCfg.plugin_id];
+            var answer = null;
+            try {
+              answer = handler && handler.handle ? handler.handle(engineCfg.bang, result.query) : null;
+            } catch (err) {
+              dlog("error", "plugin '" + engineCfg.plugin_id + "' handle() threw: " + err);
+            }
+            showPluginPopup(answer && answer.text ? answer.text : tt("plugin.no_answer", "No answer for that."));
+            return;
+          }
           if (result.engine === "Open") {
             invoke("open_app", { query: result.query })
               .then(function () {

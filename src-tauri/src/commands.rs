@@ -87,6 +87,17 @@ pub fn list_themes(app: AppHandle) -> Vec<themes::ThemeInfo> {
 }
 
 #[tauri::command]
+pub fn list_plugins(app: AppHandle) -> Vec<crate::plugins::PluginInfo> {
+    crate::plugins::list_plugins(&app)
+}
+
+#[tauri::command]
+pub fn get_plugin_js(app: AppHandle, plugin_id: String) -> Result<String, String> {
+    crate::plugins::js_for(&app, &plugin_id)
+        .ok_or_else(|| format!("plugin '{plugin_id}' not found"))
+}
+
+#[tauri::command]
 pub fn reveal_themes_folder(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
     let dir = crate::config::themes_dir(&app);
@@ -203,6 +214,31 @@ pub fn get_engines(app: AppHandle, state: State<AppState>) -> Result<serde_json:
                 "template": true,
                 "user_added": true,
             }));
+        }
+
+        // One BangDeck "engine" per plugin bang (see #130) - each is a
+        // local:true entry like Local/Open, tagged with plugin_id so
+        // main.js's onSearch can route it to that plugin's handler instead
+        // of the search_local/open_app branches.
+        for plugin in crate::plugins::list_plugins(&app) {
+            if !cfg
+                .plugins
+                .enabled_plugins
+                .iter()
+                .any(|id| id == &plugin.id)
+            {
+                continue;
+            }
+            for bang in &plugin.bangs {
+                arr.push(serde_json::json!({
+                    "name": bang.name,
+                    "action": "",
+                    "bang": bang.word,
+                    "local": true,
+                    "placeholder": plugin.name,
+                    "plugin_id": plugin.id,
+                }));
+            }
         }
     }
 

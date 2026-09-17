@@ -6,6 +6,7 @@ mod install;
 mod locales;
 mod logging;
 mod marketplace;
+mod plugins;
 mod shortcuts;
 mod themes;
 mod tray;
@@ -57,6 +58,8 @@ fn main() {
             commands::save_config,
             commands::list_themes,
             commands::reveal_themes_folder,
+            commands::list_plugins,
+            commands::get_plugin_js,
             commands::uninstall_theme,
             commands::get_engines,
             commands::get_theme_css,
@@ -98,6 +101,7 @@ fn main() {
 
             let cfg = config::load(&handle);
             config::ensure_themes_dir(&handle);
+            config::ensure_plugins_dir(&handle);
             locales::ensure_locales_dir(&handle);
 
             handle

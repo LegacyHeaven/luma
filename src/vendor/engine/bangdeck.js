@@ -62,7 +62,9 @@
 
     parseQuery(raw) {
       const trimmed = (raw || "").trim();
-      const match = trimmed.match(/^!(\S+)\s+([\s\S]+)$/);
+      // [!@] so plugin bangs (see #130) can use "@" as a visually distinct
+      // trigger for quick-answer plugins, sharing this same resolution path.
+      const match = trimmed.match(/^[!@](\S+)\s+([\s\S]+)$/);
       if (match) {
         const bangWord = match[1].toLowerCase();
         const engineKey = this.bangMap[bangWord];
@@ -70,11 +72,23 @@
           return { engine: engineKey, query: match[2].trim() };
         }
       }
+      // Bare bang, no trailing text (e.g. "@time") - only plugin engines
+      // can resolve with an empty query; Local/Open still need real text,
+      // so this leaves their existing "!local"-with-nothing-after behavior
+      // (falls through to a literal search below) unchanged.
+      const bareMatch = trimmed.match(/^[!@](\S+)$/);
+      if (bareMatch) {
+        const engineKey = this.bangMap[bareMatch[1].toLowerCase()];
+        const cfg = engineKey && this.engines[engineKey];
+        if (cfg && cfg.plugin_id) {
+          return { engine: engineKey, query: "" };
+        }
+      }
       return { engine: null, query: trimmed };
     }
 
     peekBangEngine(raw) {
-      const match = (raw || "").match(/^!(\S+)/);
+      const match = (raw || "").match(/^[!@](\S+)/);
       if (!match) return null;
       return this.bangMap[match[1].toLowerCase()] || null;
     }
@@ -103,7 +117,7 @@
       const cfg = this.engines[engineKey];
 
       if (cfg && cfg.local) {
-        if (!parsed.query) return null;
+        if (!parsed.query && !cfg.plugin_id) return null;
         return { engine: engineKey, query: parsed.query, url: null, local: true };
       }
 

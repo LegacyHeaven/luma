@@ -19,6 +19,8 @@
     "allow-save-config",
     "allow-list-themes",
     "allow-reveal-themes-folder",
+    "allow-list-plugins",
+    "allow-get-plugin-js",
     "allow-get-engines",
     "allow-get-theme-css",
     "allow-open-result",

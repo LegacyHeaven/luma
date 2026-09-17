@@ -124,6 +124,20 @@ impl Default for SearchConfig {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PluginsConfig {
+    pub enabled_plugins: Vec<String>,
+}
+
+impl Default for PluginsConfig {
+    fn default() -> Self {
+        Self {
+            enabled_plugins: vec!["time-date".into()],
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct LumaConfig {
@@ -131,6 +145,7 @@ pub struct LumaConfig {
     pub appearance: AppearanceConfig,
     pub window: WindowConfig,
     pub search: SearchConfig,
+    pub plugins: PluginsConfig,
 }
 
 #[cfg(target_os = "windows")]
@@ -312,6 +327,37 @@ pub fn ensure_themes_dir(app: &AppHandle) {
         }
         if let Err(err) = fs::write(dest.join("theme.json"), json) {
             crate::logging::error(app, format!("failed to seed {id} theme.json: {err}"));
+        }
+    }
+}
+
+pub fn plugins_dir(app: &AppHandle) -> PathBuf {
+    config_dir(app).join("plugins")
+}
+
+const BUILTIN_PLUGINS: &[(&str, &str, &str)] = &[(
+    "time-date",
+    include_str!("../resources/plugins/time-date/plugin.js"),
+    include_str!("../resources/plugins/time-date/plugin.json"),
+)];
+
+pub fn is_builtin_plugin(plugin_id: &str) -> bool {
+    BUILTIN_PLUGINS.iter().any(|(id, _, _)| *id == plugin_id)
+}
+
+pub fn ensure_plugins_dir(app: &AppHandle) {
+    for (id, js, json) in BUILTIN_PLUGINS {
+        let dest = plugins_dir(app).join(id);
+
+        if let Err(err) = fs::create_dir_all(&dest) {
+            crate::logging::error(app, format!("failed to seed built-in plugin {id}: {err}"));
+            continue;
+        }
+        if let Err(err) = fs::write(dest.join("plugin.js"), js) {
+            crate::logging::error(app, format!("failed to seed {id} plugin.js: {err}"));
+        }
+        if let Err(err) = fs::write(dest.join("plugin.json"), json) {
+            crate::logging::error(app, format!("failed to seed {id} plugin.json: {err}"));
         }
     }
 }

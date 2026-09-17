@@ -33,6 +33,8 @@ fn main() {
             "save_config",
             "list_themes",
             "reveal_themes_folder",
+            "list_plugins",
+            "get_plugin_js",
             "get_engines",
             "get_theme_css",
             "open_result",
