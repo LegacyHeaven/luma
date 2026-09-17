@@ -22,6 +22,25 @@
     @media (prefers-reduced-motion: reduce) {
       #page-transition-overlay { transition-duration: .001ms; }
     }
+
+    #boot-spinner {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 28px;
+      height: 28px;
+      margin: -14px 0 0 -14px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, .15);
+      border-top-color: rgba(255, 255, 255, .65);
+      animation: boot-spinner-spin .8s linear infinite;
+    }
+    body:not(.luma-ready) #boot-spinner { display: block; }
+    @keyframes boot-spinner-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-spinner { animation: none; }
+    }
   </style>
   <link rel="stylesheet" href="settings.css">
 </head>
@@ -32,7 +51,7 @@
 
   <div class="wrapper settings-wrapper">
     <p class="brand"><span data-i18n="settings.brand">Settings</span><span class="brand-dot">.</span></p>
-    <p class="motto"><span class="status-dot"></span><span data-i18n="settings.motto">Configure LUMA.</span></p>
+    <p class="motto"><span data-i18n="settings.motto">Configure LUMA.</span></p>
 
     <form id="settings-form">
       <div class="settings-layout">
@@ -101,7 +120,7 @@
 
           <section class="settings-section" data-category="search">
             <h2 data-i18n="settings.search.more_engines.title">More search engines</h2>
-            <p class="help" data-i18n="settings.search.more_engines.help">Google, MyPC and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its &#10005;.</p>
+            <p class="help" data-i18n="settings.search.more_engines.help">Google, Local and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its &#10005;.</p>
             <div class="settings-row" id="builtin-engines-list"></div>
             <div class="settings-row">
               <select id="add-builtin-engine" class="settings-input">
@@ -174,7 +193,7 @@
           <section class="settings-section" data-category="appearance">
             <h2 data-i18n="settings.appearance.marketplace.title">Marketplace</h2>
             <p class="help" data-i18n="settings.appearance.marketplace.help">Community themes, installed with one click - no restart needed.</p>
-            <div class="marketplace-status" id="marketplace-status" data-i18n="settings.appearance.marketplace.loading">Loading the marketplace…</div>
+            <div class="marketplace-status" id="marketplace-status">Loading the marketplace…</div>
             <div class="marketplace-grid" id="marketplace-grid"></div>
             <div class="marketplace-pagination" id="marketplace-pagination" hidden>
               <button type="button" class="btn" id="marketplace-prev-btn" data-i18n="settings.appearance.marketplace.prev_page">‹ Prev</button>

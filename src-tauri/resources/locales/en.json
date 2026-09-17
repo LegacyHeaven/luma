@@ -62,7 +62,7 @@
   "settings.search.engines.add_failed": "Couldn't add it: {0}",
 
   "settings.search.more_engines.title": "More search engines",
-  "settings.search.more_engines.help": "Google, MyPC and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its ✕.",
+  "settings.search.more_engines.help": "Google, Local and Open are on by default so the list above doesn't start out cluttered. Pick more from the dropdown below - remove one anytime with its ✕.",
   "settings.search.more_engines.add_option": "+ Add a search engine…",
   "settings.search.more_engines.empty": "None turned on yet - pick one from the dropdown below.",
 

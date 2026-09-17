@@ -320,7 +320,7 @@ pub fn remove_custom_app(
 }
 
 #[tauri::command]
-pub async fn search_mypc(app: AppHandle, query: String) -> Result<(), String> {
+pub async fn search_local(app: AppHandle, query: String) -> Result<(), String> {
     let _ = &app;
     let query = query.trim();
     if query.is_empty() {
@@ -341,7 +341,7 @@ pub async fn search_mypc(app: AppHandle, query: String) -> Result<(), String> {
         );
         crate::logging::info(
             &app,
-            format!("search_mypc: opening OS search for {query:?}"),
+            format!("search_local: opening OS search for {query:?}"),
         );
 
         use windows::core::{HSTRING, PCWSTR};

@@ -954,7 +954,7 @@
         persistPatch(function (cfg) { cfg.appearance.theme = theme.id; }, "theme");
       });
 
-      if (theme.id !== "luma-default") {
+      if (!theme.is_builtin) {
         var removeBtn = document.createElement("button");
         removeBtn.type = "button";
         removeBtn.className = "theme-option-remove";
@@ -1161,6 +1161,7 @@
     marketplaceLoading = true;
     marketplacePrevBtn.disabled = true;
     marketplaceNextBtn.disabled = true;
+    marketplaceStatus.textContent = tt("settings.appearance.marketplace.loading", "Loading the marketplace…");
     try {
       var entries = await invoke("fetch_marketplace_index");
       marketplaceEntries = entries || [];

@@ -119,7 +119,7 @@ impl Default for SearchConfig {
         Self {
             custom_engines: Vec::new(),
             custom_apps: Vec::new(),
-            enabled_builtin_engines: vec!["Google".into(), "MyPC".into(), "Open".into()],
+            enabled_builtin_engines: vec!["Google".into(), "Local".into(), "Open".into()],
         }
     }
 }
@@ -218,6 +218,31 @@ pub fn themes_dir(app: &AppHandle) -> PathBuf {
     config_dir(app).join("themes")
 }
 
+/// ponytail: one-shot rename for configs written before the `!mypc` bang
+/// became `!local` (2026-09-17). Old configs still say "MyPC" in
+/// enabled_builtin_engines; without this the engine silently drops out of
+/// the enabled list since it no longer matches any entry by name.
+fn rename_mypc_to_local(app: &AppHandle, mut cfg: LumaConfig) -> LumaConfig {
+    let mut changed = false;
+    for name in cfg.search.enabled_builtin_engines.iter_mut() {
+        if name == "MyPC" {
+            *name = "Local".into();
+            changed = true;
+        }
+    }
+    if cfg.general.default_engine == "MyPC" {
+        cfg.general.default_engine = "Local".into();
+        changed = true;
+    }
+    if changed {
+        crate::logging::info(app, "config: migrated old 'MyPC' engine name to 'Local'");
+        if let Err(err) = save(app, &cfg) {
+            crate::logging::error(app, format!("failed to save MyPC->Local migration: {err}"));
+        }
+    }
+    cfg
+}
+
 pub fn load(app: &AppHandle) -> LumaConfig {
     let path = config_path(app);
 
@@ -225,7 +250,7 @@ pub fn load(app: &AppHandle) -> LumaConfig {
         Ok(text) => match toml::from_str(&text) {
             Ok(cfg) => {
                 crate::logging::info(app, format!("config loaded from {path:?}"));
-                cfg
+                rename_mypc_to_local(app, cfg)
             }
             Err(err) => {
                 crate::logging::error(
@@ -257,11 +282,18 @@ pub fn save(app: &AppHandle, cfg: &LumaConfig) -> Result<(), String> {
 
 pub const DEFAULT_THEME_ID: &str = "luma-default";
 
-const BUILTIN_THEMES: &[(&str, &str, &str)] = &[(
-    DEFAULT_THEME_ID,
-    include_str!("../resources/themes/luma-default/theme.css"),
-    include_str!("../resources/themes/luma-default/theme.json"),
-)];
+const BUILTIN_THEMES: &[(&str, &str, &str)] = &[
+    (
+        DEFAULT_THEME_ID,
+        include_str!("../resources/themes/luma-default/theme.css"),
+        include_str!("../resources/themes/luma-default/theme.json"),
+    ),
+    (
+        "blank",
+        include_str!("../resources/themes/blank/theme.css"),
+        include_str!("../resources/themes/blank/theme.json"),
+    ),
+];
 
 pub fn is_builtin_theme(theme_id: &str) -> bool {
     BUILTIN_THEMES.iter().any(|(id, _, _)| *id == theme_id)

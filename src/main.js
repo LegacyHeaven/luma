@@ -7,6 +7,8 @@
 
   var NAV_TRANSITION_MS = 280;
 
+  var mainReadySignaled = false;
+
   function revealBody() {
     document.body.classList.add("luma-ready");
     var overlay = document.getElementById("page-transition-overlay");
@@ -16,6 +18,22 @@
       setTimeout(function () {
         overlay.style.display = "none";
       }, NAV_TRANSITION_MS);
+    }
+
+    // Tells the Rust side it's safe to show the (until-now hidden) main
+    // window - see show_main_window()'s "luma://main-ready" gate. Only the
+    // main window is created hidden this way; the spotlight has its own
+    // earlier "frontend-ready" signal above.
+    if (!isSpotlight && !mainReadySignaled) {
+      mainReadySignaled = true;
+      var tauri = getTauriBridge();
+      if (tauri) {
+        try {
+          tauri.event.emit("luma://main-ready", {});
+        } catch (e) {
+          dlog("warn", "emitting luma://main-ready failed: " + e);
+        }
+      }
     }
   }
 
@@ -263,12 +281,12 @@
                 }
               });
           } else {
-            invoke("search_mypc", { query: result.query })
+            invoke("search_local", { query: result.query })
               .then(function () {
-                dlog("info", "search_mypc invoke resolved OK");
+                dlog("info", "search_local invoke resolved OK");
               })
               .catch(function (err) {
-                dlog("error", "search_mypc invoke failed: " + err);
+                dlog("error", "search_local invoke failed: " + err);
               });
           }
           if (isSpotlight) invoke("hide_spotlight");

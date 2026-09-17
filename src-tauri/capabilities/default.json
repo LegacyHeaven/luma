@@ -33,7 +33,7 @@
     "allow-remove-custom-engine",
     "allow-list-all-builtin-engines",
     "allow-set-builtin-engine-enabled",
-    "allow-search-mypc",
+    "allow-search-local",
     "allow-open-app",
     "allow-pick-app-for",
     "allow-remove-custom-app",

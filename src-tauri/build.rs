@@ -49,7 +49,7 @@ fn main() {
             "remove_custom_engine",
             "list_all_builtin_engines",
             "set_builtin_engine_enabled",
-            "search_mypc",
+            "search_local",
             "open_app",
             "pick_app_for",
             "remove_custom_app",

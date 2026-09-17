@@ -177,14 +177,6 @@ body {
   font-weight: 500;
 }
 
-.motto .status-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-light-blue);
-  margin-right: 8px;
-}
 
 .engine-selector {
   display: inline-block;

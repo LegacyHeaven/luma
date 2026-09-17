@@ -25,6 +25,25 @@
       #page-transition-overlay { transition-duration: .001ms; }
     }
 
+    #boot-spinner {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 28px;
+      height: 28px;
+      margin: -14px 0 0 -14px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, .15);
+      border-top-color: rgba(255, 255, 255, .65);
+      animation: boot-spinner-spin .8s linear infinite;
+    }
+    body:not(.luma-ready):not(.spotlight-mode) #boot-spinner { display: block; }
+    @keyframes boot-spinner-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-spinner { animation: none; }
+    }
+
     html.spotlight-mode { background: transparent; }
 
     body.no-animations, body.no-animations * {
@@ -71,14 +90,14 @@
   </style>
 </head>
 <body>
-  <div id="page-transition-overlay" style="position:fixed;inset:0;background:#0a0510;z-index:2147483647;opacity:1;pointer-events:none;"></div>
+  <div id="page-transition-overlay" style="position:fixed;inset:0;background:#0a0510;z-index:2147483647;opacity:1;pointer-events:none;"><div id="boot-spinner"></div></div>
   <a href="#" class="settings-btn" id="open-settings" title="Settings" aria-label="Settings" data-i18n-title="search.settings_button" data-i18n-aria-label="search.settings_button"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></a>
 
   <div class="particles" id="particles"></div>
 
   <div class="wrapper">
     <p class="brand">LUMA<span class="brand-dot">.</span></p>
-    <p class="motto"><span class="status-dot"></span><span data-i18n="search.motto">One search. Every direction.</span></p>
+    <p class="motto"><span data-i18n="search.motto">One search. Every direction.</span></p>
     <p class="spotlight-brand" id="spotlight-brand" hidden>LUMA<span class="brand-dot">.</span></p>
 
     <div class="search-shell">

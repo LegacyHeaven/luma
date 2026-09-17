@@ -62,7 +62,7 @@
   "settings.search.engines.add_failed": "Kon niet toevoegen: {0}",
 
   "settings.search.more_engines.title": "Meer zoekmachines",
-  "settings.search.more_engines.help": "Google, MyPC en Open staan standaard aan zodat de lijst hierboven niet meteen vol staat. Kies er meer bij via het menu hieronder - verwijder er een met de ✕.",
+  "settings.search.more_engines.help": "Google, Local en Open staan standaard aan zodat de lijst hierboven niet meteen vol staat. Kies er meer bij via het menu hieronder - verwijder er een met de ✕.",
   "settings.search.more_engines.add_option": "+ Zoekmachine toevoegen…",
   "settings.search.more_engines.empty": "Nog geen ingeschakeld - kies er een uit het menu hieronder.",
 

@@ -73,7 +73,7 @@ fn main() {
             commands::remove_custom_engine,
             commands::list_all_builtin_engines,
             commands::set_builtin_engine_enabled,
-            commands::search_mypc,
+            commands::search_local,
             commands::open_app,
             commands::pick_app_for,
             commands::remove_custom_app,

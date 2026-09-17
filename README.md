@@ -17,9 +17,9 @@
 
 Type a plain query, or a `!bang` and a query to jump straight to one of
 70+ search engines (Google, YouTube, GitHub, Wikipedia, Amazon, and
-more), or to a file or app on your own machine with `!mypc` and
+more), or to a file or app on your own machine with `!local` and
 `!open`. Add your own engines and apps from Settings, or turn on any of
-the built-in ones you want - only Google, MyPC and Open are on by
+the built-in ones you want - only Google, Local and Open are on by
 default, to keep the list uncluttered out of the box.
 
 ### Contents
@@ -66,7 +66,7 @@ window if you'd rather stay inside the app - your choice, in Settings.
   search URL. See the full list on the
   [Bangs and Search Engines](../../wiki/Bangs-and-Search-Engines) wiki
   page.
-- **`!mypc` and `!open`** - search your own machine's files, or launch
+- **`!local` and `!open`** - search your own machine's files, or launch
   an installed app by name, without leaving the keyboard.
 - **Themes and a one-click marketplace** - switch themes instantly from
   Settings, install community themes from the marketplace with one
@@ -104,9 +104,9 @@ chmod +x luma-linux-x64
 ./luma-linux-x64
 ```
 
-macOS binaries aren't notarized (that costs an Apple developer account),
-so the first time you open one, right-click it and choose "Open" to get
-past Gatekeeper, instead of double-clicking.
+On macOS, don't double-click the app the first time. Right-click it (or
+Control-click) and choose "Open" instead, then confirm in the dialog that
+pops up. After that first launch, it opens normally from then on.
 
 Full first-run and uninstall details are on the
 [Installation](../../wiki/Installation) wiki page.
