@@ -131,31 +131,20 @@
 
       var el = document.createElement("div");
       el.id = "luma-update-banner";
-      el.style.cssText =
-        "position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:9998;" +
-        "display:flex;align-items:center;gap:12px;max-width:calc(100% - 40px);" +
-        "background:rgba(18,10,28,.96);color:#fff;font-family:monospace;font-size:13px;" +
-        "padding:10px 14px;border-radius:8px;border:1px solid rgba(207,89,230,.4);" +
-        "box-shadow:0 10px 30px rgba(0,0,0,.5);";
+      el.className = "luma-update-banner";
 
       var text = document.createElement("span");
       text.textContent = tt("update_banner.new_version_available", "A new version of LUMA is available.");
 
       var updateBtn = document.createElement("button");
       updateBtn.type = "button";
+      updateBtn.className = "luma-update-banner-btn";
       updateBtn.textContent = tt("update_banner.update_now", "Update now");
-      updateBtn.style.cssText =
-        "font-family:monospace;font-size:13px;padding:5px 12px;border-radius:5px;" +
-        "border:1px solid rgba(207,89,230,.6);background:rgba(255,255,255,.06);" +
-        "color:#fff;cursor:pointer;flex-shrink:0;";
 
       var laterBtn = document.createElement("button");
       laterBtn.type = "button";
+      laterBtn.className = "luma-update-banner-btn luma-update-banner-btn-later";
       laterBtn.textContent = tt("update_banner.later", "Later");
-      laterBtn.style.cssText =
-        "font-family:monospace;font-size:12px;padding:5px 10px;border-radius:5px;" +
-        "border:1px solid transparent;background:transparent;color:#c4c4c4;" +
-        "cursor:pointer;opacity:.75;flex-shrink:0;";
 
       var bridge = getTauriBridge();
       if (bridge && bridge.event) {

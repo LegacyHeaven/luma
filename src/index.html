@@ -37,6 +37,47 @@
     ::-webkit-scrollbar-thumb:hover { background: var(--color-purple, #8000ff); }
     ::-webkit-scrollbar-corner { background: transparent; }
 
+    /* Update-available banner - themed like the rest of the app instead of
+       a hardcoded purple, see showUpdateBanner() in main.js. */
+    .luma-update-banner {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      z-index: 9998;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: calc(100% - 40px);
+      background: var(--box-first-color, #120a1c);
+      color: var(--color-white, #fff);
+      font-family: var(--font-family, monospace);
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--box-border-color, #3a1f5c);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+    }
+    .luma-update-banner-btn {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 5px;
+      border: 1px solid var(--color-light-purple, #cf59e6);
+      background: rgba(255, 255, 255, .06);
+      color: var(--color-white, #fff);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .luma-update-banner-btn-later {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--color-gray, #c4c4c4);
+      opacity: .75;
+    }
+
     #page-transition-overlay {
       position: fixed;
       inset: 0;
