@@ -81,6 +81,9 @@ fn disable_window_border(app: &AppHandle, window: &WebviewWindow) {
     use windows::Win32::Graphics::Dwm::{
         DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
     };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SetWindowPos, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+    };
 
     let hwnd = match window.hwnd() {
         Ok(h) => h,
@@ -114,7 +117,25 @@ fn disable_window_border(app: &AppHandle, window: &WebviewWindow) {
                 window.label()
             ),
         );
+        return;
     }
+
+    // DWM otherwise only bakes the new border color into the non-client
+    // frame on the window's next natural repaint - on a brand-new window
+    // that repaint IS the first show(), so without this the very first
+    // frame still flashes the default OS border for a tick. SWP_FRAMECHANGED
+    // forces that recalculation immediately, while still hidden.
+    let _ = unsafe {
+        SetWindowPos(
+            hwnd,
+            None,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+        )
+    };
 }
 
 #[cfg(not(windows))]
