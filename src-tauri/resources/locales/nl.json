@@ -69,6 +69,8 @@
   "tray.quit": "LUMA afsluiten",
   "tray.tooltip": "LUMA - druk op je sneltoets om te zoeken",
   "dialog.pick_app_title": "Selecteer de app voor \"{0}\"",
+  "offline.banner": "Je bent offline - online functies zijn niet beschikbaar tot je verbinding terug is.",
+  "offline.feature_unavailable": "Je bent offline - dit kan nu niet bereikt worden.",
 
   "settings.back_to_search": "Terug naar zoeken",
   "settings.brand": "Instellingen",

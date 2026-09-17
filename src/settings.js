@@ -608,6 +608,10 @@
 
   function checkForUpdates() {
     if (!invoke) return;
+    if (window.LumaOffline && !window.LumaOffline.isOnline()) {
+      updateStatus.textContent = tt("offline.feature_unavailable", "You're offline - can't reach that right now.");
+      return;
+    }
     checkUpdatesBtn.disabled = true;
     updateStatus.textContent = tt("settings.updates.status_checking_short", "Checking…");
     installUpdateBtn.hidden = true;
@@ -1218,6 +1222,10 @@
   async function loadMarketplace(options) {
     options = options || {};
     if (marketplaceLoading) return;
+    if (window.LumaOffline && !window.LumaOffline.isOnline()) {
+      marketplaceStatus.textContent = tt("offline.feature_unavailable", "You're offline - can't reach that right now.");
+      return;
+    }
     marketplaceLoading = true;
     marketplacePrevBtn.disabled = true;
     marketplaceNextBtn.disabled = true;
@@ -1248,6 +1256,10 @@
   marketplaceUrlInstallBtn.addEventListener("click", function () {
     var url = marketplaceUrlInput.value.trim();
     if (!url) return;
+    if (window.LumaOffline && !window.LumaOffline.isOnline()) {
+      marketplaceUrlStatus.textContent = tt("offline.feature_unavailable", "You're offline - can't reach that right now.");
+      return;
+    }
     marketplaceUrlInstallBtn.disabled = true;
     marketplaceUrlStatus.textContent = tt("settings.appearance.marketplace.installing", "Installing…");
     invoke("install_theme_from_url", { cssUrl: url, jsonUrl: null, idHint: null, nameHint: null, authorHint: null })
@@ -1296,6 +1308,15 @@
       revealBody();
       showFatalBanner("failed to start up (" + (err && err.message ? err.message : err) + ")");
     });
+  }
+
+  if (window.LumaOffline) {
+    window.LumaOffline.onChange(function (online) {
+      checkUpdatesBtn.disabled = !online;
+      marketplaceUrlInstallBtn.disabled = !online;
+    });
+    checkUpdatesBtn.disabled = !window.LumaOffline.isOnline();
+    marketplaceUrlInstallBtn.disabled = !window.LumaOffline.isOnline();
   }
 
   setTimeout(revealBody, 4000);

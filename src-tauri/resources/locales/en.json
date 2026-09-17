@@ -69,6 +69,8 @@
   "tray.quit": "Quit LUMA",
   "tray.tooltip": "LUMA - press your shortcut to search",
   "dialog.pick_app_title": "Select the app for \"{0}\"",
+  "offline.banner": "You're offline - online features are unavailable until your connection is back.",
+  "offline.feature_unavailable": "You're offline - can't reach that right now.",
 
   "settings.back_to_search": "Back to search",
   "settings.brand": "Settings",

@@ -384,7 +384,11 @@
       }
     });
 
-    if (!isSpotlight && (!config.general || config.general.check_for_updates !== false)) {
+    if (
+      !isSpotlight &&
+      (!config.general || config.general.check_for_updates !== false) &&
+      (!window.LumaOffline || window.LumaOffline.isOnline())
+    ) {
       invoke("check_for_update")
         .then(function (status) {
           if (status.checked_ok && status.available) {
