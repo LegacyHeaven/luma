@@ -907,7 +907,10 @@ pub fn reset_to_defaults(app: AppHandle, state: State<AppState>) -> Result<(), S
     let defaults = LumaConfig::default();
     crate::config::save(&app, &defaults)?;
     *state.config.lock().unwrap() = defaults;
-    crate::logging::info(&app, "reset_to_defaults: config.toml reset to defaults".to_string());
+    crate::logging::info(
+        &app,
+        "reset_to_defaults: config.toml reset to defaults".to_string(),
+    );
     let _ = app.emit("luma://config-changed", ());
     Ok(())
 }
@@ -923,7 +926,10 @@ pub fn clear_browsing_data(app: AppHandle) -> Result<(), String> {
         .ok_or("no Luma window is open to clear data from")?;
     win.clear_all_browsing_data()
         .map_err(|e| format!("couldn't clear browsing data: {e}"))?;
-    crate::logging::info(&app, "clear_browsing_data: cleared cookies/cache/history".to_string());
+    crate::logging::info(
+        &app,
+        "clear_browsing_data: cleared cookies/cache/history".to_string(),
+    );
     Ok(())
 }
 

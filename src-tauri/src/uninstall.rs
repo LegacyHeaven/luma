@@ -42,7 +42,12 @@ fn install_dir() -> Option<PathBuf> {
 
 #[cfg(target_os = "linux")]
 fn install_dir() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local").join("share").join("Luma"))
+    std::env::var_os("HOME").map(|home| {
+        PathBuf::from(home)
+            .join(".local")
+            .join("share")
+            .join("Luma")
+    })
 }
 
 /// Removes the shortcuts and the installed copy, then exits the process.
