@@ -1,9 +1,46 @@
-use crate::{commands::AppState, window};
+use crate::{commands::AppState, locales, window};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager,
+    AppHandle, Manager, Wry,
 };
+
+/// Handles to the tray's translatable pieces, so a locale change (see
+/// `retext`) can relabel them without tearing down and rebuilding the tray.
+pub struct TrayMenuItems {
+    pub show: MenuItem<Wry>,
+    pub spotlight: MenuItem<Wry>,
+    pub settings: MenuItem<Wry>,
+    pub quit: MenuItem<Wry>,
+}
+
+/// Re-applies the given locale's strings to the tray menu items and tooltip.
+/// Called once at build time and again whenever `save_config` sees the
+/// locale change, so the native tray stays in sync with the rest of the app.
+pub fn retext(app: &AppHandle, locale_id: &str) {
+    let strings = locales::strings_for(app, locale_id);
+    let text = |key: &str, fallback: &str| {
+        strings
+            .get(key)
+            .cloned()
+            .unwrap_or_else(|| fallback.to_string())
+    };
+
+    let items = app.state::<TrayMenuItems>();
+    let _ = items.show.set_text(text("tray.open", "Open LUMA"));
+    let _ = items
+        .spotlight
+        .set_text(text("tray.toggle_spotlight", "Toggle Spotlight"));
+    let _ = items.settings.set_text(text("tray.settings", "Settings…"));
+    let _ = items.quit.set_text(text("tray.quit", "Quit LUMA"));
+
+    if let Some(tray) = app.tray_by_id("luma-tray") {
+        let _ = tray.set_tooltip(Some(text(
+            "tray.tooltip",
+            "LUMA - press your shortcut to search",
+        )));
+    }
+}
 
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let show_item = MenuItem::with_id(app, "show", "Open LUMA", true, None::<&str>)?;
@@ -12,6 +49,13 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let settings_item = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit LUMA", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
+
+    app.manage(TrayMenuItems {
+        show: show_item.clone(),
+        spotlight: spotlight_item.clone(),
+        settings: settings_item.clone(),
+        quit: quit_item.clone(),
+    });
 
     let menu = Menu::with_items(
         app,
@@ -55,6 +99,16 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             _ => {}
         })
         .build(app)?;
+
+    let locale = app
+        .state::<AppState>()
+        .config
+        .lock()
+        .unwrap()
+        .general
+        .locale
+        .clone();
+    retext(app, &locale);
 
     Ok(())
 }

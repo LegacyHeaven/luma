@@ -63,6 +63,12 @@
   "search.tips.53": "LUMA remembers your window size and position between launches.",
   "search.tips.54": "Windows, macOS, and Linux all get the same LUMA experience, and the same shortcuts.",
 
+  "tray.open": "Open LUMA",
+  "tray.toggle_spotlight": "Toggle Spotlight",
+  "tray.settings": "Settings…",
+  "tray.quit": "Quit LUMA",
+  "tray.tooltip": "LUMA - press your shortcut to search",
+
   "settings.back_to_search": "Back to search",
   "settings.brand": "Settings",
   "settings.motto": "Configure LUMA.",

@@ -68,6 +68,11 @@ pub fn save_config(
         window::apply_main_window_size(&app, &new_config.window.main_window_size);
     }
 
+    let old_locale = state.config.lock().unwrap().general.locale.clone();
+    if new_config.general.locale != old_locale {
+        crate::tray::retext(&app, &new_config.general.locale);
+    }
+
     *state.config.lock().unwrap() = new_config;
 
     let _ = app.emit("luma://config-changed", ());

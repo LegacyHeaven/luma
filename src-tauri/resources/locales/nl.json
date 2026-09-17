@@ -63,6 +63,12 @@
   "search.tips.53": "LUMA onthoudt de grootte en positie van het venster tussen keren dat je 'm opent.",
   "search.tips.54": "Windows, macOS en Linux krijgen allemaal dezelfde LUMA-ervaring, en dezelfde sneltoetsen.",
 
+  "tray.open": "LUMA openen",
+  "tray.toggle_spotlight": "Spotlight aan/uit",
+  "tray.settings": "Instellingen…",
+  "tray.quit": "LUMA afsluiten",
+  "tray.tooltip": "LUMA - druk op je sneltoets om te zoeken",
+
   "settings.back_to_search": "Terug naar zoeken",
   "settings.brand": "Instellingen",
   "settings.motto": "LUMA configureren.",
