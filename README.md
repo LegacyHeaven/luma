@@ -80,10 +80,7 @@ window if you'd rather stay inside the app - your choice, in Settings.
   of everything LUMA does, both live in an in-app console (with a live
   RAM/process panel) and in a rotating file on disk.
 - **Localization** - the interface is available in English and Dutch,
-  with live language switching and a community-editable locale file, so
-  adding a new language is one file, not a rebuild.
-- **A custom, Discord-style titlebar and install flow** - LUMA looks and
-  installs the same, consistent way on every platform, no OS chrome.
+  with live language switching and a community-editable locale file.
 
 ## Download
 
