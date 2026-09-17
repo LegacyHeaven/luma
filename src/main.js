@@ -226,6 +226,17 @@
       document.head.appendChild(style);
     }
     style.textContent = css;
+
+    // Remember this theme's background so the boot/transition overlay can
+    // match it immediately next time, before this CSS has loaded - avoids
+    // a color-mismatch flash for any non-default theme.
+    var bgMatch = css.match(/--color-dark-mode:\s*(#[0-9a-fA-F]{3,8})/);
+    if (bgMatch) {
+      document.documentElement.style.setProperty("--boot-bg", bgMatch[1]);
+      try {
+        localStorage.setItem("luma-boot-bg", bgMatch[1]);
+      } catch (e) {}
+    }
   }
 
   function applyCustomCss(css) {

@@ -145,6 +145,23 @@ body.settings-page .settings-wrapper {
 
 .settings-input-sm { width: auto; }
 
+select.settings-input {
+  /* ponytail: color-scheme is hardcoded dark since every shipped theme is
+     dark; revisit if a light community theme shows up. */
+  color-scheme: dark;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath fill='none' stroke='%23c4c4c4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1 1l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+}
+
+select.settings-input option {
+  background: var(--box-first-color, #180d29);
+  color: var(--color-white, #fff);
+}
+
 textarea.settings-input {
   min-height: 140px;
   resize: vertical;
