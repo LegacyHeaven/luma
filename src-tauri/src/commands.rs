@@ -509,10 +509,15 @@ pub fn pick_app_for(app: AppHandle, state: State<AppState>, name: String) -> Res
             .spawn();
     }
 
+    let locale = state.config.lock().unwrap().general.locale.clone();
+    let title_fmt = crate::locales::strings_for(&app, &locale)
+        .get("dialog.pick_app_title")
+        .cloned()
+        .unwrap_or_else(|| "Select the app for \"{0}\"".to_string());
     let picker = app
         .dialog()
         .file()
-        .set_title(format!("Select the app for \"{name}\""));
+        .set_title(title_fmt.replace("{0}", &name));
     #[cfg(target_os = "windows")]
     let picker = picker.add_filter("Applications", &["exe"]);
     #[cfg(target_os = "macos")]

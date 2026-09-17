@@ -68,6 +68,7 @@
   "tray.settings": "Settings…",
   "tray.quit": "Quit LUMA",
   "tray.tooltip": "LUMA - press your shortcut to search",
+  "dialog.pick_app_title": "Select the app for \"{0}\"",
 
   "settings.back_to_search": "Back to search",
   "settings.brand": "Settings",
