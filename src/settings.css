@@ -303,14 +303,25 @@ textarea.settings-input {
 }
 
 .save-status {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 500;
+  padding: 8px 16px;
+  background: rgba(8, 4, 14, .95);
+  border: 1px solid var(--box-border-color, #3a1f5c);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45), 0 0 0 1px rgba(128, 0, 255, .15);
   font-family: var(--font-family, monospace);
-  font-size: 1.2rem;
+  font-size: 1rem;
   color: var(--color-light-purple, #cf59e6);
   opacity: 0;
-  transition: opacity .3s ease;
+  transform: translateY(8px);
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
 }
 
-.save-status.visible { opacity: .85; }
+.save-status.visible { opacity: .92; transform: translateY(0); }
 .save-status.error { color: #ff6b6b; }
 
 .build-stamp {

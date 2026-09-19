@@ -182,22 +182,73 @@
     }
   }
 
-  // ponytail: plugins get only a `LumaPlugin.register()` capability, not the
-  // page's `window`/`document`/`invoke` - keeps a broken plugin from being
-  // handed anything by default. This isn't a real security boundary (a
-  // malicious plugin can still reach the global scope); actual vetting is
-  // the marketplace + CI scan (#133) and output sanitization (#134).
-  function loadPluginSource(source) {
-    var registered = null;
-    try {
-      var fn = new Function("LumaPlugin", source);
-      fn({ register: function (def) { registered = def; } });
-    } catch (e) {
-      dlog("error", "plugin failed to load: " + e);
-      return null;
+  var PluginSandbox = (function () {
+    var iframe = null;
+    var readyPromise = null;
+    var reqSeq = 0;
+    var pendingHandle = {};
+    var pendingRegister = {};
+
+    function ensure() {
+      if (readyPromise) return readyPromise;
+      readyPromise = new Promise(function (resolve) {
+        iframe = document.createElement("iframe");
+        iframe.setAttribute("sandbox", "allow-scripts");
+        iframe.style.display = "none";
+        iframe.src = "plugin-sandbox.html";
+        window.addEventListener("message", function (ev) {
+          if (!iframe || ev.source !== iframe.contentWindow) return;
+          var data = ev.data || {};
+          if (data.type === "ready") {
+            resolve();
+          } else if (data.type === "registered") {
+            var p = pendingRegister[data.id];
+            if (p) {
+              delete pendingRegister[data.id];
+              p(!!data.ok);
+            }
+          } else if (data.type === "handled") {
+            var q = pendingHandle[data.reqId];
+            if (q) {
+              delete pendingHandle[data.reqId];
+              clearTimeout(q.timer);
+              q.resolve(data.error ? null : data.answer);
+            }
+          }
+        });
+        document.body.appendChild(iframe);
+      });
+      return readyPromise;
     }
-    return registered;
-  }
+
+    function register(id, source) {
+      return ensure().then(function () {
+        return new Promise(function (resolve) {
+          pendingRegister[id] = resolve;
+          iframe.contentWindow.postMessage({ type: "register", id: id, source: source }, "*");
+        });
+      });
+    }
+
+    function handle(pluginId, bang, query) {
+      return ensure().then(function () {
+        return new Promise(function (resolve) {
+          var reqId = ++reqSeq;
+          var timer = setTimeout(function () {
+            delete pendingHandle[reqId];
+            resolve(null);
+          }, 3000);
+          pendingHandle[reqId] = { resolve: resolve, timer: timer };
+          iframe.contentWindow.postMessage(
+            { type: "handle", reqId: reqId, pluginId: pluginId, bang: bang, query: query },
+            "*"
+          );
+        });
+      });
+    }
+
+    return { register: register, handle: handle };
+  })();
 
   var pluginPopupTimer = null;
   function showPluginPopup(text) {
@@ -205,7 +256,7 @@
     if (!el) {
       el = document.createElement("div");
       el.id = "luma-plugin-popup";
-      el.className = "luma-update-banner";
+      el.className = "luma-plugin-popup";
       document.body.appendChild(el);
     }
     el.textContent = text;
@@ -241,7 +292,16 @@
     if (el) el.hidden = !show;
   }
 
+  function sanitizeCss(css) {
+    return String(css || "")
+      .replace(/@import[^;]*;?/gi, "")
+      .replace(/expression\s*\([^)]*\)/gi, "")
+      .replace(/url\s*\(\s*['"]?\s*javascript:[^)]*\)/gi, "url()")
+      .replace(/-moz-binding\s*:[^;]*;?/gi, "");
+  }
+
   function applyThemeCss(css) {
+    css = sanitizeCss(css);
     var style = document.getElementById("luma-theme-style");
     if (!style) {
       style = document.createElement("style");
@@ -269,7 +329,7 @@
       style.id = "luma-custom-style";
       document.head.appendChild(style);
     }
-    style.textContent = css || "";
+    style.textContent = sanitizeCss(css);
   }
 
   async function boot(tauri) {
@@ -343,7 +403,9 @@
       pluginIds.map(function (id) {
         return invoke("get_plugin_js", { pluginId: id })
           .then(function (source) {
-            pluginHandlers[id] = loadPluginSource(source);
+            return PluginSandbox.register(id, source).then(function (ok) {
+              pluginHandlers[id] = ok;
+            });
           })
           .catch(function (err) {
             dlog("error", "get_plugin_js invoke failed for '" + id + "': " + err);
@@ -363,14 +425,15 @@
           dlog("info", "search submitted -> local, engine=" + result.engine + " query=" + result.query);
           var engineCfg = deck.engines[result.engine];
           if (engineCfg && engineCfg.plugin_id) {
-            var handler = pluginHandlers[engineCfg.plugin_id];
-            var answer = null;
-            try {
-              answer = handler && handler.handle ? handler.handle(engineCfg.bang, result.query) : null;
-            } catch (err) {
-              dlog("error", "plugin '" + engineCfg.plugin_id + "' handle() threw: " + err);
-            }
-            showPluginPopup(answer && answer.text ? answer.text : tt("plugin.no_answer", "No answer for that."));
+            var registered = pluginHandlers[engineCfg.plugin_id];
+            (registered ? PluginSandbox.handle(engineCfg.plugin_id, engineCfg.bang, result.query) : Promise.resolve(null))
+              .catch(function (err) {
+                dlog("error", "plugin '" + engineCfg.plugin_id + "' handle() threw: " + err);
+                return null;
+              })
+              .then(function (answer) {
+                showPluginPopup(answer && answer.text ? answer.text : tt("plugin.no_answer", "No answer for that."));
+              });
             return;
           }
           if (result.engine === "Open") {

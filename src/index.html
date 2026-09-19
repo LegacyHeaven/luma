@@ -78,6 +78,25 @@
       opacity: .75;
     }
 
+    .luma-plugin-popup {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 9998;
+      max-width: calc(100% - 40px);
+      background: var(--box-first-color, #120a1c);
+      color: var(--color-white, #fff);
+      font-family: var(--font-family, monospace);
+      font-size: 13px;
+      line-height: 1.4;
+      text-align: center;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--box-border-color, #3a1f5c);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+    }
+
     #page-transition-overlay {
       position: fixed;
       inset: 0;
