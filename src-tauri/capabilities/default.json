@@ -21,6 +21,7 @@
     "allow-reveal-themes-folder",
     "allow-list-plugins",
     "allow-get-plugin-js",
+    "allow-reveal-plugins-folder",
     "allow-uninstall-plugin",
     "allow-set-plugin-enabled",
     "allow-fetch-plugin-marketplace-index",

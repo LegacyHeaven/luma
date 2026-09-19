@@ -140,6 +140,7 @@
   "settings.search.plugins.help": "Quick-answer bangs like {code}@time{/code} - toggle any installed plugin on or off.",
   "settings.search.plugins.empty": "No plugins installed - grab one from the marketplace below.",
   "settings.search.plugins.uninstall_title": "Uninstall {0}",
+  "settings.search.plugins.open_folder_button": "Open plugins folder",
 
   "settings.search.plugin_marketplace.title": "Plugin marketplace",
   "settings.search.plugin_marketplace.help": "Community plugins, installed with one click - no restart needed.",

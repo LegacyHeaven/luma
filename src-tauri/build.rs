@@ -35,6 +35,7 @@ fn main() {
             "reveal_themes_folder",
             "list_plugins",
             "get_plugin_js",
+            "reveal_plugins_folder",
             "uninstall_plugin",
             "set_plugin_enabled",
             "fetch_plugin_marketplace_index",

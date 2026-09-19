@@ -140,6 +140,7 @@
   "settings.search.plugins.help": "Snelle-antwoord-bangs zoals {code}@time{/code} - schakel elke geïnstalleerde plugin aan of uit.",
   "settings.search.plugins.empty": "Nog geen plugins geïnstalleerd - pak er eentje uit de marketplace hieronder.",
   "settings.search.plugins.uninstall_title": "{0} verwijderen",
+  "settings.search.plugins.open_folder_button": "Plugins-map openen",
 
   "settings.search.plugin_marketplace.title": "Plugin-marketplace",
   "settings.search.plugin_marketplace.help": "Plugins van de community, met één klik geïnstalleerd - geen herstart nodig.",

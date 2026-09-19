@@ -107,6 +107,16 @@ pub fn reveal_themes_folder(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn reveal_plugins_folder(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    crate::config::ensure_plugins_dir(&app);
+    let dir = crate::config::plugins_dir(&app);
+    app.opener()
+        .open_path(dir.to_string_lossy().to_string(), None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn uninstall_theme(
     app: AppHandle,
     state: State<AppState>,

@@ -60,6 +60,7 @@ fn main() {
             commands::reveal_themes_folder,
             commands::list_plugins,
             commands::get_plugin_js,
+            commands::reveal_plugins_folder,
             commands::uninstall_plugin,
             commands::set_plugin_enabled,
             plugins::fetch_plugin_marketplace_index,

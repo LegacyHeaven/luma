@@ -81,6 +81,7 @@
   var addBuiltinEngineSelect = document.getElementById("add-builtin-engine");
   var customAppsList = document.getElementById("custom-apps-list");
   var pluginsList = document.getElementById("plugins-list");
+  var openPluginsFolderBtn = document.getElementById("open-plugins-folder");
   var themeOptionsContainer = document.getElementById("theme-options");
   var customCssTextarea = document.getElementById("custom-css");
   var openThemesFolderBtn = document.getElementById("open-themes-folder");
@@ -1050,7 +1051,13 @@
           nameHint: entry.name,
           authorHint: entry.author,
         })
-          .then(async function () {
+          .then(async function (plugin) {
+            await invoke("set_plugin_enabled", { pluginId: plugin.id, enabled: true }).catch(function (err) {
+              dlog("error", "set_plugin_enabled invoke failed: " + err);
+            });
+            if (currentConfig.plugins.enabled_plugins.indexOf(plugin.id) === -1) {
+              currentConfig.plugins.enabled_plugins.push(plugin.id);
+            }
             await loadPlugins();
             await refreshPluginMarketplaceGrid();
             dlog("info", "settings: installed marketplace plugin " + entry.id);
@@ -1134,6 +1141,12 @@
     pluginMarketplaceUrlStatus.textContent = tt("settings.appearance.marketplace.installing", "Installing…");
     invoke("install_plugin_from_url", { jsUrl: url, jsonUrl: null, idHint: null, nameHint: null, authorHint: null })
       .then(async function (plugin) {
+        await invoke("set_plugin_enabled", { pluginId: plugin.id, enabled: true }).catch(function (err) {
+          dlog("error", "set_plugin_enabled invoke failed: " + err);
+        });
+        if (currentConfig.plugins.enabled_plugins.indexOf(plugin.id) === -1) {
+          currentConfig.plugins.enabled_plugins.push(plugin.id);
+        }
         await loadPlugins();
         pluginMarketplaceUrlStatus.textContent = ff("settings.search.plugin_marketplace.url_installed", [plugin.name], "Installed \"{0}\" - it's on above.");
         pluginMarketplaceUrlInput.value = "";
@@ -1340,6 +1353,13 @@
     if (!invoke) return;
     invoke("reveal_themes_folder").catch(function (err) {
       dlog("error", "reveal_themes_folder invoke failed: " + err);
+    });
+  });
+
+  openPluginsFolderBtn.addEventListener("click", function () {
+    if (!invoke) return;
+    invoke("reveal_plugins_folder").catch(function (err) {
+      dlog("error", "reveal_plugins_folder invoke failed: " + err);
     });
   });
 
