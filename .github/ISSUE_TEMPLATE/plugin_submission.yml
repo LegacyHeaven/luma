@@ -1,0 +1,64 @@
+name: Plugin submission
+description: Submit a plugin for the in-app Marketplace, or request one you'd like to see made.
+title: "[Plugin]: "
+labels: ["plugin submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing a plugin! If you already have a finished `plugin.js` and `plugin.json`, fill this in and we'll add it to `marketplace/plugins/index.json`. If you're just requesting a plugin idea for someone else to build, fill in what you can and skip the file links. See the wiki's "Writing a Plugin" guide for the plugin.json shape and sandbox rules.
+  - type: input
+    id: plugin-name
+    attributes:
+      label: Plugin name
+      description: The display name shown in the Marketplace.
+      placeholder: "Calculator & Unit Convert"
+    validations:
+      required: true
+  - type: input
+    id: author
+    attributes:
+      label: Author
+      description: Name or handle to credit.
+      placeholder: "Your name or GitHub handle"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: One sentence describing what the plugin does.
+      placeholder: "@calc for arithmetic, @convert for unit conversion."
+    validations:
+      required: true
+  - type: input
+    id: bangs
+    attributes:
+      label: "@bangs used"
+      description: The plugin trigger word(s), comma-separated.
+      placeholder: "calc, convert"
+    validations:
+      required: false
+  - type: input
+    id: js-url
+    attributes:
+      label: plugin.js URL (if already built)
+      description: Link to a raw plugin.js file (e.g. a gist, or a file in your fork).
+      placeholder: "https://raw.githubusercontent.com/.../plugin.js"
+    validations:
+      required: false
+  - type: input
+    id: json-url
+    attributes:
+      label: plugin.json URL (if already built)
+      description: Link to a raw plugin.json manifest.
+      placeholder: "https://raw.githubusercontent.com/.../plugin.json"
+    validations:
+      required: false
+  - type: checkboxes
+    id: license
+    attributes:
+      label: License
+      options:
+        - label: I'm okay with this plugin being included in Luma under the project's MIT license.
+          required: true
