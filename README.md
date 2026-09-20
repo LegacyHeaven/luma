@@ -12,7 +12,7 @@
 
 <p align="center">
   <b>LUMA</b> is a fast, open-source spotlight-style search launcher for
-  Linux, macOS and Windows, built with <a href="https://tauri.app">Tauri</a>.
+  Linux, macOS and Windows.
 </p>
 
 Type a plain query, or a `!bang` and a query to jump straight to one of
@@ -28,9 +28,7 @@ default, to keep the list uncluttered out of the box.
 - [How it runs](#how-it-runs)
 - [Features](#features)
 - [Download](#download)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [For developers](#for-developers) <sub>(build from source, project layout)</sub>
+- [Docs](#docs)
 - [License](#license)
 
 ## Screenshots
@@ -68,23 +66,15 @@ window if you'd rather stay inside the app - your choice, in Settings.
   page.
 - **`!local` and `!open`** - search your own machine's files, or launch
   an installed app by name, without leaving the keyboard.
-- **Themes and a one-click marketplace** - switch themes instantly from
-  Settings, install community themes from the marketplace with one
-  click (with paging once there are more than a handful), or drop in
-  your own `theme.css` (with custom CSS on top, if you want to go
-  further).
-- **Plugins** - quick-answer bangs like `@time` and `@date` that run a
-  small piece of JS instead of opening a search, installed the same
-  three ways as themes (marketplace, URL, or by hand).
-- **A real auto-updater** - LUMA checks GitHub for a newer build and
-  installs it itself; no separate download, no installer to re-run.
-- **Advanced logging & a live debug console** - off by default and
-  fully inert while off; turn it on and get a detailed, timestamped log
-  of everything LUMA does, both live in an in-app console (with a live
-  RAM/process panel) and in a rotating file on disk.
+- **Themes and plugins** - install either one with a single click from
+  the built-in marketplace, or add your own. Plugins add quick-answer
+  bangs like `@time` and `@date` that skip the search entirely.
+- **Automatic updates** - LUMA checks for a new version and installs it
+  for you. No separate download, no installer to re-run.
+- **Advanced logging** - off by default; turn it on in Settings if you
+  ever need to troubleshoot something or attach a log to a bug report.
 - **Localization** - the interface is available in English and Dutch,
-  with live language switching and a community-editable locale file, so
-  adding a new language is one file.
+  with more languages on the way.
 
 ## Download
 
@@ -119,54 +109,21 @@ pops up. After that first launch, it opens normally from then on.
 Full first-run and uninstall details are on the
 [Installation](../../wiki/Installation) wiki page.
 
-## Documentation
+## Docs
 
-The full docs live on the [wiki](../../wiki):
+<p align="center">
+  <a href="../../wiki"><img src="https://img.shields.io/badge/User%20Guide-open%20the%20wiki-8000ff?style=for-the-badge" alt="User Guide"></a>
+  <a href="../../wiki/Contributing"><img src="https://img.shields.io/badge/Developer%20Guide-build%20%26%20contribute-3a1f5c?style=for-the-badge" alt="Developer Guide"></a>
+</p>
 
-- [Installation](../../wiki/Installation) - prebuilt binaries and
-  building from source, in more detail
-- [Configuration](../../wiki/Configuration) - every `config.toml` field,
-  explained
-- [Theming](../../wiki/Theming) - build and install your own CSS theme,
-  or publish one to the marketplace
-- [Plugins](../../wiki/Plugins) - quick-answer bangs like `@time`,
-  installing them, and writing your own
-- [Bangs and Search Engines](../../wiki/Bangs-and-Search-Engines) - the
-  `!bang` system, the full built-in engine table, and how to add your
-  own
-- [Logging and Diagnostics](../../wiki/Logging-and-Diagnostics) - the
-  advanced logging system, log format, and debug console
-- [Community Translations](../../wiki/Community-Translations) - add a
-  new language in one file
-- [Contributing](../../wiki/Contributing) - dev setup, pre-PR checks,
-  and where things live
+The [User Guide](../../wiki) covers installing, configuring, theming
+and everything else you'll need day to day. Building from source,
+writing a plugin or theme, and how LUMA works under the hood all live
+in the [Developer Guide](../../wiki/Contributing) instead.
 
-## Contributing
-
-Bug reports, feature ideas and theme submissions all have their own
-issue template - open one from the
-[Issues](../../issues/new/choose) page. General questions and
-open-ended discussion belong in
-[Discussions](../../discussions) instead of an issue.
-
-Want to change code? See [Contributing](../../wiki/Contributing) on the
-wiki, and the [For developers](#for-developers) section below to get a
-build running locally.
-
-## For developers
-
-Building from source, the full project layout, and a deep-dive into
-every internal system now live on the wiki's
-[Contributing / Developer Guide](../../wiki/Contributing) - not needed
-if you just want to run LUMA. Short version: you'll need
-[Rust](https://rustup.rs) and Node.js 18+ (Node only runs the Tauri CLI,
-the app itself has no JS runtime dependency), then:
-
-```bash
-npm install
-npm run dev     # run it with hot reload
-npm run build   # produce a release binary at src-tauri/target/release/luma
-```
+Found a bug or have a feature idea? Open one from the
+[Issues](../../issues/new/choose) page. General questions belong in
+[Discussions](../../discussions).
 
 ## License
 

@@ -120,11 +120,6 @@ fn disable_window_border(app: &AppHandle, window: &WebviewWindow) {
         return;
     }
 
-    // DWM otherwise only bakes the new border color into the non-client
-    // frame on the window's next natural repaint - on a brand-new window
-    // that repaint IS the first show(), so without this the very first
-    // frame still flashes the default OS border for a tick. SWP_FRAMECHANGED
-    // forces that recalculation immediately, while still hidden.
     let _ = unsafe {
         SetWindowPos(
             hwnd,
@@ -250,11 +245,6 @@ pub fn show_main_window(app: &AppHandle) {
             disable_window_border(app, &window);
             disable_webview_background(app, &window);
 
-            // Don't show the window until the frontend has config/theme/engines
-            // loaded and painted - showing it immediately raced the first real
-            // frame and could flash blank/white while boot() was still awaiting
-            // its invoke() calls. Same once+timeout pattern as the spotlight
-            // window's "frontend-ready" gate below.
             let shown_once = Arc::new(AtomicBool::new(false));
 
             let win_for_ready = window.clone();

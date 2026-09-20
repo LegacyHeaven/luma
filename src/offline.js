@@ -1,11 +1,3 @@
-// Offline detection shared by index.html and settings.html: shows a themed
-// banner (reusing the update-banner CSS already in both pages) while
-// navigator.onLine is false, and lets main.js/settings.js gate online-only
-// actions (marketplace fetch, update checks) through LumaOffline.isOnline().
-//
-// ponytail: navigator.onLine only reflects whether the OS thinks it has a
-// network interface up, not real internet reachability - good enough here
-// since every online-only call already has its own try/catch fallback.
 (function () {
   "use strict";
 

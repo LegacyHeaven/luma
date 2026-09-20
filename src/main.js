@@ -20,10 +20,6 @@
       }, NAV_TRANSITION_MS);
     }
 
-    // Tells the Rust side it's safe to show the (until-now hidden) main
-    // window - see show_main_window()'s "luma://main-ready" gate. Only the
-    // main window is created hidden this way; the spotlight has its own
-    // earlier "frontend-ready" signal above.
     if (!isSpotlight && !mainReadySignaled) {
       mainReadySignaled = true;
       var tauri = getTauriBridge();
@@ -59,9 +55,6 @@
     return window.LumaI18n ? window.LumaI18n.format(key, params, fallback) : fallback;
   }
 
-  // Rotating tips under the search bar. Tip 0 is the original !bang/Esc
-  // hint (kept first so existing users still see it immediately); the rest
-  // are translatable one-liners in locales/*.json under "search.tips.N".
   var TIP_COUNT = 55;
   var tipEl = null;
   var tipIndex = 0;
@@ -84,7 +77,7 @@
   }
 
   function scheduleNextTip() {
-    var delay = 30000 + Math.random() * 60000; // 30-90s
+    var delay = 30000 + Math.random() * 60000;
     tipTimer = setTimeout(function () {
       var next = tipIndex;
       while (next === tipIndex) next = Math.floor(Math.random() * TIP_COUNT);
@@ -202,12 +195,14 @@
           if (data.type === "ready") {
             resolve();
           } else if (data.type === "registered") {
+            if (!data.ok) dlog("error", "plugin '" + data.id + "' registration failed: " + data.error);
             var p = pendingRegister[data.id];
             if (p) {
               delete pendingRegister[data.id];
               p(!!data.ok);
             }
           } else if (data.type === "handled") {
+            if (data.error) dlog("error", "plugin '" + data.pluginId + "' handle() failed: " + data.error);
             var q = pendingHandle[data.reqId];
             if (q) {
               delete pendingHandle[data.reqId];
@@ -310,9 +305,6 @@
     }
     style.textContent = css;
 
-    // Remember this theme's background so the boot/transition overlay can
-    // match it immediately next time, before this CSS has loaded - avoids
-    // a color-mismatch flash for any non-default theme.
     var bgMatch = css.match(/--color-dark-mode:\s*(#[0-9a-fA-F]{3,8})/);
     if (bgMatch) {
       document.documentElement.style.setProperty("--boot-bg", bgMatch[1]);

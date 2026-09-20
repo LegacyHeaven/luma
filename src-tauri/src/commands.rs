@@ -284,10 +284,6 @@ pub fn get_engines(app: AppHandle, state: State<AppState>) -> Result<serde_json:
             }));
         }
 
-        // One BangDeck "engine" per plugin bang (see #130) - each is a
-        // local:true entry like Local/Open, tagged with plugin_id so
-        // main.js's onSearch can route it to that plugin's handler instead
-        // of the search_local/open_app branches.
         for plugin in crate::plugins::list_plugins(&app) {
             if !cfg
                 .plugins
@@ -1012,10 +1008,6 @@ pub fn reset_spotlight_position(app: AppHandle, state: State<AppState>) -> Resul
     Ok(())
 }
 
-/// Settings > Advanced > "Reset to defaults". Overwrites config.toml with
-/// LumaConfig::default() - themes/locales on disk are untouched, only the
-/// settings that reference them (active theme, locale, etc) go back to
-/// their defaults.
 #[tauri::command]
 pub fn reset_to_defaults(app: AppHandle, state: State<AppState>) -> Result<(), String> {
     let defaults = LumaConfig::default();
@@ -1029,10 +1021,6 @@ pub fn reset_to_defaults(app: AppHandle, state: State<AppState>) -> Result<(), S
     Ok(())
 }
 
-/// Settings > Advanced > "Clear browsing data". Luma's windows share one
-/// webview data store, so clearing it from any existing window clears
-/// cookies/cache/history for all of them (the main window, spotlight, and
-/// the built-in browser).
 #[tauri::command]
 pub fn clear_browsing_data(app: AppHandle) -> Result<(), String> {
     let win = window::main_window(&app)
@@ -1047,8 +1035,6 @@ pub fn clear_browsing_data(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Settings > Advanced > "Uninstall LUMA". Removes shortcuts and the
-/// installed copy (Windows/Linux), then exits - see uninstall.rs.
 #[tauri::command]
 pub fn uninstall_app(app: AppHandle) -> Result<(), String> {
     crate::logging::info(&app, "uninstall_app: starting uninstall".to_string());

@@ -225,10 +225,6 @@ pub fn themes_dir(app: &AppHandle) -> PathBuf {
     config_dir(app).join("themes")
 }
 
-/// ponytail: one-shot rename for configs written before the `!mypc` bang
-/// became `!local` (2026-09-17). Old configs still say "MyPC" in
-/// enabled_builtin_engines; without this the engine silently drops out of
-/// the enabled list since it no longer matches any entry by name.
 fn rename_mypc_to_local(app: &AppHandle, mut cfg: LumaConfig) -> LumaConfig {
     let mut changed = false;
     for name in cfg.search.enabled_builtin_engines.iter_mut() {

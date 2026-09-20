@@ -1,8 +1,5 @@
 use std::path::PathBuf;
 
-/// Best-effort removal of the shortcuts install.rs creates. Errors are
-/// swallowed - a leftover shortcut pointing at nothing is harmless, and
-/// isn't worth failing the whole uninstall over.
 fn remove_shortcuts() {
     #[cfg(target_os = "windows")]
     {
@@ -50,10 +47,6 @@ fn install_dir() -> Option<PathBuf> {
     })
 }
 
-/// Removes the shortcuts and the installed copy, then exits the process.
-/// Config, themes, and locales are left alone - "Reset to defaults" is the
-/// separate control for that, matching how most uninstallers leave user
-/// data unless you also ask them to.
 #[cfg(target_os = "windows")]
 pub fn run() -> Result<(), String> {
     use std::os::windows::process::CommandExt;
@@ -69,10 +62,6 @@ pub fn run() -> Result<(), String> {
         std::process::exit(0);
     }
 
-    // Windows won't let a running exe delete its own folder, so hand the
-    // deletion to a detached helper that waits for this process to exit
-    // (same "wait, then act on the now-unlocked file" idea as the
-    // updater's rename-retry loop in updater.rs) and delete the folder.
     let dir_str = dir.to_string_lossy().replace('"', "\"\"");
     let cmd = format!("ping -n 3 127.0.0.1 >nul & rmdir /s /q \"{dir_str}\"");
     std::process::Command::new("cmd")
@@ -88,8 +77,6 @@ pub fn run() -> Result<(), String> {
 pub fn run() -> Result<(), String> {
     remove_shortcuts();
 
-    // Linux allows unlinking a running binary's own file, so this can just
-    // delete the folder directly - no detached helper needed.
     if let Some(dir) = install_dir() {
         let _ = std::fs::remove_dir_all(dir);
     }

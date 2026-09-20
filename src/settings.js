@@ -429,6 +429,32 @@
     return details;
   }
 
+  function sanitizeCss(css) {
+    return String(css || "")
+      .replace(/@import[^;]*;?/gi, "")
+      .replace(/expression\s*\([^)]*\)/gi, "")
+      .replace(/url\s*\(\s*['"]?\s*javascript:[^)]*\)/gi, "url()")
+      .replace(/-moz-binding\s*:[^;]*;?/gi, "");
+  }
+
+  function applyThemeCss(css) {
+    css = sanitizeCss(css);
+    var style = document.getElementById("luma-theme-style");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "luma-theme-style";
+      document.head.appendChild(style);
+    }
+    style.textContent = css;
+    var bgMatch = css.match(/--color-dark-mode:\s*(#[0-9a-fA-F]{3,8})/);
+    if (bgMatch) {
+      document.documentElement.style.setProperty("--boot-bg", bgMatch[1]);
+      try {
+        localStorage.setItem("luma-boot-bg", bgMatch[1]);
+      } catch (e) {}
+    }
+  }
+
   function tt(key, fallback) {
     return window.LumaI18n ? window.LumaI18n.t(key, fallback) : fallback;
   }
@@ -1218,9 +1244,7 @@
 
     try {
       themeCss = await invoke("get_theme_css", { themeId: currentConfig.appearance.theme });
-      var style = document.createElement("style");
-      style.textContent = themeCss;
-      document.head.appendChild(style);
+      applyThemeCss(themeCss);
     } catch (err) {
       dlog("error", "settings: get_theme_css invoke failed: " + err);
     }
@@ -1253,6 +1277,11 @@
       pickPositionBtn.disabled = false;
       try {
         currentConfig = await invoke("get_config");
+        try {
+          applyThemeCss(await invoke("get_theme_css", { themeId: currentConfig.appearance.theme }));
+        } catch (themeErr) {
+          dlog("warn", "settings: re-fetching theme CSS after config-changed failed: " + themeErr);
+        }
         if (window.LumaDebugLog) window.LumaDebugLog.setEnabled(!!(currentConfig.general && currentConfig.general.debug_logging));
         if (window.LumaI18n && currentConfig.general && currentConfig.general.locale !== window.LumaI18n.getCurrentLocale()) {
           await window.LumaI18n.init(invoke, currentConfig.general.locale);
@@ -1554,8 +1583,6 @@
     } catch (err) {
       dlog("error", "settings: fetch_marketplace_index failed: " + err);
       marketplaceStatus.textContent = ff("settings.appearance.marketplace.unreachable", [err], "Couldn't reach the marketplace ({0}). Check your connection and reopen Settings.");
-      // Keep whatever was already rendered (from a previous successful fetch)
-      // rather than blanking the grid out on a transient network error.
       renderMarketplacePagination(marketplaceEntries.length);
     } finally {
       marketplaceLoading = false;

@@ -60,27 +60,26 @@
       return window.LumaI18n ? window.LumaI18n.t("search.placeholder_fallback", "search") : "search";
     }
 
+    _prefixMatches(prefix, cfg) {
+      return cfg.plugin_id ? prefix === "@" : prefix === "!";
+    }
+
     parseQuery(raw) {
       const trimmed = (raw || "").trim();
-      // [!@] so plugin bangs (see #130) can use "@" as a visually distinct
-      // trigger for quick-answer plugins, sharing this same resolution path.
-      const match = trimmed.match(/^[!@](\S+)\s+([\s\S]+)$/);
+      const match = trimmed.match(/^([!@])(\S+)\s+([\s\S]+)$/);
       if (match) {
-        const bangWord = match[1].toLowerCase();
+        const bangWord = match[2].toLowerCase();
         const engineKey = this.bangMap[bangWord];
-        if (engineKey) {
-          return { engine: engineKey, query: match[2].trim() };
+        const cfg = engineKey && this.engines[engineKey];
+        if (cfg && this._prefixMatches(match[1], cfg)) {
+          return { engine: engineKey, query: match[3].trim() };
         }
       }
-      // Bare bang, no trailing text (e.g. "@time") - only plugin engines
-      // can resolve with an empty query; Local/Open still need real text,
-      // so this leaves their existing "!local"-with-nothing-after behavior
-      // (falls through to a literal search below) unchanged.
-      const bareMatch = trimmed.match(/^[!@](\S+)$/);
+      const bareMatch = trimmed.match(/^([!@])(\S+)$/);
       if (bareMatch) {
-        const engineKey = this.bangMap[bareMatch[1].toLowerCase()];
+        const engineKey = this.bangMap[bareMatch[2].toLowerCase()];
         const cfg = engineKey && this.engines[engineKey];
-        if (cfg && cfg.plugin_id) {
+        if (cfg && cfg.plugin_id && bareMatch[1] === "@") {
           return { engine: engineKey, query: "" };
         }
       }
@@ -88,9 +87,11 @@
     }
 
     peekBangEngine(raw) {
-      const match = (raw || "").match(/^[!@](\S+)/);
+      const match = (raw || "").match(/^([!@])(\S+)/);
       if (!match) return null;
-      return this.bangMap[match[1].toLowerCase()] || null;
+      const engineKey = this.bangMap[match[2].toLowerCase()];
+      const cfg = engineKey && this.engines[engineKey];
+      return cfg && this._prefixMatches(match[1], cfg) ? engineKey : null;
     }
 
     buildSearchUrl(engineKey, query) {

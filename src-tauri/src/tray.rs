@@ -5,8 +5,6 @@ use tauri::{
     AppHandle, Manager, Wry,
 };
 
-/// Handles to the tray's translatable pieces, so a locale change (see
-/// `retext`) can relabel them without tearing down and rebuilding the tray.
 pub struct TrayMenuItems {
     pub show: MenuItem<Wry>,
     pub spotlight: MenuItem<Wry>,
@@ -14,9 +12,6 @@ pub struct TrayMenuItems {
     pub quit: MenuItem<Wry>,
 }
 
-/// Re-applies the given locale's strings to the tray menu items and tooltip.
-/// Called once at build time and again whenever `save_config` sees the
-/// locale change, so the native tray stays in sync with the rest of the app.
 pub fn retext(app: &AppHandle, locale_id: &str) {
     let strings = locales::strings_for(app, locale_id);
     let text = |key: &str, fallback: &str| {
