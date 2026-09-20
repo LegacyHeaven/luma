@@ -77,7 +77,7 @@
   }
 
   function scheduleNextTip() {
-    var delay = 30000 + Math.random() * 60000;
+    var delay = 15000;
     tipTimer = setTimeout(function () {
       var next = tipIndex;
       while (next === tipIndex) next = Math.floor(Math.random() * TIP_COUNT);
@@ -94,6 +94,7 @@
   function startTipRotator() {
     tipEl = document.getElementById("search-tip");
     if (!tipEl || tipTimer) return;
+    tipIndex = Math.floor(Math.random() * TIP_COUNT);
     renderTip();
     scheduleNextTip();
   }
