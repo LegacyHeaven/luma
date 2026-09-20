@@ -1,0 +1,11 @@
+{
+  "id": "example-plugin",
+  "name": "Example Plugin",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "Reference example for plugin authors - not shipped with Luma or listed in the marketplace.",
+  "entry": "plugin.js",
+  "bangs": [
+    { "word": "example", "name": "Example" }
+  ]
+}

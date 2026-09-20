@@ -340,11 +340,11 @@
             <h2 data-i18n="settings.advanced.backup.title">Backup &amp; restore</h2>
             <div class="settings-row">
               <button type="button" class="btn" id="backup-config-btn" data-i18n="settings.advanced.backup.config_button">Backup settings (.toml)</button>
-              <span class="help" data-i18n="settings.advanced.backup.config_help">Just your config.toml - engines, bangs, and preferences.</span>
+              <span class="help" data-i18n="settings.advanced.backup.config_help">Just your config.toml - engines, bangs, and preferences. Saved to your Desktop (overwritten each time) and archived in your config folder's "backups" subfolder (last 6 kept).</span>
             </div>
             <div class="settings-row">
               <button type="button" class="btn" id="backup-full-btn" data-i18n="settings.advanced.backup.full_button">Full backup (.zip)</button>
-              <span class="help" data-i18n="settings.advanced.backup.full_help">Your config plus every installed theme and plugin, zipped up.</span>
+              <span class="help" data-i18n="settings.advanced.backup.full_help">Your config plus every installed theme and plugin, zipped up. Saved to your Desktop (overwritten each time) and archived in your config folder's "backups" subfolder (last 6 kept).</span>
             </div>
             <div class="settings-row">
               <button type="button" class="btn" id="restore-backup-btn" data-i18n="settings.advanced.backup.restore_button">Restore from file&hellip;</button>
@@ -382,12 +382,12 @@
       </div>
 
       <div class="settings-actions">
-        <span class="settings-actions-help" data-i18n="settings.saves_automatically">Everything here saves automatically.</span>
         <span id="save-status" class="save-status"></span>
       </div>
     </form>
 
     <p class="build-stamp" id="build-stamp">LUMA - loading…</p>
+    <p class="build-stamp">© <a href="#" id="copyright-link" data-i18n="settings.copyright">Luma by LegacyHeaven and Luma Contributors</a></p>
   </div>
 
   <div id="debug-console" class="debug-console" hidden>

@@ -295,18 +295,11 @@ pub fn save(app: &AppHandle, cfg: &LumaConfig) -> Result<(), String> {
 
 pub const DEFAULT_THEME_ID: &str = "luma-default";
 
-const BUILTIN_THEMES: &[(&str, &str, &str)] = &[
-    (
-        DEFAULT_THEME_ID,
-        include_str!("../resources/themes/luma-default/theme.css"),
-        include_str!("../resources/themes/luma-default/theme.json"),
-    ),
-    (
-        "blank",
-        include_str!("../resources/themes/blank/theme.css"),
-        include_str!("../resources/themes/blank/theme.json"),
-    ),
-];
+const BUILTIN_THEMES: &[(&str, &str, &str)] = &[(
+    DEFAULT_THEME_ID,
+    include_str!("../resources/themes/luma-default/theme.css"),
+    include_str!("../resources/themes/luma-default/theme.json"),
+)];
 
 pub fn is_builtin_theme(theme_id: &str) -> bool {
     BUILTIN_THEMES.iter().any(|(id, _, _)| *id == theme_id)
@@ -331,6 +324,14 @@ pub fn ensure_themes_dir(app: &AppHandle) {
 
 pub fn plugins_dir(app: &AppHandle) -> PathBuf {
     config_dir(app).join("plugins")
+}
+
+pub fn backups_dir(app: &AppHandle) -> PathBuf {
+    config_dir(app).join("backups")
+}
+
+pub fn desktop_dir(app: &AppHandle) -> PathBuf {
+    app.path().desktop_dir().unwrap_or_else(|_| config_dir(app))
 }
 
 pub fn ensure_plugins_dir(app: &AppHandle) {

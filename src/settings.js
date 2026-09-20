@@ -60,6 +60,15 @@
     });
   }
 
+  var copyrightLink = document.getElementById("copyright-link");
+  if (copyrightLink) {
+    copyrightLink.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (!invoke) return;
+      invoke("open_in_system_browser", { url: "https://github.com/LegacyHeaven/luma" });
+    });
+  }
+
   var shortcutInput = document.getElementById("shortcut-input");
   var defaultEngineSelect = document.getElementById("default-engine");
   var languageSelect = document.getElementById("language-select");

@@ -1074,71 +1074,113 @@ pub fn uninstall_app(app: AppHandle) -> Result<(), String> {
     crate::uninstall::run()
 }
 
+/// Newest-first list of files directly inside `dir`, sorted by mtime.
+fn backups_newest_first(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut files: Vec<(std::path::PathBuf, std::time::SystemTime)> = entries
+        .flatten()
+        .filter(|e| e.path().is_file())
+        .filter_map(|e| {
+            let modified = e.metadata().ok()?.modified().ok()?;
+            Some((e.path(), modified))
+        })
+        .collect();
+    files.sort_by_key(|(_, modified)| std::cmp::Reverse(*modified));
+    files.into_iter().map(|(path, _)| path).collect()
+}
+
+/// Keeps only the `keep` most recently modified files in `dir`, deleting the rest.
+fn prune_backups(dir: &std::path::Path, keep: usize) {
+    for old in backups_newest_first(dir).into_iter().skip(keep) {
+        let _ = std::fs::remove_file(old);
+    }
+}
+
+fn backup_timestamp() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+const BACKUPS_TO_KEEP: usize = 6;
+
 #[tauri::command]
 pub fn backup_config(app: AppHandle, state: State<AppState>) -> Result<(), String> {
-    use tauri_plugin_dialog::DialogExt;
     let text = {
         let cfg = state.config.lock().unwrap();
         toml::to_string_pretty(&*cfg).map_err(|e| e.to_string())?
     };
-    let picked = app
-        .dialog()
-        .file()
-        .set_file_name("luma-config.toml")
-        .add_filter("TOML", &["toml"])
-        .blocking_save_file()
-        .ok_or_else(|| "no file selected".to_string())?;
-    let path = picked.into_path().map_err(|e| e.to_string())?;
-    std::fs::write(&path, text).map_err(|e| e.to_string())?;
-    crate::logging::info(&app, format!("backup_config: wrote {path:?}"));
+
+    let desktop_path = crate::config::desktop_dir(&app).join("luma-config-backup.toml");
+    std::fs::write(&desktop_path, &text).map_err(|e| e.to_string())?;
+
+    let backups_dir = crate::config::backups_dir(&app);
+    std::fs::create_dir_all(&backups_dir).map_err(|e| e.to_string())?;
+    let archive_path = backups_dir.join(format!("config_{}.toml", backup_timestamp()));
+    std::fs::write(&archive_path, &text).map_err(|e| e.to_string())?;
+    prune_backups(&backups_dir, BACKUPS_TO_KEEP);
+
+    crate::logging::info(
+        &app,
+        format!("backup_config: wrote {desktop_path:?} and {archive_path:?}"),
+    );
     Ok(())
 }
 
 #[tauri::command]
 pub fn backup_full(app: AppHandle, state: State<AppState>) -> Result<(), String> {
-    use tauri_plugin_dialog::DialogExt;
     let config_text = {
         let cfg = state.config.lock().unwrap();
         toml::to_string_pretty(&*cfg).map_err(|e| e.to_string())?
     };
-    let picked = app
-        .dialog()
-        .file()
-        .set_file_name("luma-backup.zip")
-        .add_filter("Zip archive", &["zip"])
-        .blocking_save_file()
-        .ok_or_else(|| "no file selected".to_string())?;
-    let path = picked.into_path().map_err(|e| e.to_string())?;
 
-    let file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
-    let mut zip = zip::ZipWriter::new(file);
-    let options = zip::write::SimpleFileOptions::default();
+    let mut buf: Vec<u8> = Vec::new();
+    {
+        let mut zip = zip::ZipWriter::new(std::io::Cursor::new(&mut buf));
+        let options = zip::write::SimpleFileOptions::default();
 
-    zip.start_file("config.toml", options)
-        .map_err(|e| e.to_string())?;
-    zip.write_all(config_text.as_bytes())
-        .map_err(|e| e.to_string())?;
+        zip.start_file("config.toml", options)
+            .map_err(|e| e.to_string())?;
+        zip.write_all(config_text.as_bytes())
+            .map_err(|e| e.to_string())?;
 
-    add_dir_to_zip(
-        &mut zip,
-        &crate::config::plugins_dir(&app),
-        "plugins",
-        options,
-    )?;
-    add_dir_to_zip(
-        &mut zip,
-        &crate::config::themes_dir(&app),
-        "themes",
-        options,
-    )?;
+        add_dir_to_zip(
+            &mut zip,
+            &crate::config::plugins_dir(&app),
+            "plugins",
+            options,
+        )?;
+        add_dir_to_zip(
+            &mut zip,
+            &crate::config::themes_dir(&app),
+            "themes",
+            options,
+        )?;
 
-    zip.finish().map_err(|e| e.to_string())?;
-    crate::logging::info(&app, format!("backup_full: wrote {path:?}"));
+        zip.finish().map_err(|e| e.to_string())?;
+    }
+
+    let desktop_path = crate::config::desktop_dir(&app).join("luma-full-backup.zip");
+    std::fs::write(&desktop_path, &buf).map_err(|e| e.to_string())?;
+
+    let backups_dir = crate::config::backups_dir(&app);
+    std::fs::create_dir_all(&backups_dir).map_err(|e| e.to_string())?;
+    let archive_path = backups_dir.join(format!("full_{}.zip", backup_timestamp()));
+    std::fs::write(&archive_path, &buf).map_err(|e| e.to_string())?;
+    prune_backups(&backups_dir, BACKUPS_TO_KEEP);
+
+    crate::logging::info(
+        &app,
+        format!("backup_full: wrote {desktop_path:?} and {archive_path:?}"),
+    );
     Ok(())
 }
 
-fn add_dir_to_zip(
-    zip: &mut zip::ZipWriter<std::fs::File>,
+fn add_dir_to_zip<W: Write + std::io::Seek>(
+    zip: &mut zip::ZipWriter<W>,
     dir: &std::path::Path,
     prefix: &str,
     options: zip::write::SimpleFileOptions,
