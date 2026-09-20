@@ -2,7 +2,7 @@
 name = "luma"
 version = "2.10.3"
 description = "Luma - the open-source spotlight search for every desktop. One search, every direction."
-authors = ["Luma contributors"]
+authors = ["LegacyHeaven & Luma contributors"]
 license = "MIT"
 repository = "https://github.com/LegacyHeaven/luma"
 edition = "2021"
