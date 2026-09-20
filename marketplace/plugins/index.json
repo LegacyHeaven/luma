@@ -6,5 +6,13 @@
     "description": "Quick @time and @date answers, no query needed.",
     "js_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/plugins/time-date/plugin.js",
     "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/plugins/time-date/plugin.json"
+  },
+  {
+    "id": "calculator",
+    "name": "Calculator & Unit Convert",
+    "author": "Luma",
+    "description": "@calc for arithmetic, @convert for length/mass/volume/time/temperature unit conversion.",
+    "js_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/plugins/calculator/plugin.js",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/plugins/calculator/plugin.json"
   }
 ]

@@ -1,0 +1,12 @@
+{
+  "id": "calculator",
+  "name": "Calculator & Unit Convert",
+  "author": "Luma",
+  "version": "1.0.0",
+  "description": "@calc for arithmetic, @convert for length/mass/volume/time/temperature unit conversion.",
+  "entry": "plugin.js",
+  "bangs": [
+    { "word": "calc", "name": "Calculator" },
+    { "word": "convert", "name": "Unit Convert" }
+  ]
+}

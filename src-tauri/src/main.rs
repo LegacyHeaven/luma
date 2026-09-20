@@ -101,6 +101,10 @@ fn main() {
             commands::reset_to_defaults,
             commands::clear_browsing_data,
             commands::uninstall_app,
+            commands::record_bang_usage,
+            commands::backup_config,
+            commands::backup_full,
+            commands::restore_backup,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

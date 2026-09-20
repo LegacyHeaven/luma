@@ -71,6 +71,7 @@
   var disableAnimationsCheckbox = document.getElementById("disable-animations");
   var showSpotlightBrandingCheckbox = document.getElementById("show-spotlight-branding");
   var startAtLoginCheckbox = document.getElementById("start-at-login");
+  var frecencyRankingCheckbox = document.getElementById("frecency-ranking");
   var customEnginesList = document.getElementById("custom-engines-list");
   var newEngineName = document.getElementById("new-engine-name");
   var newEngineUrl = document.getElementById("new-engine-url");
@@ -223,6 +224,10 @@
 
   showSpotlightBrandingCheckbox.addEventListener("change", function () {
     persistPatch(function (cfg) { cfg.general.show_spotlight_branding = showSpotlightBrandingCheckbox.checked; }, "show spotlight branding");
+  });
+
+  frecencyRankingCheckbox.addEventListener("change", function () {
+    persistPatch(function (cfg) { cfg.general.frecency_ranking = frecencyRankingCheckbox.checked; }, "frecency ranking");
   });
 
   var customCssSaveTimer = null;
@@ -616,6 +621,63 @@
         uninstallBtn.disabled = false;
         showMaintenanceStatus(ff("settings.advanced.maintenance.action_failed", [err], "Couldn't do that: {0}"), true);
       });
+    });
+  }
+
+  var backupStatus = document.getElementById("backup-status");
+  function showBackupStatus(text, isError) {
+    if (!backupStatus) return;
+    backupStatus.textContent = text;
+    backupStatus.classList.toggle("error", !!isError);
+    backupStatus.classList.add("visible");
+    clearTimeout(showBackupStatus._t);
+    showBackupStatus._t = setTimeout(function () { backupStatus.classList.remove("visible"); }, 4000);
+  }
+
+  var backupConfigBtn = document.getElementById("backup-config-btn");
+  if (backupConfigBtn) {
+    backupConfigBtn.addEventListener("click", function () {
+      if (!invoke) return;
+      invoke("backup_config")
+        .then(function () {
+          showBackupStatus(tt("settings.advanced.backup.done", "Backup saved."));
+        })
+        .catch(function (err) {
+          dlog("error", "backup_config invoke failed: " + err);
+          showBackupStatus(ff("settings.advanced.maintenance.action_failed", [err], "Couldn't do that: {0}"), true);
+        });
+    });
+  }
+
+  var backupFullBtn = document.getElementById("backup-full-btn");
+  if (backupFullBtn) {
+    backupFullBtn.addEventListener("click", function () {
+      if (!invoke) return;
+      invoke("backup_full")
+        .then(function () {
+          showBackupStatus(tt("settings.advanced.backup.done", "Backup saved."));
+        })
+        .catch(function (err) {
+          dlog("error", "backup_full invoke failed: " + err);
+          showBackupStatus(ff("settings.advanced.maintenance.action_failed", [err], "Couldn't do that: {0}"), true);
+        });
+    });
+  }
+
+  var restoreBackupBtn = document.getElementById("restore-backup-btn");
+  if (restoreBackupBtn) {
+    restoreBackupBtn.addEventListener("click", function () {
+      if (!invoke) return;
+      if (!window.confirm(tt("settings.advanced.backup.restore_confirm", "Restore from that file? This replaces your current settings (and, for a full backup, your themes and plugins)."))) return;
+      invoke("restore_backup")
+        .then(function () {
+          dlog("info", "settings: restored from backup, reloading");
+          window.location.reload();
+        })
+        .catch(function (err) {
+          dlog("error", "restore_backup invoke failed: " + err);
+          showBackupStatus(ff("settings.advanced.maintenance.action_failed", [err], "Couldn't do that: {0}"), true);
+        });
     });
   }
 
@@ -1262,6 +1324,7 @@
     );
     if (mainSizeInput) mainSizeInput.checked = true;
     startAtLoginCheckbox.checked = !!currentConfig.general.start_at_login;
+    frecencyRankingCheckbox.checked = !!currentConfig.general.frecency_ranking;
     checkUpdatesEnabled.checked = currentConfig.general.check_for_updates !== false;
     customCssTextarea.value = currentConfig.appearance.custom_css || "";
     selectedThemeId = currentConfig.appearance.theme;

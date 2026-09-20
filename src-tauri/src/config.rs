@@ -26,6 +26,8 @@ pub struct GeneralConfig {
     pub disable_animations: bool,
 
     pub locale: String,
+
+    pub frecency_ranking: bool,
 }
 
 impl Default for GeneralConfig {
@@ -41,6 +43,7 @@ impl Default for GeneralConfig {
             show_spotlight_branding: false,
             disable_animations: false,
             locale: "en".into(),
+            frecency_ranking: false,
         }
     }
 }
@@ -132,12 +135,19 @@ pub struct PluginsConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
+pub struct FrecencyConfig {
+    pub bang_usage: std::collections::HashMap<String, u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct LumaConfig {
     pub general: GeneralConfig,
     pub appearance: AppearanceConfig,
     pub window: WindowConfig,
     pub search: SearchConfig,
     pub plugins: PluginsConfig,
+    pub frecency: FrecencyConfig,
 }
 
 #[cfg(target_os = "windows")]

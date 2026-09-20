@@ -117,14 +117,16 @@
       const engineKey = parsed.engine || fallbackEngine || this.defaultEngine;
       const cfg = this.engines[engineKey];
 
+      const bang = parsed.engine && cfg ? cfg.bang : null;
+
       if (cfg && cfg.local) {
         if (!parsed.query && !cfg.plugin_id) return null;
-        return { engine: engineKey, query: parsed.query, url: null, local: true };
+        return { engine: engineKey, query: parsed.query, url: null, local: true, bang };
       }
 
       const url = this.buildSearchUrl(engineKey, parsed.query);
       if (!url) return null;
-      return { engine: engineKey, query: parsed.query, url };
+      return { engine: engineKey, query: parsed.query, url, bang };
     }
   }
 

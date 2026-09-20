@@ -413,6 +413,12 @@
       placeholderOverride: isSpotlight ? tt("search.spotlight_placeholder", "search the universe") : null,
       onSearch: function (result) {
 
+        if (config.general && config.general.frecency_ranking && result.bang) {
+          invoke("record_bang_usage", { bang: result.bang }).catch(function (err) {
+            dlog("error", "record_bang_usage invoke failed: " + err);
+          });
+        }
+
         if (result.local) {
           dlog("info", "search submitted -> local, engine=" + result.engine + " query=" + result.query);
           var engineCfg = deck.engines[result.engine];

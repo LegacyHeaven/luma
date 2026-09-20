@@ -4,8 +4,8 @@
     "name": "Material Blue",
     "author": "Luma",
     "description": "A cool Material-Design-inspired blue, for a calmer, more corporate feel.",
-    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-material-blue/theme.css",
-    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-material-blue/theme.json",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/material-blue/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/material-blue/theme.json",
     "colors": ["#131418", "#1e2126", "#8ab4f8", "#aecbfa", "#e8eaed"]
   },
   {
@@ -13,8 +13,8 @@
     "name": "Neon Pink",
     "author": "Luma",
     "description": "A vibrant hot-pink/magenta theme with a synthwave edge.",
-    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-pink/theme.css",
-    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-pink/theme.json",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/pink/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/pink/theme.json",
     "colors": ["#150816", "#240f22", "#ff2e88", "#ff8fc7", "#fff"]
   },
   {
@@ -22,8 +22,8 @@
     "name": "Emerald",
     "author": "Luma",
     "description": "A calm nature-inspired emerald green theme.",
-    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-emerald/theme.css",
-    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-emerald/theme.json",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/emerald/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/emerald/theme.json",
     "colors": ["#04120c", "#0b2018", "#10b981", "#6ee7b7", "#eafff4"]
   },
   {
@@ -31,8 +31,8 @@
     "name": "Amber Sunset",
     "author": "Luma",
     "description": "A warm amber/orange sunset theme.",
-    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-amber/theme.css",
-    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/luma-amber/theme.json",
+    "css_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/amber/theme.css",
+    "json_url": "https://raw.githubusercontent.com/LegacyHeaven/luma/main/marketplace/themes/amber/theme.json",
     "colors": ["#120b02", "#1c1305", "#f59e0b", "#ffcf6b", "#ffe9b3"]
   },
   {

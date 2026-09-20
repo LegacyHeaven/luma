@@ -2,7 +2,7 @@
 name = "luma"
 version = "2.10.3"
 description = "Luma - the open-source spotlight search for every desktop. One search, every direction."
-authors = ["LegacyHeaven & Luma contributors"]
+authors = ["Luma contributors"]
 license = "MIT"
 repository = "https://github.com/LegacyHeaven/luma"
 edition = "2021"
@@ -25,6 +25,7 @@ sysinfo = "0.32"
 ureq = "2"
 sha2 = "0.10"
 tauri-plugin-dialog = "2"
+zip = "2"
 
 [target."cfg(windows)".dependencies.windows]
 version = "0.61"

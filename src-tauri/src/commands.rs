@@ -1,4 +1,5 @@
 use crate::{config::LumaConfig, shortcuts, themes, window};
+use std::io::{Read, Write};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, State};
 
@@ -304,9 +305,40 @@ pub fn get_engines(app: AppHandle, state: State<AppState>) -> Result<serde_json:
                 }));
             }
         }
+
+        if cfg.general.frecency_ranking {
+            let usage = cfg.frecency.bang_usage.clone();
+            let count_of = |e: &serde_json::Value| -> u64 {
+                e["bang"]
+                    .as_str()
+                    .and_then(|b| usage.get(&b.to_lowercase()))
+                    .copied()
+                    .unwrap_or(0)
+            };
+            arr.sort_by_key(|e| std::cmp::Reverse(count_of(e)));
+        }
     }
 
     Ok(value)
+}
+
+#[tauri::command]
+pub fn record_bang_usage(
+    app: AppHandle,
+    state: State<AppState>,
+    bang: String,
+) -> Result<(), String> {
+    let bang = bang
+        .trim()
+        .trim_start_matches('!')
+        .trim_start_matches('@')
+        .to_lowercase();
+    if bang.is_empty() {
+        return Ok(());
+    }
+    let mut cfg = state.config.lock().unwrap();
+    *cfg.frecency.bang_usage.entry(bang).or_insert(0) += 1;
+    crate::config::save(&app, &cfg)
 }
 
 #[tauri::command]
@@ -1040,4 +1072,174 @@ pub fn clear_browsing_data(app: AppHandle) -> Result<(), String> {
 pub fn uninstall_app(app: AppHandle) -> Result<(), String> {
     crate::logging::info(&app, "uninstall_app: starting uninstall".to_string());
     crate::uninstall::run()
+}
+
+#[tauri::command]
+pub fn backup_config(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    use tauri_plugin_dialog::DialogExt;
+    let text = {
+        let cfg = state.config.lock().unwrap();
+        toml::to_string_pretty(&*cfg).map_err(|e| e.to_string())?
+    };
+    let picked = app
+        .dialog()
+        .file()
+        .set_file_name("luma-config.toml")
+        .add_filter("TOML", &["toml"])
+        .blocking_save_file()
+        .ok_or_else(|| "no file selected".to_string())?;
+    let path = picked.into_path().map_err(|e| e.to_string())?;
+    std::fs::write(&path, text).map_err(|e| e.to_string())?;
+    crate::logging::info(&app, format!("backup_config: wrote {path:?}"));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn backup_full(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    use tauri_plugin_dialog::DialogExt;
+    let config_text = {
+        let cfg = state.config.lock().unwrap();
+        toml::to_string_pretty(&*cfg).map_err(|e| e.to_string())?
+    };
+    let picked = app
+        .dialog()
+        .file()
+        .set_file_name("luma-backup.zip")
+        .add_filter("Zip archive", &["zip"])
+        .blocking_save_file()
+        .ok_or_else(|| "no file selected".to_string())?;
+    let path = picked.into_path().map_err(|e| e.to_string())?;
+
+    let file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = zip::write::SimpleFileOptions::default();
+
+    zip.start_file("config.toml", options)
+        .map_err(|e| e.to_string())?;
+    zip.write_all(config_text.as_bytes())
+        .map_err(|e| e.to_string())?;
+
+    add_dir_to_zip(
+        &mut zip,
+        &crate::config::plugins_dir(&app),
+        "plugins",
+        options,
+    )?;
+    add_dir_to_zip(
+        &mut zip,
+        &crate::config::themes_dir(&app),
+        "themes",
+        options,
+    )?;
+
+    zip.finish().map_err(|e| e.to_string())?;
+    crate::logging::info(&app, format!("backup_full: wrote {path:?}"));
+    Ok(())
+}
+
+fn add_dir_to_zip(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &std::path::Path,
+    prefix: &str,
+    options: zip::write::SimpleFileOptions,
+) -> Result<(), String> {
+    if !dir.is_dir() {
+        return Ok(());
+    }
+    for entry in walk_dir_flat(dir) {
+        let rel = entry.strip_prefix(dir).map_err(|e| e.to_string())?;
+        let zip_path = format!("{prefix}/{}", rel.to_string_lossy().replace('\\', "/"));
+        if entry.is_dir() {
+            continue;
+        }
+        let data = std::fs::read(&entry).map_err(|e| e.to_string())?;
+        zip.start_file(zip_path, options)
+            .map_err(|e| e.to_string())?;
+        zip.write_all(&data).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+fn walk_dir_flat(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    fn walk(d: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(d) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else {
+                out.push(path);
+            }
+        }
+    }
+    walk(dir, &mut out);
+    out
+}
+
+#[tauri::command]
+pub fn restore_backup(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    use tauri_plugin_dialog::DialogExt;
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter("Luma backup", &["zip", "toml"])
+        .blocking_pick_file()
+        .ok_or_else(|| "no file selected".to_string())?;
+    let path = picked.into_path().map_err(|e| e.to_string())?;
+
+    let is_zip = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("zip"));
+
+    let new_cfg: LumaConfig = if is_zip {
+        restore_from_zip(&app, &path)?
+    } else {
+        let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        toml::from_str(&text).map_err(|e| e.to_string())?
+    };
+
+    crate::config::save(&app, &new_cfg)?;
+    *state.config.lock().unwrap() = new_cfg;
+    let _ = app.emit("luma://config-changed", ());
+    crate::logging::info(&app, format!("restore_backup: restored from {path:?}"));
+    Ok(())
+}
+
+fn restore_from_zip(app: &AppHandle, path: &std::path::Path) -> Result<LumaConfig, String> {
+    let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+
+    let mut config_text: Option<String> = None;
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
+        let name = entry.name().to_string();
+        if name.ends_with('/') {
+            continue;
+        }
+        if name == "config.toml" {
+            let mut text = String::new();
+            entry.read_to_string(&mut text).map_err(|e| e.to_string())?;
+            config_text = Some(text);
+        } else if let Some(rel) = name.strip_prefix("plugins/") {
+            extract_zip_entry(&mut entry, &crate::config::plugins_dir(app).join(rel))?;
+        } else if let Some(rel) = name.strip_prefix("themes/") {
+            extract_zip_entry(&mut entry, &crate::config::themes_dir(app).join(rel))?;
+        }
+    }
+
+    let config_text = config_text.ok_or("that zip doesn't contain a config.toml")?;
+    toml::from_str(&config_text).map_err(|e| e.to_string())
+}
+
+fn extract_zip_entry(entry: &mut zip::read::ZipFile, dest: &std::path::Path) -> Result<(), String> {
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let mut data = Vec::new();
+    entry.read_to_end(&mut data).map_err(|e| e.to_string())?;
+    std::fs::write(dest, data).map_err(|e| e.to_string())
 }

@@ -197,6 +197,14 @@
           </section>
 
           <section class="settings-section" data-category="search">
+            <h2 data-i18n="settings.search.frecency.title">Frecency-ranked suggestions</h2>
+            <p class="help" data-i18n="settings.search.frecency.help">Reorders the engine/bang list so the ones you actually use most show up first.</p>
+            <div class="settings-row">
+              <label class="checkbox-option"><input type="checkbox" id="frecency-ranking"> <span data-i18n="settings.search.frecency.label">Rank suggestions by usage</span></label>
+            </div>
+          </section>
+
+          <section class="settings-section" data-category="search">
             <h2 data-i18n="settings.search.custom_apps.title">Custom selected apps</h2>
             <p class="help" data-i18n-rich="settings.search.custom_apps.help">Apps you've pointed <code>!open</code> at by hand after it couldn't find them on its own - it'll launch straight from here next time.</p>
             <div class="settings-row" id="custom-apps-list"></div>
@@ -326,6 +334,23 @@
               <span class="help" data-i18n="settings.advanced.maintenance.uninstall_help">Removes LUMA and its shortcuts, then closes the app. Your settings are kept in case you reinstall.</span>
             </div>
             <div id="maintenance-status" class="save-status"></div>
+          </section>
+
+          <section class="settings-section" data-category="advanced">
+            <h2 data-i18n="settings.advanced.backup.title">Backup &amp; restore</h2>
+            <div class="settings-row">
+              <button type="button" class="btn" id="backup-config-btn" data-i18n="settings.advanced.backup.config_button">Backup settings (.toml)</button>
+              <span class="help" data-i18n="settings.advanced.backup.config_help">Just your config.toml - engines, bangs, and preferences.</span>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn" id="backup-full-btn" data-i18n="settings.advanced.backup.full_button">Full backup (.zip)</button>
+              <span class="help" data-i18n="settings.advanced.backup.full_help">Your config plus every installed theme and plugin, zipped up.</span>
+            </div>
+            <div class="settings-row">
+              <button type="button" class="btn" id="restore-backup-btn" data-i18n="settings.advanced.backup.restore_button">Restore from file&hellip;</button>
+              <span class="help" data-i18n="settings.advanced.backup.restore_help">Pick a .zip full backup or a plain .toml config file.</span>
+            </div>
+            <div id="backup-status" class="save-status"></div>
           </section>
 
           <section class="settings-section" data-category="advanced" id="debug-section" hidden>

@@ -132,6 +132,10 @@
   "settings.search.more_engines.add_option": "+ Add a search engine…",
   "settings.search.more_engines.empty": "None turned on yet - pick one from the dropdown below.",
 
+  "settings.search.frecency.title": "Frecency-ranked suggestions",
+  "settings.search.frecency.help": "Reorders the engine/bang list so the ones you actually use most show up first.",
+  "settings.search.frecency.label": "Rank suggestions by usage",
+
   "settings.search.custom_apps.title": "Custom selected apps",
   "settings.search.custom_apps.help": "Apps you've pointed {code}!open{/code} at by hand after it couldn't find them on its own - it'll launch straight from here next time.",
   "settings.search.custom_apps.empty": "None yet - !open saves one here the first time it can't find an app on its own.",
@@ -230,6 +234,16 @@
   "settings.advanced.maintenance.uninstall_help": "Removes LUMA and its shortcuts, then closes the app. Your settings are kept in case you reinstall.",
   "settings.advanced.maintenance.uninstall_confirm": "Uninstall LUMA? This closes the app and removes it from your computer. Your settings are kept in case you reinstall.",
   "settings.advanced.maintenance.action_failed": "Couldn't do that: {0}",
+
+  "settings.advanced.backup.title": "Backup & restore",
+  "settings.advanced.backup.config_button": "Backup settings (.toml)",
+  "settings.advanced.backup.config_help": "Just your config.toml - engines, bangs, and preferences.",
+  "settings.advanced.backup.full_button": "Full backup (.zip)",
+  "settings.advanced.backup.full_help": "Your config plus every installed theme and plugin, zipped up.",
+  "settings.advanced.backup.restore_button": "Restore from file…",
+  "settings.advanced.backup.restore_help": "Pick a .zip full backup or a plain .toml config file.",
+  "settings.advanced.backup.restore_confirm": "Restore from that file? This replaces your current settings (and, for a full backup, your themes and plugins).",
+  "settings.advanced.backup.done": "Backup saved.",
 
   "settings.advanced.logging.title": "Advanced logging",
   "settings.advanced.logging.help": "Off by default, and fully inert while off - nothing is recorded or written to disk. Turn it on and LUMA records every notable thing it does (every command it runs, search submitted, results opened, config saved, errors) at a much higher level of detail, both in the console below and in a rotating log file on disk - plus live RAM/process info, so a bug can be diagnosed without a terminal. See the wiki's \"Logging & diagnostics\" page for the exact format, useful for anyone building their own version of LUMA. You found this section by holding {code}Shift+L{/code} on this page - it'll stay revealed once enabled below.",
