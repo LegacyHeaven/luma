@@ -16,6 +16,7 @@
   var registry = {};
 
   window.addEventListener("message", function (ev) {
+    if (ev.source !== parent) return;
     var data = ev.data || {};
 
     if (data.type === "register") {
