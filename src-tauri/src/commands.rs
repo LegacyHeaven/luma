@@ -948,6 +948,7 @@ pub fn toggle_spotlight(app: AppHandle, state: State<AppState>) {
     window::toggle_spotlight(
         &app,
         cfg.window.spotlight_width as f64,
+        cfg.general.show_spotlight_branding,
         &cfg.window.spotlight_position,
         cfg.window.spotlight_custom_x,
         cfg.window.spotlight_custom_y,

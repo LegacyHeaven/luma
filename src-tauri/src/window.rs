@@ -307,14 +307,23 @@ pub fn spotlight_window(app: &AppHandle) -> Option<WebviewWindow> {
 
 const SPOTLIGHT_GLOW_MARGIN_SIDE: f64 = 50.0;
 const SPOTLIGHT_WINDOW_HEIGHT: f64 = 176.0;
+const SPOTLIGHT_BRANDING_EXTRA_HEIGHT: f64 = 40.0;
 
 pub fn ensure_spotlight_window(
     app: &AppHandle,
     width: f64,
+    show_branding: bool,
 ) -> tauri::Result<(WebviewWindow, bool)> {
     if let Some(w) = spotlight_window(app) {
         return Ok((w, false));
     }
+
+    let height = SPOTLIGHT_WINDOW_HEIGHT
+        + if show_branding {
+            SPOTLIGHT_BRANDING_EXTRA_HEIGHT
+        } else {
+            0.0
+        };
 
     let window = WebviewWindowBuilder::new(
         app,
@@ -322,10 +331,7 @@ pub fn ensure_spotlight_window(
         WebviewUrl::App("index.html?mode=spotlight".into()),
     )
     .title("LUMA")
-    .inner_size(
-        width + SPOTLIGHT_GLOW_MARGIN_SIDE * 2.0,
-        SPOTLIGHT_WINDOW_HEIGHT,
-    )
+    .inner_size(width + SPOTLIGHT_GLOW_MARGIN_SIDE * 2.0, height)
     .resizable(false)
     .decorations(false)
     .transparent(true)
@@ -395,11 +401,12 @@ pub fn position_spotlight(
 pub fn toggle_spotlight(
     app: &AppHandle,
     width: f64,
+    show_branding: bool,
     placement: &str,
     x_frac: Option<f64>,
     y_frac: Option<f64>,
 ) {
-    match ensure_spotlight_window(app, width) {
+    match ensure_spotlight_window(app, width, show_branding) {
         Ok((window, just_created)) => {
             let visible = window.is_visible().unwrap_or(false);
             crate::logging::info(
