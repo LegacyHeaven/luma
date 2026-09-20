@@ -132,9 +132,9 @@
   "settings.search.more_engines.add_option": "+ Add a search engine…",
   "settings.search.more_engines.empty": "None turned on yet - pick one from the dropdown below.",
 
-  "settings.search.frecency.title": "Frecency-ranked suggestions",
+  "settings.search.frecency.title": "Rank by usage",
   "settings.search.frecency.help": "Reorders the engine/bang list so the ones you actually use most show up first.",
-  "settings.search.frecency.label": "Rank suggestions by usage",
+  "settings.search.frecency.label": "Enabled",
 
   "settings.search.custom_apps.title": "Custom selected apps",
   "settings.search.custom_apps.help": "Apps you've pointed {code}!open{/code} at by hand after it couldn't find them on its own - it'll launch straight from here next time.",
