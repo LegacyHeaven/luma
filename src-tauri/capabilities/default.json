@@ -58,6 +58,9 @@
     "allow-reveal-log-file",
     "allow-reset-to-defaults",
     "allow-clear-browsing-data",
-    "allow-uninstall-app"
+    "allow-uninstall-app",
+    "allow-backup-config",
+    "allow-backup-full",
+    "allow-restore-backup"
   ]
 }
