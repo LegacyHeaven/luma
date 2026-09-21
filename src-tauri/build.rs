@@ -75,6 +75,9 @@ fn main() {
             "reset_to_defaults",
             "clear_browsing_data",
             "uninstall_app",
+            "backup_config",
+            "backup_full",
+            "restore_backup",
         ]),
     ))
     .expect("failed to run tauri-build");
